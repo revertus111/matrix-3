@@ -7,11 +7,12 @@ $scriptRoot = $PSScriptRoot
 $marioBuilder = Join-Path $scriptRoot 'build-mario.cmd'
 $ootBuilder = Join-Path $scriptRoot 'build-oot.cmd'
 $tpBuilder = Join-Path $scriptRoot 'build-tp.cmd'
+$tpProbe = Join-Path $scriptRoot 'probe-tp-link.cmd'
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'Matrix3 Native Builder'
 $form.StartPosition = 'CenterScreen'
-$form.ClientSize = New-Object System.Drawing.Size(630, 255)
+$form.ClientSize = New-Object System.Drawing.Size(630, 330)
 $form.FormBorderStyle = 'FixedDialog'
 $form.MaximizeBox = $false
 $form.MinimizeBox = $true
@@ -50,17 +51,24 @@ $tpButton.Size = New-Object System.Drawing.Size(180, 58)
 $tpButton.Location = New-Object System.Drawing.Point(425, 91)
 $form.Controls.Add($tpButton)
 
+$tpProbeButton = New-Object System.Windows.Forms.Button
+$tpProbeButton.Text = 'PROBE TP LINK'
+$tpProbeButton.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Bold)
+$tpProbeButton.Size = New-Object System.Drawing.Size(180, 48)
+$tpProbeButton.Location = New-Object System.Drawing.Point(425, 159)
+$form.Controls.Add($tpProbeButton)
+
 $status = New-Object System.Windows.Forms.Label
-$status.Text = 'Pick a build. A build window will stay open with SUCCESS or FAILED.'
+$status.Text = 'Pick a build/probe. Its window will stay open with SUCCESS or FAILED.'
 $status.AutoSize = $false
 $status.Size = New-Object System.Drawing.Size(580, 42)
-$status.Location = New-Object System.Drawing.Point(25, 165)
+$status.Location = New-Object System.Drawing.Point(25, 222)
 $form.Controls.Add($status)
 
 $closeButton = New-Object System.Windows.Forms.Button
 $closeButton.Text = 'Close'
 $closeButton.Size = New-Object System.Drawing.Size(90, 30)
-$closeButton.Location = New-Object System.Drawing.Point(515, 211)
+$closeButton.Location = New-Object System.Drawing.Point(515, 286)
 $form.Controls.Add($closeButton)
 
 function Start-Builder([string]$Path, [string]$Label) {
@@ -76,7 +84,7 @@ function Start-Builder([string]$Path, [string]$Label) {
 
     try {
         Start-Process -FilePath $Path | Out-Null
-        $status.Text = "$Label build started. Use the build window; you do not need to type anything."
+        $status.Text = "$Label started. Use its window; you do not need to type anything."
     }
     catch {
         [System.Windows.Forms.MessageBox]::Show(
@@ -88,9 +96,10 @@ function Start-Builder([string]$Path, [string]$Label) {
     }
 }
 
-$marioButton.Add_Click({ Start-Builder $marioBuilder 'Mario' })
-$ootButton.Add_Click({ Start-Builder $ootBuilder 'OoT' })
-$tpButton.Add_Click({ Start-Builder $tpBuilder 'TP Link' })
+$marioButton.Add_Click({ Start-Builder $marioBuilder 'Mario build/test' })
+$ootButton.Add_Click({ Start-Builder $ootBuilder 'OoT build' })
+$tpButton.Add_Click({ Start-Builder $tpBuilder 'TP Link donor build' })
+$tpProbeButton.Add_Click({ Start-Builder $tpProbe 'TP Link visual proof' })
 $closeButton.Add_Click({ $form.Close() })
 
 [void]$form.ShowDialog()
