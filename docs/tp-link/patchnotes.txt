@@ -9,3 +9,11 @@
 - Ninja is reused when installed or installed user-locally through the decomp README's documented Python package path when missing.
 - No Nintendo game assets, disc bytes or extracted donor resources are committed to Matrix3.
 - Status: verified-static implementation only. User runtime donor-build PASS/FAIL is still required before Link asset conversion/integration begins.
+
+2026-10-05 - Fix TP donor bootstrap after first runtime failure
+- User runtime log showed the Windows App Execution Alias python.exe stub returning exit code 9009 while Ninja was missing; the bootstrap incorrectly treated that alias as a usable Python installation.
+- The TP builder now rejects the WindowsApps Python alias, checks py/native/MSYS2 Python candidates, checks PATH/MSYS2 Ninja, and when required installs UCRT64 Python + Ninja through the existing Matrix3 MSYS2 toolchain.
+- The builder now scans Matrix3/native first and automatically uses a single Twilight Princess image placed there, so the user's local donor file does not need to be browsed to manually.
+- Added explicit early rejection for .nkit.iso. zeldaret/tp documents ISO/GCM, RVZ, WIA, WBFS, CISO, NFS, GCZ and TGC inputs, not NKit v1; Dolphin also cannot convert NKit to a non-NKit image. The builder now explains this before cloning/installing/building instead of failing later inside donor tooling.
+- The current user file `native/Legend of Zelda, The - Twilight Princess (USA).nkit.iso` is therefore a known input-format blocker; replacing it with a supported GZ2E01 image in the same native folder is sufficient for the next one-click attempt.
+- Status: bootstrap recovery is verified-static. Donor build still needs a runtime rerun with a supported image.
