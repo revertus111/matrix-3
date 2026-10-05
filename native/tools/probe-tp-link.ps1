@@ -300,6 +300,11 @@ function Ensure-VisualToolchain {
         throw "Visual proof tool pin mismatch. Expected $demakePin, got $head"
     }
 
+    if ((Test-Path $msys2Python) -and (Test-VisualDependencies -PythonPath $msys2Python)) {
+        Write-Host 'Using Matrix3 MSYS2/UCRT64 Python visual toolchain.' -ForegroundColor DarkGray
+        return @{ Root = $demakeRoot; Python = $msys2Python }
+    }
+
     $visualPython = Resolve-VenvPython
     if (-not $visualPython -and (Test-Path $venvDir)) {
         Write-Host 'Replacing incompatible MSYS2/POSIX TP Link visual-proof venv...' -ForegroundColor Yellow
