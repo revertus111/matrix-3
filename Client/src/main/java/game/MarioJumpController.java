@@ -11,10 +11,22 @@ public final class MarioJumpController {
 
     // Presentation calibration only. libsm64 remains the action/physics owner.
     private static final float DEFAULT_SM64_TO_MATRIX_Y_SCALE = 3.0F;
+    private static final float DEFAULT_SM64_TO_MATRIX_XZ_SCALE = 3.0F;
     private static final float SM64_TO_MATRIX_Y_SCALE = resolveVerticalScale();
+    private static final float SM64_TO_MATRIX_XZ_SCALE = resolveHorizontalScale();
     private static final float EXTERNAL_POSITION_EPSILON = 0.5F;
     private static final int WALK_RETRY_CYCLES = 10;
     private static final float MOVE_DIRECTION_DEADZONE = 0.20F;
+
+    /*
+     * Temporary hybrid collision mode. The RuneScape player/server remains the
+     * authority for legal tile crossings, while native Mario deltas are allowed
+     * to move continuously inside a bounded envelope around that authoritative
+     * position. 256 Matrix units is half a tile; stay just inside it so a blocked
+     * crossing cannot visually carry Mario through the neighboring tile.
+     */
+    private static final float COLLISION_PRESENTATION_LEAD = 240.0F;
+    private static final float WALK_REQUEST_LEAD = 192.0F;
 
     /*
      * Keep libsm64's camera basis fixed and encode Matrix's already-resolved
@@ -33,6 +45,7 @@ public final class MarioJumpController {
     private static boolean combatAttackWasDown;
     private static boolean baselineValid;
     private static boolean appliedPositionValid;
+    private static boolean nativePresentationValid;
 
     private static float groundX;
     private static float groundY;
@@ -41,6 +54,8 @@ public final class MarioJumpController {
     private static float lastAppliedX;
     private static float lastAppliedY;
     private static float lastAppliedZ;
+    private static float lastNativePresentationX;
+    private static float lastNativePresentationZ;
     private static float requestedWorldMoveX;
     private static float requestedWorldMoveZ;
     private static int lastWalkTargetX = Integer.MIN_VALUE;
@@ -126,13 +141,14 @@ public final class MarioJumpController {
             nativeGroundY = latestNative.y;
             baselineValid = true;
             appliedPositionValid = false;
+            nativePresentationValid = false;
             System.out.println("[SM64 Bridge] Native state -> Matrix transform ACTIVE (Y scale "
-                    + SM64_TO_MATRIX_Y_SCALE + ", XZ owner vanilla RS3 walking/collision)");
+                    + SM64_TO_MATRIX_Y_SCALE + ", XZ scale " + SM64_TO_MATRIX_XZ_SCALE
+                    + ", collision owner vanilla RS3)");
             System.out.println("[Mario] Controls: camera-relative WASD move, Space jump, F attack, Shift crouch/ground-pound");
         }
 
         publishControls();
-        requestVanillaRuneScapeStep(player);
 
         Sm64BridgeSession.NativePosition interpolatedNative =
                 Sm64BridgeSession.getInterpolatedPosition();
@@ -147,9 +163,10 @@ public final class MarioJumpController {
         float currentZ = position.aFloat2657;
         if (appliedPositionValid) {
             /*
-             * Matrix/server walking owns X/Z and terrain corrections. Mario only
-             * overlays native vertical displacement. Rebase any external change
-             * instead of fighting RuneScape movement/collision ownership.
+             * Any position the stock Matrix movement/update path writes between
+             * our client ticks is authoritative. Preserve that as the collision /
+             * server baseline, but do not drag Mario back to the tile centre; his
+             * visible X/Z continues from the last native presentation position.
              */
             if (Math.abs(currentX - lastAppliedX) > EXTERNAL_POSITION_EPSILON) {
                 groundX = currentX;
@@ -162,15 +179,35 @@ public final class MarioJumpController {
             }
         }
 
+        float nativeDeltaX = 0.0F;
+        float nativeDeltaZ = 0.0F;
+        if (nativePresentationValid) {
+            nativeDeltaX = (interpolatedNative.x - lastNativePresentationX) * SM64_TO_MATRIX_XZ_SCALE;
+            nativeDeltaZ = (interpolatedNative.z - lastNativePresentationZ) * SM64_TO_MATRIX_XZ_SCALE;
+        }
+        lastNativePresentationX = interpolatedNative.x;
+        lastNativePresentationZ = interpolatedNative.z;
+        nativePresentationValid = true;
+
+        float presentationBaseX = appliedPositionValid ? lastAppliedX : currentX;
+        float presentationBaseZ = appliedPositionValid ? lastAppliedZ : currentZ;
+        float desiredX = presentationBaseX + nativeDeltaX;
+        float desiredZ = presentationBaseZ + nativeDeltaZ;
+
         /*
-         * Always accept the live Matrix X/Z as ground truth. This is the temporary
-         * vanilla-RS3 collision mode: normal walk requests go to the server and the
-         * ordinary player movement/update path decides whether/how X/Z advances.
-         * libsm64 still receives the same movement input for authentic Mario action
-         * and animation state, but native X/Z is deliberately not applied locally.
+         * Request a vanilla step only as the continuous Mario presentation nears
+         * the edge of the currently authoritative RuneScape position. Short taps
+         * therefore remain genuinely sub-tile instead of committing an entire RS
+         * walk step immediately.
          */
-        groundX = currentX;
-        groundZ = currentZ;
+        requestVanillaRuneScapeStep(player, desiredX, desiredZ);
+
+        float targetX = clamp(desiredX,
+                groundX - COLLISION_PRESENTATION_LEAD,
+                groundX + COLLISION_PRESENTATION_LEAD);
+        float targetZ = clamp(desiredZ,
+                groundZ - COLLISION_PRESENTATION_LEAD,
+                groundZ + COLLISION_PRESENTATION_LEAD);
 
         float nativeHeight = interpolatedNative.y - nativeGroundY;
         if (nativeHeight < 0.0F) {
@@ -179,32 +216,43 @@ public final class MarioJumpController {
 
         // Matrix altitude increases as scene-Y decreases.
         float targetY = groundY - nativeHeight * SM64_TO_MATRIX_Y_SCALE;
-        player.method5395(currentX, targetY, currentZ);
-        lastAppliedX = currentX;
+        player.method5395(targetX, targetY, targetZ);
+        lastAppliedX = targetX;
         lastAppliedY = targetY;
-        lastAppliedZ = currentZ;
+        lastAppliedZ = targetZ;
         appliedPositionValid = true;
 
         Mario64Diagnostics.observeRuntime(player);
     }
 
     /**
-     * Temporary collision handoff: translate the camera-relative Mario movement
-     * intent into Matrix3's existing scene-walk packet. The normal server
-     * route/collision owner then validates walls, objects, blocked floor and
-     * diagonal legality and returns movement through the stock player update path.
-     * No custom clip masks or parallel Mario collision map are introduced here.
+     * Temporary collision handoff. Native Mario owns the continuous presentation,
+     * but crossing out of the local sub-tile envelope requires a normal Matrix3
+     * walk request. The existing server route/collision owner therefore remains
+     * authoritative for walls, solid objects, blocked floors and diagonal legality.
      */
-    private static void requestVanillaRuneScapeStep(Player player) {
+    private static void requestVanillaRuneScapeStep(Player player, float desiredX, float desiredZ) {
         if (player == null || client.aClass195_8589 == null) {
             return;
         }
 
-        int dx = directionStep(requestedWorldMoveX);
-        int dz = directionStep(requestedWorldMoveZ);
+        float leadX = desiredX - groundX;
+        float leadZ = desiredZ - groundZ;
+        int dx = 0;
+        int dz = 0;
+
+        if (requestedWorldMoveX > MOVE_DIRECTION_DEADZONE && leadX >= WALK_REQUEST_LEAD) {
+            dx = 1;
+        } else if (requestedWorldMoveX < -MOVE_DIRECTION_DEADZONE && leadX <= -WALK_REQUEST_LEAD) {
+            dx = -1;
+        }
+        if (requestedWorldMoveZ > MOVE_DIRECTION_DEADZONE && leadZ >= WALK_REQUEST_LEAD) {
+            dz = 1;
+        } else if (requestedWorldMoveZ < -MOVE_DIRECTION_DEADZONE && leadZ <= -WALK_REQUEST_LEAD) {
+            dz = -1;
+        }
+
         if (dx == 0 && dz == 0) {
-            lastWalkTargetX = Integer.MIN_VALUE;
-            lastWalkTargetY = Integer.MIN_VALUE;
             return;
         }
 
@@ -236,14 +284,14 @@ public final class MarioJumpController {
         lastWalkRequestCycle = client.cycles;
     }
 
-    private static int directionStep(float value) {
-        if (value > MOVE_DIRECTION_DEADZONE) {
-            return 1;
+    private static float clamp(float value, float min, float max) {
+        if (value < min) {
+            return min;
         }
-        if (value < -MOVE_DIRECTION_DEADZONE) {
-            return -1;
+        if (value > max) {
+            return max;
         }
-        return 0;
+        return value;
     }
 
     private static void publishIdleInput() {
@@ -373,6 +421,12 @@ public final class MarioJumpController {
                 DEFAULT_SM64_TO_MATRIX_Y_SCALE);
     }
 
+    private static float resolveHorizontalScale() {
+        return resolvePositiveScale(
+                "matrix3.sm64.horizontalScale",
+                DEFAULT_SM64_TO_MATRIX_XZ_SCALE);
+    }
+
     private static float resolvePositiveScale(String propertyName, float defaultValue) {
         String configured = System.getProperty(propertyName);
         if (configured == null || configured.trim().isEmpty()) {
@@ -395,6 +449,7 @@ public final class MarioJumpController {
         MarioWeaponCombat.reset();
         baselineValid = false;
         appliedPositionValid = false;
+        nativePresentationValid = false;
         groundX = 0.0F;
         groundY = 0.0F;
         groundZ = 0.0F;
@@ -402,6 +457,8 @@ public final class MarioJumpController {
         lastAppliedX = 0.0F;
         lastAppliedY = 0.0F;
         lastAppliedZ = 0.0F;
+        lastNativePresentationX = 0.0F;
+        lastNativePresentationZ = 0.0F;
         requestedWorldMoveX = 0.0F;
         requestedWorldMoveZ = 0.0F;
         lastWalkTargetX = Integer.MIN_VALUE;
