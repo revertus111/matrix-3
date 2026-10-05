@@ -14,9 +14,11 @@ Add Link as an imported character in Matrix3 with Ocarina of Time movement, acti
 
 ## Current status
 
-**Phase 0 — native OoT compatibility and bridge proof: BLOCKED ON COMPATIBILITY EVIDENCE**
+**Phase 0 — NTSC-U 1.2 native compatibility and bridge proof: ACTIVE**
 
-A local identity check of the user-provided 32 MiB ROM matches the upstream `oot-ntsc-us-1.2` profile (MD5 `57a9719ad547c516342e1a15d5c28c3d`). The candidate upstream SDK is `Cycl0o0/liboot`: its documentation describes an engine-neutral C API for Link movement, equipment, items, animation geometry, and host-world collision. Its compatibility matrix marks NTSC-U 1.2 as **identification only, not gameplay validated**; PAL 1.1 is its compiled and ROM-backed tested target. Recognition of this ROM must not be treated as runtime compatibility.
+The user-provided 32 MiB ROM matches the NTSC-U 1.2 profile (MD5 `57a9719ad547c516342e1a15d5c28c3d`). The official `zeldaret/oot` decompilation has an `ntsc-1.2` build target for that revision. This gives us the source revision needed to adapt the candidate engine-neutral Link SDK, `Cycl0o0/liboot`.
+
+The SDK is not plug-and-play for this ROM yet: its Makefile selects PAL 1.1, and its generated asset symbols/keep offsets are PAL-specific. Its compatibility matrix previously marked NTSC-U 1.2 as identification-only, while PAL 1.1 is the compiled and ROM-backed tested target. The first technical bundle is therefore to generate/use NTSC-U 1.2 asset data from the matching decompilation, build liboot for this exact revision, and prove Link state plus animated geometry against the local ROM. ROM identity is established; gameplay compatibility is not yet runtime verified.
 
 The SDK is not integrated into Matrix3. Its project is AGPL-3.0-or-later and includes selected vendored decompilation files without a repository-wide license declaration. Review dependency and distribution implications before vendoring or redistributing it.
 
@@ -32,11 +34,12 @@ These findings are `verified-static`; the source integration is not runtime veri
 
 ## Phases and bundles
 
-### Phase 0 — Native OoT compatibility and bridge proof
+### Phase 0 — NTSC-U 1.2 native compatibility and bridge proof
 
-- [ ] 0.1 Validate the exact NTSC-U 1.2 ROM against a supported liboot gameplay build, or establish a supported build for this revision.
-- [ ] 0.2 Build a bounded native bridge proof that creates Link, advances the OoT fixed-step update, and returns Link state plus animated geometry.
-- [ ] 0.3 Confirm the native dependency's license/provenance and reproducible Windows build path before adding it to Matrix3.
+- [x] 0.1 Identify the local ROM as NTSC-U 1.2 and locate the matching `zeldaret/oot` build target.
+- [ ] 0.2 Generate or adapt NTSC-U 1.2 asset symbols and build settings for liboot from the matching decompilation.
+- [ ] 0.3 Build a bounded native bridge proof that creates Link, advances the OoT fixed-step update, and returns Link state plus animated geometry using the exact local ROM.
+- [ ] 0.4 Confirm the native dependency's license/provenance and reproducible Windows build path before adding it to Matrix3.
 
 ### Phase 1 — Playable Link foundation
 
@@ -66,4 +69,4 @@ These findings are `verified-static`; the source integration is not runtime veri
 
 ## Resume Here
 
-No Matrix3 source or ROM data has been changed. The exact ROM revision is identified, but upstream gameplay compatibility for NTSC-U 1.2 is not established. Next: decide the compatibility path, then complete Phase 0 before adding a Link driver. Do not reuse Mario-specific native state or claim ROM support from an identity match alone.
+The exact local ROM and matching zeldaret build target are known. No Matrix3 gameplay source or ROM data has been changed. Next: adapt liboot's PAL-specific build and generated assets for NTSC-U 1.2, then validate Link state and animated geometry against the local ROM before integrating a Link driver. Keep ROM bytes and extracted assets local.
