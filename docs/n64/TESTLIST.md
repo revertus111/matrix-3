@@ -1,5 +1,27 @@
 # N64 Client Console Runtime Test List
 
+## Custom combat v3 - one consolidated acceptance session
+
+1. [ ] From repository root: `git pull origin main`.
+2. [ ] In MSYS2 MinGW64, `cd native/sm64-bridge` then `make bootstrap` (rebuilds both library and sidecar).
+3. [ ] Eclipse Java 8 refresh/clean/build, then launch/login once.
+4. [ ] Equip a normal one-handed sword, longsword or scimitar; Ctrl+M into Mario.
+5. [ ] Console startup reports `combat-socket-v3`; N64 -> Mario 64 -> Custom combat shows RIGHT_HAND AVAILABLE and weapon ID/name.
+6. [ ] Sword follows the right wrist while idle/turning/running. Adjust grip scale/XYZ/angles if needed; the bounds-based starting grip is NOT visually verified.
+7. [ ] Press F once: torso/right arm wind up, slash, recover; holding F does not loop or restart the slash.
+8. [ ] Run and press F: legs continue native running; sword follows hand through the complete swing and recovery.
+9. [ ] Play 1H slash button previews only (no new server attack request); optional equipped-weapon override is explicit.
+10. [ ] Freeze in Equipment Workbench: body and sword freeze together. Unfreeze before further attacks.
+11. [ ] Unequip or disable custom combat: current native F/punch behavior returns. Re-equip/re-enable without F: no unsolicited slash.
+12. [ ] Ctrl+M out/re-enter; logout/relog: no floating/stale weapon, normal RuneScape body restored.
+13. [ ] WASD at different headings, jump, backflip, ground-pound, helmet/head-shell workbench and ordinary remote-player rendering remain correct.
+14. [ ] Nearby-NPC F still uses existing server combat rules; visual blade contact timing is not part of this proof.
+15. [ ] Long idle: native frames continue and sleep guard remains active; no model-build error spam.
+
+Older v1/v2 sidecar: Java connects with original STEP layout, custom combat reports native v3 required, native Mario remains usable. Older Java cannot use the v3 sidecar; update both together.
+
+## Earlier semantic/helmet acceptance checks (retained)
+
 ## One required V7 rebuild / acceptance session
 
 ### Build
@@ -68,3 +90,4 @@
 - [ ] No floating helmet, frozen pose, stale coverage, or Mario masking remains after exit.
 - [ ] Re-enter Mario mode and semantic metadata/helmet attachment initialize cleanly.
 - [ ] Normal RuneScape appearance/server authority remain unchanged outside Mario mode.
+

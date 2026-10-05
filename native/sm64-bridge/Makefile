@@ -18,7 +18,7 @@ else
   EXTRA_LINK := -Wl,-rpath,'$$ORIGIN' -lm
 endif
 
-.PHONY: all bootstrap deps clean
+.PHONY: all bootstrap deps clean test-combat
 
 all: $(TARGET)
 
@@ -41,10 +41,16 @@ deps:
 	$(MAKE) -C "$(LIBSM64_ROOT)" clean
 	$(MAKE) -C "$(LIBSM64_ROOT)" lib
 
-$(TARGET): sm64_bridge.c $(LIBSM64_LIB)
+$(TARGET): sm64_bridge.c combat_overlay.h $(LIBSM64_LIB)
 	@mkdir -p "$(DIST_DIR)"
 	$(CC) $(CFLAGS) $(INCLUDES) sm64_bridge.c "$(LIBSM64_LIB)" $(EXTRA_LINK) -o "$(TARGET)"
 	cp -f "$(LIBSM64_LIB)" "$(COPIED_LIB)"
 
 clean:
 	rm -rf "$(DIST_DIR)"
+
+
+# ROM-free production curve + native frame fixture; Java parser test is documented.
+test-combat: $(TARGET)
+	$(CC) $(CFLAGS) $(INCLUDES) tests/combat_test.c "$(LIBSM64_LIB)" $(EXTRA_LINK) -o "$(DIST_DIR)/combat_test"
+	./$(DIST_DIR)/combat_test "$(DIST_DIR)/combat-frame.bin"

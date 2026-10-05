@@ -114,6 +114,8 @@ public final class MarioVisualRenderer {
             }
             replacementReady = true;
             lastFreshRenderSuccessNanos = System.nanoTime();
+            // Same immutable frame as the body: no one-tick socket/pose mismatch.
+            MarioWeaponCombat.render(renderer, player, frame, MODEL_SCALE);
             if (lastLoggedSequence < 0L) {
                 lastLoggedSequence = frame.sequence;
                 String colourMode = lastBuiltTextureSubdivisions <= 0
@@ -821,3 +823,4 @@ public final class MarioVisualRenderer {
                 && Math.abs(z) <= 0.000001F;
     }
 }
+

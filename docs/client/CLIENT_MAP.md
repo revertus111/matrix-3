@@ -543,3 +543,15 @@ When a dedicated research chat is populating this map:
 7. Update an existing entry instead of duplicating it.
 8. Leave unresolved semantics as `HYPOTHESIS` or `UNKNOWN` with the next useful verification target.
 9. Do not modify runtime behavior unless separately requested and AAA-approved.
+
+
+## Mario native combat socket / Class261 matrix boundary
+
+**Evidence:** verified-static; focused transform/native checks pass, in-game acceptance pending.
+**Tags:** MarioWeaponCombat, Sm64BridgeSession, MarioVisualRenderer, Class261, method3572, method3582, right hand, native socket, custom animation
+
+- Pinned libsm64 `geo_process_animated_part` owns temporary local XYZ animation channels. The Matrix patch adds offsets before matrix construction and captures native hand matrix after parent composition. Physics/action ownership stays native.
+- `MarioVisualRenderer.render` calls weapon rendering with the exact immutable body GeometryFrame. Socket origin is rebased from native Mario XYZ using the existing body Y mirror and mesh scale.
+- `Class261.method3572` accepts nine values in column order: arguments 1/2/3 contribute X input to output X/Y/Z; 4/5/6 contribute Y input; 7/8/9 contribute Z input. `method3582` directly establishes point multiplication; do not pass a row-major array unchanged.
+- Weapon basis uses `S * nativeHandBasis * calibration * S`, S=(1,-1,1), retaining native scale; translation uses `S*(socketPosition-nativeMarioPosition)*modelScale + MatrixPlayerPosition`.
+- Detailed source pins, joint identity guards, protocol v3 and uncertainty: `docs/n64/CUSTOM_COMBAT.md`.

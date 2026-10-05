@@ -1,5 +1,5 @@
 diff --git a/src/gfx_adapter.c b/src/gfx_adapter.c
-index ba7fc1d..9f5d8ab 100644
+index ba7fc1d..71d5770 100644
 --- a/src/gfx_adapter.c
 +++ b/src/gfx_adapter.c
 @@ -7,6 +7,7 @@
@@ -10,7 +10,13 @@ index ba7fc1d..9f5d8ab 100644
  
  static Mat4 s_curMatrix;
  static float s_curColor[3];
-@@ -21,6 +22,47 @@ static float *s_trianglePtr;
+@@ -17,11 +18,53 @@ static float s_texWidth;
+ static float s_texHeight;
+ 
+ static struct SM64MarioGeometryBuffers *s_outBuffers;
++static unsigned int s_combatJointMask;
+ 
+ static float *s_trianglePtr;
  static float *s_colorPtr;
  static float *s_normalPtr;
  static float *s_uvPtr;
@@ -58,7 +64,7 @@ index ba7fc1d..9f5d8ab 100644
  
  static void mtxf_mul_vec3f_x(Mat4 mtx, Vec3f b, float w, Vec3f out)
  {
-@@ -39,10 +81,15 @@ static void convert_uv_to_atlas( float *atlas_uv_out, short tc[] )
+@@ -39,10 +82,15 @@ static void convert_uv_to_atlas( float *atlas_uv_out, short tc[] )
      atlas_uv_out[1] = v * s_texHeight / 64.0f;
  }
  
@@ -75,7 +81,7 @@ index ba7fc1d..9f5d8ab 100644
  
      for( ;; )
      {
-@@ -70,6 +117,20 @@ static void process_display_list( void *dl )
+@@ -71,6 +119,20 @@ static void process_display_list( void *dl )
                  Vec3f p1 = { (float)x1, (float)y1, (float)z1 };
                  Vec3f p2 = { (float)x2, (float)y2, (float)z2 };
  
@@ -96,7 +102,7 @@ index ba7fc1d..9f5d8ab 100644
                  signed char nx0 = vdata[v00].n.n[0], ny0 = vdata[v00].n.n[1], nz0 = vdata[v00].n.n[2];
                  signed char nx1 = vdata[v01].n.n[0], ny1 = vdata[v01].n.n[1], nz1 = vdata[v01].n.n[2];
                  signed char nx2 = vdata[v02].n.n[0], ny2 = vdata[v02].n.n[1], nz2 = vdata[v02].n.n[2];
-@@ -169,7 +230,7 @@ static void process_display_list( void *dl )
+@@ -183,7 +245,7 @@ static void process_display_list( void *dl )
              case GFXCMD_SubDisplayList:
              {
                  intptr_t dl = *ptr++;
@@ -105,7 +111,7 @@ index ba7fc1d..9f5d8ab 100644
                  break;
              }
  
-@@ -189,7 +250,7 @@ void gSPMatrix( void *pkt, Mtx *m, uint8_t flags )
+@@ -203,7 +265,7 @@ void gSPMatrix( void *pkt, Mtx *m, uint8_t flags )
  
  void gSPDisplayList( void *pkt, struct DisplayListNode *dl )
  {
@@ -114,19 +120,78 @@ index ba7fc1d..9f5d8ab 100644
  }
  
  void gfx_adapter_bind_output_buffers( struct SM64MarioGeometryBuffers *outBuffers )
-@@ -199,5 +260,7 @@ void gfx_adapter_bind_output_buffers( struct SM64MarioGeometryBuffers *outBuffers )
+@@ -213,5 +275,51 @@ void gfx_adapter_bind_output_buffers( struct SM64MarioGeometryBuffers *outBuffer
      s_colorPtr = s_outBuffers->color;
      s_normalPtr = s_outBuffers->normal;
      s_uvPtr = s_outBuffers->uv;
 +    s_localTrianglePtr = s_outBuffers->localPosition;
 +    s_partPtr = s_outBuffers->partId;
      s_outBuffers->numTrianglesUsed = 0;
- }
+-}
+\ No newline at end of file
++    s_combatJointMask = 0;
++    if (s_outBuffers->combatPose != NULL)
++        s_outBuffers->combatPose->rightHandAvailable = 0;
++}
++
++/* verified-static: pinned Mario geo animated-part order is root=0, pelvis=1,
++ * torso=2, head=3, left chain=4..7, right chain=8..11, legs=12..19.
++ * Switch nodes visit exactly one hand. Named DL checks fail closed if the pin
++ * changes. Offsets affect local evaluated channels, never persistent AnimInfo.
++ */
++void gfx_adapter_combat_rotation(int joint, struct GraphNodeAnimatedPart *node, Vec3s rotation)
++{
++    int slot = -1;
++    void *dl = node->displayList;
++    struct SM64MarioCombatPose *pose = s_outBuffers->combatPose;
++    if (pose == NULL) return;
++    if (joint == 2 && (dl == mario_torso || dl == mario_medium_poly_torso
++            || dl == mario_low_poly_torso || dl == mario_metal_torso_shared_dl
++            || dl == mario_metal_medium_poly_torso || dl == mario_metal_low_poly_torso))
++        slot = 0;
++    if (joint == 9 && (dl == mario_right_arm || dl == mario_medium_poly_right_arm
++            || dl == mario_low_poly_right_arm || dl == mario_right_arm_shared_dl
++            || dl == mario_medium_poly_right_arm_shared_dl || dl == mario_low_poly_right_arm_shared_dl))
++        slot = 1;
++    if (joint == 10 && (dl == mario_right_forearm_shared_dl
++            || dl == mario_medium_poly_right_forearm_shared_dl
++            || dl == mario_low_poly_right_forearm_shared_dl))
++        slot = 2;
++    if (joint == 11 && s_combatJointMask == 7 && node->translation[0] == 60
++            && node->translation[1] == 0 && node->translation[2] == 0)
++        slot = 3;
++    if (slot < 0) return;
++    s_combatJointMask |= 1u << slot;
++    for (int axis = 0; axis < 3; axis++)
++        rotation[axis] = (int16_t)((uint16_t)rotation[axis] + (uint16_t)pose->rotation[slot][axis]);
++}
++
++void gfx_adapter_combat_socket(int joint, struct GraphNodeAnimatedPart *node, Mat4 matrix)
++{
++    (void)node;
++    if (joint == 11 && s_combatJointMask == 15 && s_outBuffers->combatPose != NULL) {
++        memcpy(s_outBuffers->combatPose->rightHand, matrix, sizeof(Mat4));
++        s_outBuffers->combatPose->rightHandAvailable = 1;
++    }
++}
+diff --git a/src/gfx_adapter.h b/src/gfx_adapter.h
+index 5d1ef49..b959c8f 100644
+--- a/src/gfx_adapter.h
++++ b/src/gfx_adapter.h
+@@ -12,4 +12,6 @@
+ extern void gSPMatrix( void *pkt, Mtx *m, uint8_t flags );
+ extern void gSPDisplayList( void *pkt, struct DisplayListNode *dl );
+ 
+-extern void gfx_adapter_bind_output_buffers( struct SM64MarioGeometryBuffers *outBuffers );
+\ No newline at end of file
++extern void gfx_adapter_combat_rotation(int joint, struct GraphNodeAnimatedPart *node, Vec3s rotation);
++extern void gfx_adapter_combat_socket(int joint, struct GraphNodeAnimatedPart *node, Mat4 matrix);
++extern void gfx_adapter_bind_output_buffers( struct SM64MarioGeometryBuffers *outBuffers );
 diff --git a/src/libsm64.h b/src/libsm64.h
-index 1f6c5e4..bcb1477 100644
+index 1f6c5e4..0c6a820 100644
 --- a/src/libsm64.h
 +++ b/src/libsm64.h
-@@ -58,11 +58,26 @@ struct SM64MarioState
+@@ -68,13 +68,37 @@ struct SM64MarioState
      int16_t invincTimer;
  };
  
@@ -141,6 +206,14 @@ index 1f6c5e4..bcb1477 100644
 +    SM64_MARIO_GEOMETRY_PART_HAIR_BACK = 6,
 +};
 +
++/* Matrix3 pose-only extension. No Mario action/animation state is overwritten. */
++struct SM64MarioCombatPose
++{
++    int16_t rotation[4][3]; /* torso, right upper arm, forearm, hand; angle offsets */
++    float rightHand[16];   /* Mat4 memory order: basis columns then translation */
++    uint8_t rightHandAvailable;
++};
++
  struct SM64MarioGeometryBuffers
  {
      float *position;
@@ -152,4 +225,59 @@ index 1f6c5e4..bcb1477 100644
 +    /* SM64MarioGeometryPart, one stable semantic id per triangle. */
 +    uint8_t *partId;
      uint16_t numTrianglesUsed;
++    struct SM64MarioCombatPose *combatPose; /* optional, borrowed for this tick */
  };
+ 
+ struct SM64WallCollisionData
+@@ -207,3 +231,4 @@ extern SM64_LIB_FN void sm64_set_sound_volume(float vol);
+ #endif
+ 
+ #endif//LIB_SM64_H
++
+diff --git a/src/decomp/game/rendering_graph_node.c b/src/decomp/game/rendering_graph_node.c
+index 97bfed4..81e7417 100644
+--- a/src/decomp/game/rendering_graph_node.c
++++ b/src/decomp/game/rendering_graph_node.c
+@@ -54,6 +54,7 @@ static Gfx *gDisplayListHead;
+  *
+  */
+ 
++static int s_matrixCombatJoint;
+ s16 gMatStackIndex;
+ Mat4 gMatStack[32];
+ Mtx *gMatStackFixed[32];
+@@ -571,6 +572,7 @@ static void geo_process_background(struct GraphNodeBackground *node) {
+  * but set in global variables. If an animated part is skipped, everything afterwards desyncs.
+  */
+ static void geo_process_animated_part(struct GraphNodeAnimatedPart *node) {
++    int combatJoint = s_matrixCombatJoint++;
+     Mat4 matrix;
+     Vec3s rotation;
+     Vec3f translation;
+@@ -616,9 +618,11 @@ static void geo_process_animated_part(struct GraphNodeAnimatedPart *node) {
+         rotation[1] = gCurAnimData[retrieve_animation_index(gCurrAnimFrame, &gCurrAnimAttribute)];
+         rotation[2] = gCurAnimData[retrieve_animation_index(gCurrAnimFrame, &gCurrAnimAttribute)];
+     }
++    gfx_adapter_combat_rotation(combatJoint, node, rotation);
+     mtxf_rotate_xyz_and_translate(matrix, translation, rotation);
+     mtxf_mul(gMatStack[gMatStackIndex + 1], matrix, gMatStack[gMatStackIndex]);
+     gMatStackIndex++;
++    gfx_adapter_combat_socket(combatJoint, node, gMatStack[gMatStackIndex]);
+     mtxf_to_mtx(matrixPtr, gMatStack[gMatStackIndex]);
+     gMatStackFixed[gMatStackIndex] = matrixPtr;
+     if (node->displayList != NULL) {
+@@ -1123,6 +1127,7 @@ void geo_process_node_and_siblings(struct GraphNode *firstNode) {
+ 
+ void geo_process_root_hack_single_node(struct GraphNode *node)
+ {
++    s_matrixCombatJoint = 0;
+     gDisplayListHead = NULL; // Currently unused, but referenced
+ 
+     display_list_pool_reset();
+@@ -1165,4 +1170,4 @@ void geo_process_root_hack_single_node(struct GraphNode *node)
+     gMarioObject->header.gfx.throwMatrix = NULL;
+ 
+     alloc_only_pool_free(gDisplayListHeap);
+-}
+\ No newline at end of file
++}

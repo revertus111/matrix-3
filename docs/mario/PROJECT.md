@@ -1,5 +1,22 @@
 # Mario 64 in Matrix3 / Revision 830
 
+
+## Active priority override - 2026-10-04 custom combat proof
+
+The user supplied SAP AAA for custom native animation overlay + 830 weapon attachment.
+This is the active next runtime gate; prior steering/collision and equipment carryovers below remain preserved.
+
+- Phase 4, Bundle 4.3: native 1H slash + right-hand socket (`IMPLEMENTED / NEEDS RUNTIME ACCEPTANCE`).
+- [x] Establish pinned pose/joint/matrix ownership (`verified-static`); details in `docs/n64/CUSTOM_COMBAT.md`.
+- [x] Native additive torso/right-arm slash and socket export; v3 Java bridge with v1/v2 compatibility.
+- [x] Equipped 830 weapon attachment, conditional F trigger, small Custom combat tab and grip controls.
+- [x] Linux native build and focused protocol/curve/transform checks.
+- [ ] Windows/MSYS2 + Eclipse Java 8 build; consolidated runtime acceptance in `docs/n64/TESTLIST.md`.
+- [ ] Visually accept/tune slash and sword grip before considering 1H stab.
+
+Runtime state is UNKNOWN until tested. No collision, damage/contact timing, 830 retargeting or stab expansion is included.
+
+
 ## Goal
 
 Run an authentic Mario experience inside Matrix3/revision-830: Matrix3 owns the RuneScape world, input, rendering and eventual server authority, while an SM64-derived native core owns Mario's movement/action/animation state through a narrow passthrough bridge.
@@ -458,6 +475,9 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 
 ## Resume Here
 
+**Current override: Bundle 4.3 custom combat proof.** Pull main, run `make bootstrap` in native/sm64-bridge, Eclipse refresh/clean/build, equip a one-handed sword, Ctrl+M, open N64 -> Mario 64 -> Custom combat, then test F idle/running and exit cleanup. Follow the single custom-combat section in `docs/n64/TESTLIST.md`. Native/frame/transform seam is established; do not retrace it. Grip defaults and slash aesthetics await runtime calibration. Stab is deferred until slash acceptance. Files: native bridge/semantic patch/combat_overlay.h; Sm64BridgeSession; MarioWeaponCombat; MarioJumpController; MarioVisualRenderer; N64Panel. Prior checkpoint below is carryover, not the active first task.
+
+
 **Last completed:**
 
 - Bridge Spike A runtime-VERIFIED against real `libsm64` + user ROM.
@@ -570,3 +590,4 @@ See `docs/n64/TESTLIST.md` for the N64 workspace and idle->Space flight-recorder
 ## Next recommended work
 
 Runtime-verify the Matrix-world steering adapter in one launch: N/E/S/W first, then rotate continuously while holding W. This adapter no longer sends Matrix camera heading into libsm64; it sends the desired Matrix world movement direction directly. If full-orbit steering passes, return immediately to the saved idle->Space N64 recorder capture and the nearby-NPC F/punch -> stock RuneScape combat proof. Only after Bundle 1.3 passes should the main architectural path return to Phase 3 Bundle 3.1 and stream a bounded RuneScape terrain heightfield into libsm64 as native collision surfaces. Link can then be added as another driver/capability profile without creating another input/camera/damage framework.
+

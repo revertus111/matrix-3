@@ -230,15 +230,18 @@ public final class MarioJumpController {
         float worldMoveX = controls.moveX * rightX + controls.moveY * forwardX;
         float worldMoveZ = controls.moveX * rightZ + controls.moveY * forwardZ;
 
-        Sm64BridgeSession.setInput(
+        boolean weaponCombat = MarioWeaponCombat.updateInput(buttonB && !combatAttackWasDown);
+        Sm64BridgeSession.setCombatInput(
                 LIBSM64_NEUTRAL_CAMERA_X,
                 LIBSM64_NEUTRAL_CAMERA_Z,
                 -worldMoveX,
                 -worldMoveZ,
                 buttonA,
-                buttonB,
-                buttonZ);
-        Mario64Diagnostics.observeControls(controls, buttonA, buttonB, buttonZ);
+                weaponCombat ? false : buttonB,
+                buttonZ,
+                weaponCombat ? 1 : 0,
+                MarioWeaponCombat.getRequest());
+        Mario64Diagnostics.observeControls(controls, buttonA, weaponCombat ? false : buttonB, buttonZ);
 
         if (buttonB && !combatAttackWasDown) {
             AlternateCharacterCombatBridge.requestPrimaryMeleeAttack();
@@ -323,6 +326,7 @@ public final class MarioJumpController {
     }
 
     private static void resetPresentation() {
+        MarioWeaponCombat.reset();
         baselineValid = false;
         appliedPositionValid = false;
         groundX = 0.0F;
@@ -350,3 +354,4 @@ public final class MarioJumpController {
         return nativeHeight <= 0.0F ? 0.0F : nativeHeight * SM64_TO_MATRIX_Y_SCALE;
     }
 }
+

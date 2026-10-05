@@ -2,6 +2,7 @@ package game.console;
 
 import game.Mario64Diagnostics;
 import game.MarioEquipmentWorkbench;
+import game.MarioWeaponCombat;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -42,6 +43,7 @@ public final class N64Panel extends JPanel {
 
     private final JTabbedPane gameTabs = new JTabbedPane();
     private final Timer refreshTimer;
+    private final JLabel combatStatus = valueLabel();
 
     private final JLabel modeValue = valueLabel();
     private final JLabel characterValue = valueLabel();
@@ -161,9 +163,44 @@ public final class N64Panel extends JPanel {
         marioTabs.setForeground(ConsoleTheme.TEXT);
         marioTabs.setBackground(ConsoleTheme.PANEL);
         marioTabs.addTab("Runtime", createMarioRuntimeTab());
+        marioTabs.addTab("Custom combat", createCombatTab());
         marioTabs.addTab("Equipment Workbench", createEquipmentWorkbenchTab());
         host.add(marioTabs, BorderLayout.CENTER);
         return host;
+    }
+
+    private JScrollPane createCombatTab() {
+        JPanel card = ConsoleTheme.createCard("Native 1H slash / right-hand weapon");
+        card.add(ConsoleTheme.createWrappedText(
+                "Equip a sword or scimitar, enter Mario mode, then press F. Play slash previews animation only. Native v3 requires make bootstrap. Grip defaults are a starting point; use the controls to fit the equipped sword.", 4));
+        card.add(ConsoleTheme.createValueRow("Live combat", combatStatus));
+        JCheckBox enabled = new JCheckBox("Enable custom sword combat", true);
+        styleCheckBox(enabled);
+        enabled.addActionListener(e -> MarioWeaponCombat.setEnabled(enabled.isSelected()));
+        card.add(enabled);
+        JCheckBox force = new JCheckBox("Preview 1H slash with any equipped weapon");
+        styleCheckBox(force);
+        force.addActionListener(e -> MarioWeaponCombat.setForceSlash(force.isSelected()));
+        card.add(force);
+        JButton play = new JButton("Play 1H slash");
+        ConsoleTheme.styleButton(play);
+        play.addActionListener(e -> MarioWeaponCombat.playSlash());
+        card.add(play);
+        String[] names = {"Weapon scale", "Hand-local X", "Hand-local Y", "Hand-local Z",
+                "Weapon yaw", "Weapon pitch", "Weapon roll"};
+        for (int i=0;i<names.length;i++) {
+            final int index=i;
+            NumericControl control=new NumericControl(names[i], i==0?.05D:-720D,
+                    i==0?5D:720D, i==0?.05D:5D, i==0?2:0,
+                    v -> MarioWeaponCombat.setCalibration(index,(float)v));
+            control.setValue(i==0?1:0);
+            card.add(control);
+        }
+        card.add(ConsoleTheme.createWrappedText(
+                "Calibration is session-only. Freeze pose in Equipment Workbench for grip inspection; unfreeze to play attacks. Unsupported weapons retain normal Mario attacks unless the explicit preview override is enabled.", 3));
+        JScrollPane scroll=new JScrollPane(card);
+        ConsoleTheme.styleScrollPane(scroll);
+        return scroll;
     }
 
     private JPanel createMarioRuntimeTab() {
@@ -558,6 +595,7 @@ public final class N64Panel extends JPanel {
     }
 
     private void refresh() {
+        combatStatus.setText(MarioWeaponCombat.getStatus());
         refreshWorkbench();
 
         if (pauseDisplay.isSelected()) {
@@ -814,3 +852,4 @@ public final class N64Panel extends JPanel {
         }
     }
 }
+

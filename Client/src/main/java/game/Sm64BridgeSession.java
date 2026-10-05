@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 public final class Sm64BridgeSession {
 
     private static final int MIN_BINARY_PROTOCOL_VERSION = 1;
-    private static final int MAX_BINARY_PROTOCOL_VERSION = 2;
+    private static final int MAX_BINARY_PROTOCOL_VERSION = 3;
     private static final int BINARY_CMD_STEP = 1;
     private static final long STEP_NANOS = 1000000000L / 30L;
     private static final long MAX_SCHEDULE_DRIFT_NANOS = STEP_NANOS * 4L;
@@ -83,6 +83,18 @@ public final class Sm64BridgeSession {
                     cameraLookX, cameraLookZ,
                     stickX, stickY,
                     buttonA, buttonB, buttonZ);
+        }
+    }
+
+    static void setCombatInput(float cameraLookX, float cameraLookZ,
+            float stickX, float stickY, boolean a, boolean b, boolean z,
+            int combatMode, int combatRequest) {
+        Worker worker = current;
+        if (worker != null) {
+            float[] camera = normalizeCamera(cameraLookX, cameraLookZ);
+            worker.inputState = new InputState(camera[0], camera[1],
+                    clampStick(stickX), clampStick(stickY), a, b, z,
+                    combatMode, combatRequest);
         }
     }
 
@@ -231,7 +243,8 @@ public final class Sm64BridgeSession {
                 frame.colors,
                 frame.uvs,
                 frame.localPositions,
-                frame.partIds);
+                frame.partIds, frame.rightHand, frame.combatAnimation,
+                frame.combatTime, frame.combatWeight);
     }
 
     private static final class Worker implements Runnable {
@@ -302,7 +315,7 @@ public final class Sm64BridgeSession {
             inputState = new InputState(
                     input.cameraLookX, input.cameraLookZ,
                     input.stickX, input.stickY,
-                    down, input.buttonB, input.buttonZ);
+                    down, input.buttonB, input.buttonZ, input.combatMode, input.combatRequest);
         }
 
         void setInput(float cameraLookX, float cameraLookZ,
@@ -363,7 +376,9 @@ public final class Sm64BridgeSession {
                 publish(step(output, input, InputState.IDLE, protocolVersion));
                 publish(step(output, input, InputState.IDLE, protocolVersion));
                 ready = true;
-                if (protocolVersion >= 2) {
+                if (protocolVersion >= 3) {
+                    System.out.println("[SM64 Bridge] Persistent session READY (30 Hz + combat socket v3)");
+                } else if (protocolVersion >= 2) {
                     System.out.println("[SM64 Bridge] Persistent session READY (30 Hz + semantic geometry v2)");
                 } else {
                     System.out.println("[SM64 Bridge] Persistent session READY (30 Hz + geometry, protocol v1)");
@@ -450,6 +465,10 @@ public final class Sm64BridgeSession {
         output.write(controls.buttonA ? 1 : 0);
         output.write(controls.buttonB ? 1 : 0);
         output.write(controls.buttonZ ? 1 : 0);
+        if (protocolVersion >= 3) {
+            output.write(controls.combatMode);
+            writeIntLE(output, controls.combatRequest);
+        }
         output.flush();
 
         expectMagic(input, 'M', '6', '4', 'F');
@@ -480,9 +499,32 @@ public final class Sm64BridgeSession {
             localPositions = readFloatArray(input, triangleCount * 9);
             partIds = readByteArray(input, triangleCount);
         }
+        float[] rightHand = null;
+        int combatAnimation = 0;
+        float combatTime = 0, combatWeight = 0;
+        if (protocolVersion >= 3) {
+            int available = readIntLE(input);
+            float[] matrix = readFloatArray(input, 16);
+            combatAnimation = readIntLE(input);
+            combatTime = readFloatLE(input);
+            combatWeight = readFloatLE(input);
+            if (available < 0 || available > 1 || combatAnimation < 0 || combatAnimation > 1
+                    || !unitFloat(combatTime) || !unitFloat(combatWeight))
+                throw new IOException("invalid combat socket frame");
+            for (float value : matrix) {
+                if (Float.isNaN(value) || Float.isInfinite(value))
+                    throw new IOException("non-finite hand socket");
+            }
+            if (available == 1) rightHand = matrix;
+        }
         return new GeometryFrame(
                 protocolVersion, sequence, state, triangleCount,
-                positions, colors, uvs, localPositions, partIds);
+                positions, colors, uvs, localPositions, partIds,
+                rightHand, combatAnimation, combatTime, combatWeight);
+    }
+
+    private static boolean unitFloat(float value) {
+        return value >= 0.0F && value <= 1.0F;
     }
 
     private static float[] normalizeCamera(float x, float z) {
@@ -672,10 +714,19 @@ public final class Sm64BridgeSession {
         final boolean buttonA;
         final boolean buttonB;
         final boolean buttonZ;
+        final int combatMode;
+        final int combatRequest;
 
         InputState(float cameraLookX, float cameraLookZ,
                 float stickX, float stickY,
                 boolean buttonA, boolean buttonB, boolean buttonZ) {
+            this(cameraLookX, cameraLookZ, stickX, stickY, buttonA, buttonB, buttonZ, 0, 0);
+        }
+
+        InputState(float cameraLookX, float cameraLookZ, float stickX, float stickY,
+                boolean buttonA, boolean buttonB, boolean buttonZ, int combatMode, int combatRequest) {
+            this.combatMode = combatMode;
+            this.combatRequest = combatRequest;
             this.cameraLookX = cameraLookX;
             this.cameraLookZ = cameraLookZ;
             this.stickX = stickX;
@@ -720,10 +771,25 @@ public final class Sm64BridgeSession {
         final float[] uvs;
         final float[] localPositions;
         final byte[] partIds;
+        final float[] rightHand;
+        final int combatAnimation;
+        final float combatTime;
+        final float combatWeight;
 
         GeometryFrame(int protocolVersion, long sequence, NativeState state, int triangleCount,
                 float[] positions, float[] colors, float[] uvs,
                 float[] localPositions, byte[] partIds) {
+            this(protocolVersion, sequence, state, triangleCount, positions, colors, uvs,
+                    localPositions, partIds, null, 0, 0, 0);
+        }
+
+        GeometryFrame(int protocolVersion, long sequence, NativeState state, int triangleCount,
+                float[] positions, float[] colors, float[] uvs, float[] localPositions, byte[] partIds,
+                float[] rightHand, int combatAnimation, float combatTime, float combatWeight) {
+            this.rightHand = rightHand;
+            this.combatAnimation = combatAnimation;
+            this.combatTime = combatTime;
+            this.combatWeight = combatWeight;
             this.protocolVersion = protocolVersion;
             this.sequence = sequence;
             this.state = state;
@@ -783,3 +849,4 @@ public final class Sm64BridgeSession {
         }
     }
 }
+

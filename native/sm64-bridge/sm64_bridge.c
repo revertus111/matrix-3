@@ -12,9 +12,10 @@
 #endif
 
 #include "libsm64.h"
+#include "combat_overlay.h"
 
 #define BRIDGE_PROTOCOL_VERSION 1
-#define BINARY_PROTOCOL_VERSION 2
+#define BINARY_PROTOCOL_VERSION 3
 #define BINARY_CMD_STEP 1
 #define BINARY_CMD_QUIT 2
 #define SM64_ACT_IDLE 0x0C400201u
@@ -29,6 +30,9 @@ static float s_geo_uvs[6 * SM64_GEO_MAX_TRIANGLES];
 static float s_geo_local_positions[9 * SM64_GEO_MAX_TRIANGLES];
 static uint8_t s_geo_part_ids[SM64_GEO_MAX_TRIANGLES];
 
+static struct SM64MarioCombatPose s_combat_pose;
+static struct CombatOverlay s_combat;
+
 static struct SM64MarioGeometryBuffers s_geometry = {
     s_geo_positions,
     s_geo_normals,
@@ -36,7 +40,8 @@ static struct SM64MarioGeometryBuffers s_geometry = {
     s_geo_uvs,
     s_geo_local_positions,
     s_geo_part_ids,
-    0
+    0,
+    &s_combat_pose
 };
 
 /*
@@ -129,6 +134,8 @@ static int reset_mario(void)
     sm64_set_mario_forward_velocity(s_mario_id, 0.0f);
     sm64_set_mario_action(s_mario_id, SM64_ACT_IDLE);
     s_last_mario_action = SM64_ACT_IDLE;
+    memset(&s_combat, 0, sizeof(s_combat));
+    memset(&s_combat_pose, 0, sizeof(s_combat_pose));
     return 1;
 }
 
@@ -330,7 +337,12 @@ static int write_binary_frame(
             || !write_float_array(s_geometry.color, color_count)
             || !write_float_array(s_geometry.uv, uv_count)
             || !write_float_array(s_geometry.localPosition, position_count)
-            || !write_bytes(s_geometry.partId, (size_t) triangles)) {
+            || !write_bytes(s_geometry.partId, (size_t) triangles)
+            || !write_u32_le(s_combat_pose.rightHandAvailable)
+            || !write_float_array(s_combat_pose.rightHand, 16)
+            || !write_u32_le(s_combat.active ? 1u : 0u)
+            || !write_f32_le(s_combat.time)
+            || !write_f32_le(s_combat.weight)) {
         return 0;
     }
     return fflush(stdout) == 0;
@@ -345,7 +357,7 @@ static int run_binary_bridge(const uint8_t *texture)
     _setmode(_fileno(stdout), _O_BINARY);
 #endif
 
-    fprintf(stderr, "[SM64 Bridge] semantic-geometry-v2 + sleep-guard-v2 active\n");
+    fprintf(stderr, "[SM64 Bridge] combat-socket-v3 + semantic-geometry-v2 + sleep-guard-v2 active\n");
 
     if (!write_binary_handshake(texture)) {
         return 0;
@@ -368,6 +380,8 @@ static int run_binary_bridge(const uint8_t *texture)
             int button_a;
             int button_b;
             int button_z;
+            int combat_mode;
+            uint32_t combat_request;
 
             if (!read_f32_le(&cam_look_x)
                     || !read_f32_le(&cam_look_z)
@@ -382,6 +396,9 @@ static int run_binary_bridge(const uint8_t *texture)
                 return 0;
             }
 
+            combat_mode = fgetc(stdin);
+            if (combat_mode < 0 || combat_mode > 1 || !read_u32_le(&combat_request)) return 0;
+            combat_overlay_evaluate(&s_combat, combat_mode, combat_request, s_combat_pose.rotation);
             tick_mario(
                     cam_look_x, cam_look_z, stick_x, stick_y,
                     button_a, button_b, button_z, &state);
@@ -518,3 +535,4 @@ int main(int argc, char **argv)
     free(rom);
     return binary_ok ? 0 : 7;
 }
+
