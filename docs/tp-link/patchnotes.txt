@@ -50,3 +50,9 @@
 - Visual setup then failed after creating the isolated venv because the selected MSYS2 Python produced a POSIX-style `venv\bin\python.exe`, while the launcher assumed only Windows `venv\Scripts\python.exe`.
 - `probe-tp-link.ps1` now resolves the venv interpreter across `Scripts\python.exe`, `bin\python.exe`, and `bin\python3.exe`, reuses the already-created environment when valid, and reports a targeted error if none exists.
 - Status: asset extraction/model/BCK/socket stage is runtime VERIFIED; visible GIF rendering remains NEEDS TEST.
+
+2026-10-05 - Fix TP Link visual-proof dependency probe control flow
+- Second Bundle 1.2 runtime probe confirmed the venv interpreter-layout fix works and reached the pinned visual-tool dependency check.
+- The check intentionally imports NumPy/Pillow to decide whether installation is needed, but with global `$ErrorActionPreference = 'Stop'`, Python's expected missing-module traceback was promoted to a terminating PowerShell error before the install branch could execute.
+- Added a bounded `Test-VisualDependencies` helper that temporarily suppresses expected native stderr, returns success/failure from the Python exit code, installs NumPy/Pillow only when required, and verifies the imports again after installation.
+- Donor extraction/model/BCK/socket remains runtime VERIFIED; visible GIF rendering remains NEEDS TEST.
