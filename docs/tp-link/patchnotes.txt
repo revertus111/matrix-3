@@ -56,3 +56,11 @@
 - The check intentionally imports NumPy/Pillow to decide whether installation is needed, but with global `$ErrorActionPreference = 'Stop'`, Python's expected missing-module traceback was promoted to a terminating PowerShell error before the install branch could execute.
 - Added a bounded `Test-VisualDependencies` helper that temporarily suppresses expected native stderr, returns success/failure from the Python exit code, installs NumPy/Pillow only when required, and verifies the imports again after installation.
 - Donor extraction/model/BCK/socket remains runtime VERIFIED; visible GIF rendering remains NEEDS TEST.
+
+2026-10-05 - Replace MSYS2 Python visual venv with native CPython
+- Third Bundle 1.2 runtime probe reached dependency installation and proved the previous control-flow fix works.
+- The visual venv was still based on MSYS2/UCRT Python 3.14 (`venv\bin\python.exe`). PyPI could not use normal Windows binary wheels in that environment, so NumPy fell back to a source-build dependency chain and failed while attempting to build CMake/Ninja.
+- The donor/static probe may continue using the already-working MSYS2 Python, but the visual renderer now requires native Windows CPython 3.12 or 3.13 with a normal `win-*` platform tag.
+- Existing incompatible `bin`-layout visual venvs are deleted and recreated as native `Scripts\python.exe` venvs.
+- If native CPython 3.12/3.13 is not already available, `PROBE TP LINK` now automatically installs Python 3.13 for the current user through `winget` (`Python.Python.3.13`), then creates the isolated visual venv and installs NumPy/Pillow from wheels.
+- Status: native visual-toolchain fix is verified-static; authentic model/BCK/socket extraction remains runtime VERIFIED; visible GIF rendering remains NEEDS TEST.
