@@ -83,3 +83,20 @@
 - Remote players remain untouched and the local RuneScape appearance/equipment object is not nulled or rewritten.
 - Updated Zelda PROJECT/TESTLIST so the combined V2 runtime proof now expects Link to render alone, with the 830 body returning immediately on Ctrl+L exit or any fail-open condition.
 - Status: `verified-static`; in-game Link-only visibility and fail-open restoration remain `UNKNOWN` pending runtime acceptance.
+
+2026-10-05 - Link-only replacement runtime PASS + direct material V2 runtime FAIL
+- User runtime screenshot verified the fail-open local-player replacement activates: adult Link renders alone and the revision-830 local body is no longer drawn underneath him.
+- The same screenshot rejected the direct synthetic Matrix material path. Link's face remained nearly solid white and the body/tunic/limbs remained broad flat green/white/gray polygons, so actual OoT texture detail was not visibly applied.
+- User supplied the Native Builder output. It confirms root `Native Builder.bat`/BUILD OOT used the correct bridge folder and MSYS2 UCRT64 toolchain, CMake generated/built successfully, linked a fresh `build/dist/oot_bridge.exe`, and ended `OOT BUILD SUCCESS`. The texture failure is therefore not attributed to the launcher/build environment.
+- Status: suppression is runtime accepted. Protocol-V2 native build is runtime/build accepted. Synthetic Matrix runtime-material/direct-UV presentation is rejected.
+
+2026-10-05 - Stage OoT RGBA micro-bake V3 texture recovery
+- Replaced the active Link direct synthetic-material path with a CPU micro-bake that consumes the retained protocol-V2 texture catalog directly.
+- Textured OoT source triangles are subdivided up to 4x per edge (16 micro-faces), bounded automatically by Matrix's 65,535-vertex / signed-short-safe face limit.
+- Each micro-face barycentrically interpolates Link position, liboot normal, vertex RGB lighting/tint, and UV; the local-ROM RGBA texture is bilinearly sampled with repeat/mirror/clamp addressing.
+- Sampled texture RGB is multiplied by interpolated liboot vertex RGB per liboot's documented host-render rule, then baked into normal Matrix face colours. No ROM-derived texture bytes are persisted to the cache or repository.
+- Generated vertices are shared by transformed position + quantized liboot normal so Matrix can smooth intended surfaces while retaining hard-normal boundaries. Untextured/missing-texture faces remain safe vertex-colour fallback.
+- Added renderer diagnostics: source vs generated triangle counts, unique vertices, retained texture-catalog size, textured-source count, subdivision count, and `material=oot-rgba-micro-v3`.
+- Added `-Dmatrix3.oot.textureSubdivisions=0..4` diagnostic override; default is 4.
+- This recovery patch does not change the V2 native protocol. Because the user's latest Native Builder run already produced a successful protocol-V2 sidecar, the next test is Java-only: pull, Eclipse refresh/clean/run, Ctrl+L.
+- Status: V3 is `verified-static`; Eclipse compile/runtime texture orientation and visual fidelity remain `UNKNOWN` pending the next user test.
