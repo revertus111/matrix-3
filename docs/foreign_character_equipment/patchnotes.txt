@@ -42,3 +42,9 @@
 - Git-for-Windows runtime reported the repaired patch parsed but failed to match the first pinned-source hunks, consistent with CRLF worktree normalization.
 - Bootstrap now forces the private `.deps/libsm64` checkout to `core.autocrlf=false` / LF, force-checks out and cleans the pinned dependency, then applies the semantic patch with whitespace-insensitive context matching.
 - This changes dependency preparation only; semantic ids, protocol-v2 payload, fitting, and helmet coverage behavior are unchanged.
+
+2026-10-04 - V7 semantic FACE unit correction
+- Runtime logs proved the first semantic fit compared raw display-list-local FACE width (`538`) directly against Matrix helmet bounds while the known posed Mario head span was only about `137`, producing 4x-8x helmet fits.
+- `MarioSemanticGeometry` now derives the uniform display-list-local -> posed-native scale from corresponding FACE triangle edge-length ratios. Rotation/translation cancel, so the median ratio is pose-independent for the rigid head transform.
+- Semantic FACE W/H/D are now converted through that native head scale and the established Matrix Mario model scale before adapter/auto-fit consumption.
+- Expected acceptance: semantic FACE width should fall into the same Matrix-space neighborhood as the established ~137-unit head span rather than hundreds of raw N64 source units.
