@@ -11,7 +11,7 @@ $alanmDir = Join-Path $rawDir 'AlAnm'
 $dtk = Join-Path $workspace 'build\tools\dtk.exe'
 $probeScript = Join-Path $PSScriptRoot 'tp-link-probe.py'
 $visualScript = Join-Path $PSScriptRoot 'tp-link-visual-proof.py'
-$discDir = Join-Path $workspace "$tpTarget"
+$discDir = Join-Path $workspace "orig\$tpTarget"
 $supportedDiscExtensions = @('.iso', '.gcm', '.rvz', '.wia', '.wbfs', '.ciso', '.nfs', '.gcz', '.tgc')
 $msys2Python = 'C:\msys64\ucrt64\bin\python.exe'
 
