@@ -5,6 +5,13 @@ $tpPin = 'c8fa8c9e2aab72cf4e5db0e5d1c84a9ea6ee6eb0'
 $tpTarget = 'GZ2E01'
 $workspace = Join-Path $env:LOCALAPPDATA 'Matrix3\TPDecomp'
 $discTarget = Join-Path $workspace "orig\$tpTarget"
+$nativeDir = Split-Path $PSScriptRoot -Parent
+$msys2Shell = $env:MATRIX3_MSYS2_SHELL
+if (-not $msys2Shell) {
+    $msys2Shell = 'C:\msys64\msys2_shell.cmd'
+}
+$msys2Root = Split-Path $msys2Shell -Parent
+$msys2UcrtBin = Join-Path $msys2Root 'ucrt64\bin'
 
 function Invoke-External {
     param(
@@ -34,66 +41,159 @@ function Invoke-External {
     }
 }
 
-function Resolve-Python {
-    $command = Get-Command python.exe -ErrorAction SilentlyContinue
-    if ($command) {
-        return @{ Exe = $command.Source; Prefix = @() }
-    }
+function Test-PythonSpec {
+    param([Parameter(Mandatory = $true)][hashtable]$Spec)
 
-    $command = Get-Command py.exe -ErrorAction SilentlyContinue
-    if ($command) {
-        return @{ Exe = $command.Source; Prefix = @('-3') }
+    try {
+        & $Spec.Exe @($Spec.Prefix) --version *> $null
+        return ($LASTEXITCODE -eq 0)
     }
-
-    throw 'Python 3 was not found. Install Python 3 and make it available to Windows, then run this button again.'
+    catch {
+        return $false
+    }
 }
 
-$python = Resolve-Python
+function Find-Python {
+    $py = Get-Command py.exe -ErrorAction SilentlyContinue
+    if ($py) {
+        $spec = @{ Exe = $py.Source; Prefix = @('-3') }
+        if (Test-PythonSpec -Spec $spec) {
+            return $spec
+        }
+    }
 
-function Invoke-Python {
-    param(
-        [string[]]$Arguments = @(),
-        [string]$WorkingDirectory = $null
+    $python = Get-Command python.exe -ErrorAction SilentlyContinue
+    if ($python -and $python.Source -notmatch '\\WindowsApps\\python\.exe$') {
+        $spec = @{ Exe = $python.Source; Prefix = @() }
+        if (Test-PythonSpec -Spec $spec) {
+            return $spec
+        }
+    }
+
+    $candidates = @(
+        (Join-Path $msys2UcrtBin 'python.exe'),
+        (Join-Path $msys2Root 'usr\bin\python.exe')
     )
 
-    $allArgs = @($python.Prefix) + @($Arguments)
-    Invoke-External -FilePath $python.Exe -Arguments $allArgs -WorkingDirectory $WorkingDirectory
-}
-
-function Resolve-Ninja {
-    $command = Get-Command ninja.exe -ErrorAction SilentlyContinue
-    if ($command) {
-        return $command.Source
-    }
-
-    Write-Host 'Ninja was not found. Installing the documented user-local Ninja package...' -ForegroundColor Yellow
-    Invoke-Python -Arguments @('-m', 'pip', 'install', '--user', 'ninja')
-
-    $command = Get-Command ninja.exe -ErrorAction SilentlyContinue
-    if ($command) {
-        return $command.Source
-    }
-
-    $userBaseLines = & $python.Exe @($python.Prefix) -m site --user-base
-    if ($LASTEXITCODE -eq 0) {
-        $userBase = [string]($userBaseLines | Select-Object -Last 1)
-        if ($userBase -and (Test-Path $userBase)) {
-            $candidate = Get-ChildItem -Path $userBase -Filter 'ninja.exe' -File -Recurse -ErrorAction SilentlyContinue |
-                Select-Object -First 1
-            if ($candidate) {
-                return $candidate.FullName
+    foreach ($candidate in $candidates) {
+        if (Test-Path $candidate) {
+            $spec = @{ Exe = $candidate; Prefix = @() }
+            if (Test-PythonSpec -Spec $spec) {
+                return $spec
             }
         }
     }
 
-    throw 'Ninja could not be located after installation. Send this build window log; do not start manually extracting the disc.'
+    return $null
+}
+
+function Find-Ninja {
+    $ninja = Get-Command ninja.exe -ErrorAction SilentlyContinue
+    if ($ninja) {
+        return $ninja.Source
+    }
+
+    $candidate = Join-Path $msys2UcrtBin 'ninja.exe'
+    if (Test-Path $candidate) {
+        return $candidate
+    }
+
+    return $null
+}
+
+function Ensure-Msys2BootstrapTools {
+    if (-not (Test-Path $msys2Shell)) {
+        throw "Python 3 and/or Ninja are missing, and the existing Matrix3 MSYS2 shell was not found at '$msys2Shell'. Send this log; do not install random tools manually."
+    }
+
+    Write-Host 'Python 3 / Ninja are missing from native Windows PATH.' -ForegroundColor Yellow
+    Write-Host 'Installing the required UCRT64 Python + Ninja packages through the existing Matrix3 MSYS2 toolchain...' -ForegroundColor Cyan
+
+    & $msys2Shell -defterm -here -no-start -ucrt64 -c "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-python mingw-w64-ucrt-x86_64-ninja"
+    if ($LASTEXITCODE -ne 0) {
+        throw "MSYS2 could not install Python/Ninja (exit $LASTEXITCODE). Send this build window log."
+    }
+}
+
+function Resolve-Toolchain {
+    $pythonSpec = Find-Python
+    $ninjaPath = Find-Ninja
+
+    if (-not $pythonSpec -or -not $ninjaPath) {
+        Ensure-Msys2BootstrapTools
+        $pythonSpec = Find-Python
+        $ninjaPath = Find-Ninja
+    }
+
+    if (-not $pythonSpec) {
+        throw 'A real Python 3 executable still could not be found after the automatic MSYS2 setup. The Microsoft Store app-execution alias is intentionally ignored.'
+    }
+
+    if (-not $ninjaPath) {
+        throw 'Ninja still could not be found after the automatic MSYS2 setup.'
+    }
+
+    return @{ Python = $pythonSpec; Ninja = $ninjaPath }
+}
+
+function Invoke-Python {
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$PythonSpec,
+        [string[]]$Arguments = @(),
+        [string]$WorkingDirectory = $null
+    )
+
+    $allArgs = @($PythonSpec.Prefix) + @($Arguments)
+    Invoke-External -FilePath $PythonSpec.Exe -Arguments $allArgs -WorkingDirectory $WorkingDirectory
+}
+
+function Test-IsNkitV1Name {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    return [System.IO.Path]::GetFileName($Path).ToLowerInvariant().EndsWith('.nkit.iso')
+}
+
+function Find-LocalTpDisc {
+    if (-not (Test-Path $nativeDir)) {
+        return $null
+    }
+
+    $extensions = @('.iso', '.gcm', '.rvz', '.wia', '.wbfs', '.ciso', '.nfs', '.gcz', '.tgc')
+    $all = @(Get-ChildItem -LiteralPath $nativeDir -File -ErrorAction SilentlyContinue | Where-Object {
+        $extensions -contains $_.Extension.ToLowerInvariant()
+    })
+
+    if ($all.Count -eq 0) {
+        return $null
+    }
+
+    $named = @($all | Where-Object { $_.Name -match '(?i)twilight\s*princess|zelda.*twilight|GZ2E01' })
+    $pool = if ($named.Count -gt 0) { $named } else { $all }
+    $nonNkit = @($pool | Where-Object { -not (Test-IsNkitV1Name -Path $_.FullName) })
+
+    if ($nonNkit.Count -eq 1) {
+        return $nonNkit[0].FullName
+    }
+
+    if ($nonNkit.Count -eq 0 -and $pool.Count -eq 1) {
+        return $pool[0].FullName
+    }
+
+    return $null
 }
 
 function Select-TpDisc {
+    $localDisc = Find-LocalTpDisc
+    if ($localDisc) {
+        Write-Host 'Found the Twilight Princess image beside the Matrix3 native tools:' -ForegroundColor Green
+        Write-Host "  $localDisc"
+        return $localDisc
+    }
+
     Add-Type -AssemblyName System.Windows.Forms
 
     $dialog = New-Object System.Windows.Forms.OpenFileDialog
     $dialog.Title = 'Select Twilight Princess GameCube USA (GZ2E01)'
+    $dialog.InitialDirectory = $nativeDir
     $dialog.Filter = 'Supported disc images (*.iso;*.gcm;*.rvz;*.wia;*.wbfs;*.ciso;*.nfs;*.gcz;*.tgc)|*.iso;*.gcm;*.rvz;*.wia;*.wbfs;*.ciso;*.nfs;*.gcz;*.tgc|All files (*.*)|*.*'
     $dialog.Multiselect = $false
     $dialog.CheckFileExists = $true
@@ -103,6 +203,23 @@ function Select-TpDisc {
     }
 
     return $dialog.FileName
+}
+
+function Assert-SupportedTpImage {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if (Test-IsNkitV1Name -Path $Path) {
+        throw @"
+Found your Twilight Princess file automatically, but it is an NKit v1 image:
+  $Path
+
+zeldaret/tp does not document .nkit.iso as a supported donor format, and converting it with Dolphin would still leave it as NKit.
+Use a normal GZ2E01 ISO/GCM, RVZ, WIA, WBFS, CISO, NFS, GCZ or TGC image instead.
+You can place the replacement directly in:
+  $nativeDir
+Then click PREP + BUILD TP LINK again; the builder will find it automatically.
+"@
+    }
 }
 
 function Assert-RawDiscId {
@@ -133,15 +250,29 @@ function Assert-RawDiscId {
     Write-Host "Disc identity VERIFIED: $gameId (GameCube North America)." -ForegroundColor Green
 }
 
+$discPath = $null
+if (-not (Test-Path $discTarget)) {
+    $discPath = Select-TpDisc
+    Assert-SupportedTpImage -Path $discPath
+    Assert-RawDiscId -Path $discPath
+}
+else {
+    Write-Host 'Reusing the already prepared local GZ2E01 image.' -ForegroundColor Green
+}
+
 $git = Get-Command git.exe -ErrorAction SilentlyContinue
 if (-not $git) {
     throw 'Git was not found. Install Git for Windows, then run this button again.'
 }
 
-$ninjaExe = Resolve-Ninja
+$toolchain = Resolve-Toolchain
+$python = $toolchain.Python
+$ninjaExe = $toolchain.Ninja
 
 Write-Host "TP source pin: $tpPin"
 Write-Host "Local donor workspace: $workspace"
+Write-Host "Python: $($python.Exe)"
+Write-Host "Ninja: $ninjaExe"
 Write-Host ''
 
 $workspaceParent = Split-Path $workspace -Parent
@@ -167,9 +298,6 @@ if ($LASTEXITCODE -ne 0) {
 Invoke-External -FilePath $git.Source -Arguments @('-C', $workspace, 'checkout', '--detach', $tpPin)
 
 if (-not (Test-Path $discTarget)) {
-    $discPath = Select-TpDisc
-    Assert-RawDiscId -Path $discPath
-
     $origDir = Split-Path $discTarget -Parent
     if (-not (Test-Path $origDir)) {
         New-Item -ItemType Directory -Path $origDir -Force | Out-Null
@@ -185,13 +313,10 @@ if (-not (Test-Path $discTarget)) {
         Copy-Item -LiteralPath $discPath -Destination $discTarget -Force
     }
 }
-else {
-    Write-Host 'Reusing the already prepared local GZ2E01 image.' -ForegroundColor Green
-}
 
 Write-Host ''
 Write-Host 'Configuring the pinned Twilight Princess decomp...' -ForegroundColor Cyan
-Invoke-Python -Arguments @('configure.py') -WorkingDirectory $workspace
+Invoke-Python -PythonSpec $python -Arguments @('configure.py') -WorkingDirectory $workspace
 
 Write-Host ''
 Write-Host 'Building GZ2E01...' -ForegroundColor Cyan
