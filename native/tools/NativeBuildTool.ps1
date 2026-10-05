@@ -6,11 +6,12 @@ Add-Type -AssemblyName System.Drawing
 $scriptRoot = $PSScriptRoot
 $marioBuilder = Join-Path $scriptRoot 'build-mario.cmd'
 $ootBuilder = Join-Path $scriptRoot 'build-oot.cmd'
+$tpBuilder = Join-Path $scriptRoot 'build-tp.cmd'
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'Matrix3 Native Builder'
 $form.StartPosition = 'CenterScreen'
-$form.ClientSize = New-Object System.Drawing.Size(430, 255)
+$form.ClientSize = New-Object System.Drawing.Size(630, 255)
 $form.FormBorderStyle = 'FixedDialog'
 $form.MaximizeBox = $false
 $form.MinimizeBox = $true
@@ -23,7 +24,7 @@ $title.Location = New-Object System.Drawing.Point(22, 18)
 $form.Controls.Add($title)
 
 $subtitle = New-Object System.Windows.Forms.Label
-$subtitle.Text = 'No cd commands. No guessing which bridge folder you are in.'
+$subtitle.Text = 'No cd commands. No guessing which bridge or donor folder you are in.'
 $subtitle.AutoSize = $true
 $subtitle.Location = New-Object System.Drawing.Point(25, 55)
 $form.Controls.Add($subtitle)
@@ -42,17 +43,24 @@ $ootButton.Size = New-Object System.Drawing.Size(180, 58)
 $ootButton.Location = New-Object System.Drawing.Point(225, 91)
 $form.Controls.Add($ootButton)
 
+$tpButton = New-Object System.Windows.Forms.Button
+$tpButton.Text = 'PREP + BUILD TP LINK'
+$tpButton.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Bold)
+$tpButton.Size = New-Object System.Drawing.Size(180, 58)
+$tpButton.Location = New-Object System.Drawing.Point(425, 91)
+$form.Controls.Add($tpButton)
+
 $status = New-Object System.Windows.Forms.Label
 $status.Text = 'Pick a build. A build window will stay open with SUCCESS or FAILED.'
 $status.AutoSize = $false
-$status.Size = New-Object System.Drawing.Size(380, 42)
+$status.Size = New-Object System.Drawing.Size(580, 42)
 $status.Location = New-Object System.Drawing.Point(25, 165)
 $form.Controls.Add($status)
 
 $closeButton = New-Object System.Windows.Forms.Button
 $closeButton.Text = 'Close'
 $closeButton.Size = New-Object System.Drawing.Size(90, 30)
-$closeButton.Location = New-Object System.Drawing.Point(315, 211)
+$closeButton.Location = New-Object System.Drawing.Point(515, 211)
 $form.Controls.Add($closeButton)
 
 function Start-Builder([string]$Path, [string]$Label) {
@@ -82,6 +90,7 @@ function Start-Builder([string]$Path, [string]$Label) {
 
 $marioButton.Add_Click({ Start-Builder $marioBuilder 'Mario' })
 $ootButton.Add_Click({ Start-Builder $ootBuilder 'OoT' })
+$tpButton.Add_Click({ Start-Builder $tpBuilder 'TP Link' })
 $closeButton.Add_Click({ $form.Close() })
 
 [void]$form.ShowDialog()
