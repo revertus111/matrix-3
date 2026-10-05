@@ -1,6 +1,6 @@
 # Mario custom combat proof
 
-Status: RUNTIME PROOF ACCEPTED / V3 VISUAL TUNING PENDING. Approved by the 2026-10-04 SAP AAA handoff.
+Status: RUNTIME PROOF ACCEPTED / V4 VISUAL TUNING PENDING. Approved by the 2026-10-04 SAP AAA handoff.
 Primary target: MARIO_COMBAT_1H_SLASH (wire family 1) is runtime-VERIFIED 2026-10-04. Stab remains deferred until explicitly selected as the next scope.
 
 ## Source-established ownership (verified-static)
@@ -26,7 +26,11 @@ Torso/arm/forearm display-list identity guards cover normal, metal and LOD varia
 
 `combat_overlay.h` owns the keyframed slash. V1 used 24 ticks (0.8 seconds) and was runtime-reported as a slow punch. V2 reduced that to 16 ticks (~0.53 seconds) and added more forearm/wrist motion, but runtime feedback still classified the result as a custom punch rather than a sword cut.
 
-V3 corrects the pose using the established local geometry rather than another arbitrary axis mix. The right-hand node translation is `(60,0,0)`, so the articulated right-arm chain advances along local +X. Rotation around local X therefore primarily rolls/twists that chain, while local Y/Z produce visible hand displacement arcs. V2 over-weighted X/vertical motion and under-weighted Y sweep. V3 uses a large local-Y shoulder/forearm sweep for the cross-body cut, Z for lift/drop, and X mainly for forearm/wrist blade roll. Duration is 14 ticks (~0.47 seconds). These V3 artistic angles remain HYPOTHESIS until runtime-accepted.
+V3 used a large local-Y shoulder/forearm sweep based on the established +X arm-chain geometry. Runtime video then showed the custom pose itself folding Mario's upper body forward and collapsing the weapon hand toward the floor. The result was visually rejected.
+
+Source follow-up confirms custom weapon mode already returns `active` from `MarioWeaponCombat.updateInput(...)` while the v3/socket/model readiness gate is true, and `MarioJumpController` forwards native B as `false` whenever that active flag is true. The V3 motion therefore was not the stock libsm64 punch leaking through; it was the additive pose values themselves.
+
+V4 deliberately simplifies the animation rather than stacking more corrections: torso offsets remain zero for the entire attack, shoulder motion owns the main arc, forearm motion is restrained, and the wrist only adds small blade roll. Duration is 15 ticks (~0.50 seconds). V4 artistic angles remain HYPOTHESIS until runtime-accepted.
 
 Smoothstep segments begin and end with zero offsets. Native request numbers latch short Java attack edges; held requests cannot replay. Requests while the slash is active are consumed without restart or queuing. Disabling mode cancels the overlay.
 
@@ -53,7 +57,9 @@ Grip origin from worn-model bounds (85% down Y), initial length and artistic sla
 - Runtime 2026-10-04: pressing F triggers the custom native MARIO_COMBAT_1H_SLASH animation. `VERIFIED`.
 - Runtime 2026-10-04: V1 works but reads as a slow punch. `VERIFIED` visual feedback.
 - Runtime 2026-10-05: after rebuilding the V2 profile successfully through the verified Native Builder, the attack still reads as a custom punch. `VERIFIED` visual rejection of V2.
-- Source follow-up for V3: hand translation `(60,0,0)` plus the established XYZ composition proves the arm chain is +X-aligned; dominant local-Y sweep is therefore the correct axis family for a horizontal cross-body hand arc. `verified-static`.
+- Runtime video 2026-10-05: V3 visibly folds Mario forward and drives the weapon hand down beside the body; V3 is visually rejected. `VERIFIED`.
+- Source follow-up 2026-10-05: custom weapon combat suppresses native B while active, so V3's bad motion is attributable to the custom additive pose rather than stock punch input. `verified-static`.
+- V4 zeroes torso offsets and reduces the attack to shoulder/forearm/wrist motion only. Runtime visual acceptance is pending.
 - Moving-slash leg continuity, held-F no-replay, freeze/unfreeze, unequip fallback, Ctrl+M/relog cleanup, remote-player isolation, NPC damage/XP integration and sustained stability remain pending unless separately runtime-confirmed.
 
 ## Optional repeatable checks
