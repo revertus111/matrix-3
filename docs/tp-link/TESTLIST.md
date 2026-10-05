@@ -28,17 +28,21 @@ Use the shortest path only. Do not manually extract the whole disc.
 8. Expected setup behavior:
    - donor checkout lives under `%LOCALAPPDATA%\Matrix3\TPDecomp`, not inside the Matrix3 repository;
    - source is detached at `c8fa8c9e2aab72cf4e5db0e5d1c84a9ea6ee6eb0`;
-   - the selected image is hard-linked when possible, otherwise copied once;
+   - `orig\GZ2E01` is a directory, matching decomp-toolkit's `object_base` contract;
+   - the selected image keeps its filename/extension inside `orig\GZ2E01` and is hard-linked when possible, otherwise copied once;
+   - if a previous builder version left `orig\GZ2E01` as a file, the new builder removes only that local workspace link/copy and repairs the layout automatically;
    - `configure.py` completes;
    - `ninja` completes;
    - window ends with `TP LINK DONOR BUILD SUCCESS`.
 9. Close and click `PREP + BUILD TP LINK` a second time.
 10. Expected: it reuses the prepared local source/image and does not ask the user to locate the disc again.
 
-## Known first-run evidence
+## Known runtime evidence
 
-- First runtime attempt failed before disc selection because Windows resolved `python.exe` to the Microsoft Store alias and returned exit code `9009` while Ninja was missing.
-- The user's current file in `native` is named `Legend of Zelda, The - Twilight Princess (USA).nkit.iso`; this is a known unsupported-input blocker and should be replaced with a supported `GZ2E01` image before the next build attempt.
+- First runtime attempt failed before disc selection because Windows resolved `python.exe` to the Microsoft Store alias and returned exit code `9009` while Ninja was missing. Builder recovery is patched.
+- NKit v1 input was correctly rejected early on the next attempt.
+- A supported `.ciso` was then found automatically; Python, Ninja, donor clone and pinned checkout all succeeded.
+- That attempt failed at `dtk dol split` with `orig/GZ2E01/files/RELS.arc not found` because the builder had incorrectly made `orig/GZ2E01` itself the disc-image file. decomp-toolkit treats the configured `object_base` as a directory and searches for disc images inside it. The builder now preserves the donor filename/extension inside that directory and repairs the old local layout on rerun.
 
 ## Failure evidence
 
