@@ -8,8 +8,13 @@ import java.util.Map;
  * Matrix-native presentation adapter for liboot's animated adult-Link geometry.
  *
  * Protocol V2 carries OoT positions, normals, colours, UVs, per-triangle texture
- * indices, and local-ROM texture updates. Textures are registered at runtime in
- * Matrix's existing material path; no OoT texture bytes are written to the cache.
+ * indices, and local-ROM RGBA texture updates. The first V2 attempt tried to
+ * register those pixels as synthetic Matrix runtime materials; runtime proved
+ * that path fell back to flat vertex colours. This renderer therefore uses a
+ * Matrix-native CPU micro-bake: textured OoT triangles are subdivided, the real
+ * local-ROM RGBA texture is sampled at each micro-face, multiplied by liboot's
+ * vertex lighting/tint, and emitted as normal Matrix face colours. No OoT texture
+ * bytes are written to the cache or repository.
  */
 public final class LinkVisualRenderer {
 
@@ -19,9 +24,12 @@ public final class LinkVisualRenderer {
             BASE_MODEL_FLAGS | TRANSFORM_FLAGS | 0x1f01f | 0x80000;
     private static final int FINAL_MODEL_FLAGS = BASE_MODEL_FLAGS | TRANSFORM_FLAGS;
     private static final int MAX_MATRIX_VERTICES = 65535;
-    private static final int DIRECT_UV_TEXTURE_INDEX = 32766;
+    private static final int MAX_MATRIX_TRIANGLES = MAX_MATRIX_VERTICES / 3;
+    private static final int DEFAULT_TEXTURE_SUBDIVISIONS = 4;
+    private static final int MAX_TEXTURE_SUBDIVISIONS = 4;
     private static final long MAX_FRAME_AGE_NANOS = 500000000L;
     private static final float NORMAL_QUANTIZE = 1024.0F;
+    private static final int TEXTURE_SUBDIVISIONS = resolveTextureSubdivisions();
 
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
@@ -36,7 +44,10 @@ public final class LinkVisualRenderer {
     private static long lastLoggedSequence = -1L;
     private static long lastFailedSequence = -1L;
     private static int cachedUniqueVertices;
-    private static int cachedTexturedFaces;
+    private static int cachedOutputTriangles;
+    private static int cachedTexturedSourceFaces;
+    private static int cachedTextureCatalogSize;
+    private static int cachedTextureSubdivisions;
 
     private LinkVisualRenderer() {
     }
@@ -69,8 +80,6 @@ public final class LinkVisualRenderer {
             clearReplacementReadiness();
             return;
         }
-
-        LinkTextureRegistry.prepare(renderer, frame);
 
         if (cachedRenderer != renderer
                 || cachedSequence != frame.sequence
@@ -110,13 +119,22 @@ public final class LinkVisualRenderer {
                 lastLoggedSequence = frame.sequence;
                 System.out.println("[OoT Visual] Native ADULT Link -> Matrix Model ACTIVE"
                         + " triangles=" + frame.triangleCount
+                        + " matrixTriangles=" + cachedOutputTriangles
                         + " uniqueVerts=" + cachedUniqueVertices
-                        + " texturedFaces=" + cachedTexturedFaces
+                        + " texturedSource=" + cachedTexturedSourceFaces
+                        + " textureCatalog=" + cachedTextureCatalogSize
+                        + " textureSubdivisions=" + cachedTextureSubdivisions
                         + " anim=" + frame.animId
                         + " action=" + frame.action
                         + " scale=" + fit.scale
                         + " fit=" + (fit.forcedScale ? "forced" : fit.autoFit ? "830-auto" : "fallback")
-                        + " material=oot-uv-texture-v2");
+                        + " material=oot-rgba-micro-v3");
+                if (cachedTextureCatalogSize <= 0 || cachedTexturedSourceFaces <= 0) {
+                    System.err.println("[OoT Visual] OoT RGBA bake has no usable textured faces yet"
+                            + " textureCatalog=" + cachedTextureCatalogSize
+                            + " texturedSource=" + cachedTexturedSourceFaces
+                            + "; vertex-colour fallback is active");
+                }
             }
         } catch (RuntimeException ex) {
             clearReplacementReadiness();
@@ -161,7 +179,10 @@ public final class LinkVisualRenderer {
         cachedFitRevision = -1L;
         cachedModel = null;
         cachedUniqueVertices = 0;
-        cachedTexturedFaces = 0;
+        cachedOutputTriangles = 0;
+        cachedTexturedSourceFaces = 0;
+        cachedTextureCatalogSize = 0;
+        cachedTextureSubdivisions = 0;
         lastRenderedCycle = Integer.MIN_VALUE;
         lastLoggedSequence = -1L;
         lastFailedSequence = -1L;
@@ -188,103 +209,83 @@ public final class LinkVisualRenderer {
 
     private static Model buildModel(Class106 renderer, OotBridgeSession.LinkFrame frame,
             LinkCharacterFit.Profile fit) {
-        int triangles = frame.triangleCount;
-        int maxVertices = triangles * 3;
-        if (triangles <= 0 || maxVertices > MAX_MATRIX_VERTICES) {
+        TextureCatalog textures = new TextureCatalog(frame.textureUpdates);
+        int subdivisions = chooseTextureSubdivisions(frame, textures);
+        int outputTriangles = countOutputTriangles(frame, textures, subdivisions);
+        int vertexCapacity = outputTriangles * 3;
+        if (outputTriangles <= 0 || outputTriangles > MAX_MATRIX_TRIANGLES
+                || vertexCapacity > MAX_MATRIX_VERTICES) {
             return null;
         }
 
-        Class159 raw = new Class159(maxVertices, triangles, 0);
-        raw.anInt1778 = triangles;
-        raw.anIntArray1774 = new int[maxVertices];
-        raw.aFloatArray1771 = new float[maxVertices];
-        raw.aFloatArray1784 = new float[maxVertices];
-        raw.uvCoordVertexA = new byte[triangles];
-        raw.uvCoordVertexB = new byte[triangles];
-        raw.uvCoordVertexC = new byte[triangles];
-
+        Class159 raw = new Class159(vertexCapacity, outputTriangles, 0);
+        raw.anInt1791 = 0;
+        raw.anInt1775 = 0;
+        raw.anInt1778 = outputTriangles;
         Arrays.fill(raw.anIntArray1813, -1);
         Arrays.fill(raw.anIntArray1780, -1);
         Arrays.fill(raw.faceTextures, (short) -1);
         Arrays.fill(raw.faceTextureIndexes, (short) -1);
 
-        Map<VertexKey, Integer> sharedVertices = new HashMap<VertexKey, Integer>(maxVertices * 2);
-        int uniqueVertices = 0;
-        int texturedFaces = 0;
+        VertexPool vertices = new VertexPool(raw, vertexCapacity);
+        int outputTriangle = 0;
+        int texturedSourceFaces = 0;
 
-        for (int triangle = 0; triangle < triangles; triangle++) {
-            int positionBase = triangle * 9;
-            int colorBase = triangle * 9;
-            int uvBase = triangle * 6;
-            int ootTexture = frame.triangleTextures[triangle];
-            int materialId = ootTexture == 0xffff
-                    ? -1
-                    : LinkTextureRegistry.materialIdFor(ootTexture);
-            int[] faceVertex = new int[3];
-            int sumR = 0;
-            int sumG = 0;
-            int sumB = 0;
-
-            for (int vertex = 0; vertex < 3; vertex++) {
-                int p = positionBase + vertex * 3;
-                int c = colorBase + vertex * 3;
-                int uv = uvBase + vertex * 2;
-
-                int x = Math.round((frame.positions[p] - frame.x) * fit.scale);
-                int y = Math.round(fit.toMatrixY(frame.positions[p + 1], frame.y));
-                int z = Math.round((frame.positions[p + 2] - frame.z) * fit.scale);
-                int nx = quantizeNormal(frame.normals[p]);
-                int ny = quantizeNormal(-frame.normals[p + 1]);
-                int nz = quantizeNormal(frame.normals[p + 2]);
-                float u = finiteOrZero(frame.uvs[uv]);
-                float v = finiteOrZero(frame.uvs[uv + 1]);
-
-                VertexKey key = new VertexKey(
-                        x, y, z, nx, ny, nz,
-                        Float.floatToIntBits(u), Float.floatToIntBits(v),
-                        materialId);
-                Integer existing = sharedVertices.get(key);
-                int rawVertex;
-                if (existing != null) {
-                    rawVertex = existing.intValue();
-                } else {
-                    rawVertex = uniqueVertices++;
-                    if (rawVertex >= MAX_MATRIX_VERTICES) {
-                        return null;
-                    }
-                    sharedVertices.put(key, Integer.valueOf(rawVertex));
-                    raw.anIntArray1782[rawVertex] = x;
-                    raw.anIntArray1777[rawVertex] = y;
-                    raw.anIntArray1797[rawVertex] = z;
-                    raw.anIntArray1774[rawVertex] = rawVertex;
-                    raw.aFloatArray1771[rawVertex] = u;
-                    raw.aFloatArray1784[rawVertex] = v;
-                }
-                faceVertex[vertex] = rawVertex;
-
-                sumR += unitColor(frame.colors[c]);
-                sumG += unitColor(frame.colors[c + 1]);
-                sumB += unitColor(frame.colors[c + 2]);
+        for (int sourceTriangle = 0; sourceTriangle < frame.triangleCount; sourceTriangle++) {
+            OotBridgeSession.TextureUpdate texture =
+                    textureForTriangle(frame, textures, sourceTriangle);
+            boolean textured = subdivisions > 0 && texture != null
+                    && hasFiniteUvs(frame, sourceTriangle);
+            if (!textured) {
+                outputTriangle = emitMicroTriangle(
+                        raw, vertices, outputTriangle,
+                        frame, fit, sourceTriangle, null,
+                        0.0F, 0.0F,
+                        1.0F, 0.0F,
+                        0.0F, 1.0F);
+                continue;
             }
 
-            // Negating model Y mirrors one axis; swap B/C to preserve winding.
-            raw.aShortArray1786[triangle] = (short) faceVertex[0];
-            raw.aShortArray1787[triangle] = (short) faceVertex[2];
-            raw.aShortArray1789[triangle] = (short) faceVertex[1];
-            raw.faceColours[triangle] = rgbToRsHsl(
-                    sumR / 3, sumG / 3, sumB / 3);
+            texturedSourceFaces++;
+            float step = 1.0F / subdivisions;
+            for (int b = 0; b < subdivisions; b++) {
+                for (int c = 0; c < subdivisions - b; c++) {
+                    float b0 = b * step;
+                    float c0 = c * step;
+                    float b1 = (b + 1) * step;
+                    float c1 = c * step;
+                    float b2 = b * step;
+                    float c2 = (c + 1) * step;
+                    outputTriangle = emitMicroTriangle(
+                            raw, vertices, outputTriangle,
+                            frame, fit, sourceTriangle, texture,
+                            b0, c0, b1, c1, b2, c2);
 
-            if (materialId >= 0) {
-                raw.faceTextures[triangle] = (short) materialId;
-                raw.faceTextureIndexes[triangle] = (short) DIRECT_UV_TEXTURE_INDEX;
-                texturedFaces++;
+                    if (b + c + 1 < subdivisions) {
+                        float b3 = (b + 1) * step;
+                        float c3 = (c + 1) * step;
+                        outputTriangle = emitMicroTriangle(
+                                raw, vertices, outputTriangle,
+                                frame, fit, sourceTriangle, texture,
+                                b1, c1, b3, c3, b2, c2);
+                    }
+                }
             }
         }
 
-        raw.anInt1791 = uniqueVertices;
-        raw.anInt1775 = uniqueVertices;
-        cachedUniqueVertices = uniqueVertices;
-        cachedTexturedFaces = texturedFaces;
+        if (outputTriangle != outputTriangles) {
+            System.err.println("[OoT Visual] Texture tessellation count mismatch expected="
+                    + outputTriangles + " actual=" + outputTriangle);
+            return null;
+        }
+
+        raw.anInt1791 = vertices.size();
+        raw.anInt1775 = raw.anInt1791;
+        cachedUniqueVertices = raw.anInt1791;
+        cachedOutputTriangles = outputTriangles;
+        cachedTexturedSourceFaces = texturedSourceFaces;
+        cachedTextureCatalogSize = textures.size();
+        cachedTextureSubdivisions = texturedSourceFaces > 0 ? subdivisions : 0;
 
         try {
             Model model = renderer.method1755(raw, RAW_BUILD_FLAGS, 0, 64, 850);
@@ -299,15 +300,235 @@ public final class LinkVisualRenderer {
         }
     }
 
+    private static int emitMicroTriangle(
+            Class159 raw,
+            VertexPool vertices,
+            int outputTriangle,
+            OotBridgeSession.LinkFrame frame,
+            LinkCharacterFit.Profile fit,
+            int sourceTriangle,
+            OotBridgeSession.TextureUpdate texture,
+            float b0, float c0,
+            float b1, float c1,
+            float b2, float c2) {
+        int vertexA = writeVertex(vertices, frame, fit, sourceTriangle, b0, c0);
+        int vertexB = writeVertex(vertices, frame, fit, sourceTriangle, b1, c1);
+        int vertexC = writeVertex(vertices, frame, fit, sourceTriangle, b2, c2);
+
+        // Negating model Y mirrors one axis; swap B/C to preserve winding.
+        raw.aShortArray1786[outputTriangle] = (short) vertexA;
+        raw.aShortArray1787[outputTriangle] = (short) vertexC;
+        raw.aShortArray1789[outputTriangle] = (short) vertexB;
+
+        float centerB = (b0 + b1 + b2) / 3.0F;
+        float centerC = (c0 + c1 + c2) / 3.0F;
+        int colorBase = sourceTriangle * 9;
+        int baseR = unitColor(interpolate(frame.colors, colorBase, 3, 0, centerB, centerC));
+        int baseG = unitColor(interpolate(frame.colors, colorBase, 3, 1, centerB, centerC));
+        int baseB = unitColor(interpolate(frame.colors, colorBase, 3, 2, centerB, centerC));
+
+        int r = baseR;
+        int g = baseG;
+        int b = baseB;
+        if (texture != null) {
+            int uvBase = sourceTriangle * 6;
+            float u = interpolate(frame.uvs, uvBase, 2, 0, centerB, centerC);
+            float v = interpolate(frame.uvs, uvBase, 2, 1, centerB, centerC);
+            int rgba = sampleTexture(texture, u, v);
+            int alpha = rgba >>> 24 & 0xff;
+            if (alpha > 0) {
+                int texR = rgba >>> 16 & 0xff;
+                int texG = rgba >>> 8 & 0xff;
+                int texB = rgba & 0xff;
+                int litR = (texR * baseR + 127) / 255;
+                int litG = (texG * baseG + 127) / 255;
+                int litB = (texB * baseB + 127) / 255;
+                if (alpha < 255) {
+                    int inverse = 255 - alpha;
+                    r = (baseR * inverse + litR * alpha + 127) / 255;
+                    g = (baseG * inverse + litG * alpha + 127) / 255;
+                    b = (baseB * inverse + litB * alpha + 127) / 255;
+                } else {
+                    r = litR;
+                    g = litG;
+                    b = litB;
+                }
+            }
+        }
+        raw.faceColours[outputTriangle] = rgbToRsHsl(r, g, b);
+        return outputTriangle + 1;
+    }
+
+    private static int writeVertex(VertexPool vertices,
+            OotBridgeSession.LinkFrame frame,
+            LinkCharacterFit.Profile fit,
+            int sourceTriangle,
+            float b,
+            float c) {
+        int positionBase = sourceTriangle * 9;
+        float x = interpolate(frame.positions, positionBase, 3, 0, b, c);
+        float y = interpolate(frame.positions, positionBase, 3, 1, b, c);
+        float z = interpolate(frame.positions, positionBase, 3, 2, b, c);
+        int modelX = Math.round((x - frame.x) * fit.scale);
+        int modelY = Math.round(fit.toMatrixY(y, frame.y));
+        int modelZ = Math.round((z - frame.z) * fit.scale);
+
+        int normalBase = sourceTriangle * 9;
+        float nx = interpolate(frame.normals, normalBase, 3, 0, b, c);
+        float ny = -interpolate(frame.normals, normalBase, 3, 1, b, c);
+        float nz = interpolate(frame.normals, normalBase, 3, 2, b, c);
+        float length = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (length > 0.000001F && !Float.isNaN(length) && !Float.isInfinite(length)) {
+            nx /= length;
+            ny /= length;
+            nz /= length;
+        } else {
+            nx = 0.0F;
+            ny = 0.0F;
+            nz = 0.0F;
+        }
+        return vertices.getOrCreate(
+                modelX, modelY, modelZ,
+                quantizeNormal(nx), quantizeNormal(ny), quantizeNormal(nz));
+    }
+
+    private static float interpolate(float[] values, int base, int stride, int component,
+            float b, float c) {
+        float a = 1.0F - b - c;
+        return values[base + component] * a
+                + values[base + stride + component] * b
+                + values[base + stride * 2 + component] * c;
+    }
+
+    private static TextureCatalog textureCatalog(OotBridgeSession.LinkFrame frame) {
+        return new TextureCatalog(frame == null ? null : frame.textureUpdates);
+    }
+
+    private static OotBridgeSession.TextureUpdate textureForTriangle(
+            OotBridgeSession.LinkFrame frame, TextureCatalog textures, int triangle) {
+        if (frame == null || triangle < 0 || triangle >= frame.triangleCount) {
+            return null;
+        }
+        int textureIndex = frame.triangleTextures[triangle];
+        if (textureIndex == 0xffff) {
+            return null;
+        }
+        return textures.get(textureIndex);
+    }
+
+    private static boolean hasFiniteUvs(OotBridgeSession.LinkFrame frame, int triangle) {
+        int base = triangle * 6;
+        for (int i = 0; i < 6; i++) {
+            float value = frame.uvs[base + i];
+            if (Float.isNaN(value) || Float.isInfinite(value)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static int chooseTextureSubdivisions(
+            OotBridgeSession.LinkFrame frame, TextureCatalog textures) {
+        if (TEXTURE_SUBDIVISIONS <= 0 || textures.size() <= 0) {
+            return 0;
+        }
+        int subdivisions = TEXTURE_SUBDIVISIONS;
+        while (subdivisions > 1
+                && countOutputTriangles(frame, textures, subdivisions) > MAX_MATRIX_TRIANGLES) {
+            subdivisions--;
+        }
+        if (countOutputTriangles(frame, textures, subdivisions) > MAX_MATRIX_TRIANGLES) {
+            return 0;
+        }
+        return subdivisions;
+    }
+
+    private static int countOutputTriangles(OotBridgeSession.LinkFrame frame,
+            TextureCatalog textures, int subdivisions) {
+        int total = 0;
+        int texturedMultiplier = subdivisions > 0 ? subdivisions * subdivisions : 1;
+        for (int triangle = 0; triangle < frame.triangleCount; triangle++) {
+            boolean textured = subdivisions > 0
+                    && textureForTriangle(frame, textures, triangle) != null
+                    && hasFiniteUvs(frame, triangle);
+            total += textured ? texturedMultiplier : 1;
+        }
+        return total;
+    }
+
+    private static int sampleTexture(OotBridgeSession.TextureUpdate texture, float u, float v) {
+        if (texture == null || texture.rgba == null
+                || texture.width <= 0 || texture.height <= 0
+                || texture.rgba.length < texture.width * texture.height * 4
+                || Float.isNaN(u) || Float.isInfinite(u)
+                || Float.isNaN(v) || Float.isInfinite(v)) {
+            return 0xffffffff;
+        }
+
+        float x = u * texture.width - 0.5F;
+        float y = v * texture.height - 0.5F;
+        int x0 = (int) Math.floor(x);
+        int y0 = (int) Math.floor(y);
+        int x1 = x0 + 1;
+        int y1 = y0 + 1;
+        float tx = x - x0;
+        float ty = y - y0;
+
+        int sx0 = wrapTexel(x0, texture.width, texture.wrapS);
+        int sx1 = wrapTexel(x1, texture.width, texture.wrapS);
+        int sy0 = wrapTexel(y0, texture.height, texture.wrapT);
+        int sy1 = wrapTexel(y1, texture.height, texture.wrapT);
+
+        int r = clamp(Math.round(bilinearChannel(texture, sx0, sy0, sx1, sy1, tx, ty, 0)), 0, 255);
+        int g = clamp(Math.round(bilinearChannel(texture, sx0, sy0, sx1, sy1, tx, ty, 1)), 0, 255);
+        int b = clamp(Math.round(bilinearChannel(texture, sx0, sy0, sx1, sy1, tx, ty, 2)), 0, 255);
+        int a = clamp(Math.round(bilinearChannel(texture, sx0, sy0, sx1, sy1, tx, ty, 3)), 0, 255);
+        return a << 24 | r << 16 | g << 8 | b;
+    }
+
+    private static float bilinearChannel(OotBridgeSession.TextureUpdate texture,
+            int x0, int y0, int x1, int y1,
+            float tx, float ty, int channel) {
+        float top = lerp(textureChannel(texture, x0, y0, channel),
+                textureChannel(texture, x1, y0, channel), tx);
+        float bottom = lerp(textureChannel(texture, x0, y1, channel),
+                textureChannel(texture, x1, y1, channel), tx);
+        return lerp(top, bottom, ty);
+    }
+
+    private static int textureChannel(OotBridgeSession.TextureUpdate texture,
+            int x, int y, int channel) {
+        int offset = (y * texture.width + x) * 4 + channel;
+        return texture.rgba[offset] & 0xff;
+    }
+
+    private static int wrapTexel(int coordinate, int size, int mode) {
+        if (size <= 1) {
+            return 0;
+        }
+        if (mode == 2) { // clamp
+            return clamp(coordinate, 0, size - 1);
+        }
+        if (mode == 1) { // mirrored repeat
+            int period = size * 2;
+            int value = coordinate % period;
+            if (value < 0) value += period;
+            return value < size ? value : period - 1 - value;
+        }
+        // repeat
+        int value = coordinate % size;
+        return value < 0 ? value + size : value;
+    }
+
+    private static float lerp(float a, float b, float t) {
+        return a + (b - a) * t;
+    }
+
     private static int quantizeNormal(float value) {
         if (Float.isNaN(value) || Float.isInfinite(value)) {
             return 0;
         }
         return Math.round(value * NORMAL_QUANTIZE);
-    }
-
-    private static float finiteOrZero(float value) {
-        return Float.isNaN(value) || Float.isInfinite(value) ? 0.0F : value;
     }
 
     private static int unitColor(float value) {
@@ -316,6 +537,24 @@ public final class LinkVisualRenderer {
         }
         int color = Math.round(value * 255.0F);
         return clamp(color, 0, 255);
+    }
+
+    private static int resolveTextureSubdivisions() {
+        String configured = System.getProperty("matrix3.oot.textureSubdivisions");
+        if (configured == null || configured.trim().isEmpty()) {
+            return DEFAULT_TEXTURE_SUBDIVISIONS;
+        }
+        try {
+            int parsed = Integer.parseInt(configured.trim());
+            if (parsed >= 0 && parsed <= MAX_TEXTURE_SUBDIVISIONS) {
+                return parsed;
+            }
+        } catch (NumberFormatException ignored) {
+            // Fall through to the default.
+        }
+        System.out.println("[OoT Visual] Invalid matrix3.oot.textureSubdivisions='"
+                + configured + "'; using " + DEFAULT_TEXTURE_SUBDIVISIONS);
+        return DEFAULT_TEXTURE_SUBDIVISIONS;
     }
 
     /** Standard RuneScape packed-HSL face-colour conversion. */
@@ -361,6 +600,71 @@ public final class LinkVisualRenderer {
         return value < min ? min : value > max ? max : value;
     }
 
+    private static final class TextureCatalog {
+        private final Map<Integer, OotBridgeSession.TextureUpdate> byIndex =
+                new HashMap<Integer, OotBridgeSession.TextureUpdate>();
+
+        TextureCatalog(OotBridgeSession.TextureUpdate[] updates) {
+            if (updates == null) {
+                return;
+            }
+            for (int i = 0; i < updates.length; i++) {
+                OotBridgeSession.TextureUpdate texture = updates[i];
+                if (texture == null || texture.index < 0
+                        || texture.rgba == null || texture.width <= 0 || texture.height <= 0) {
+                    continue;
+                }
+                long required = (long) texture.width * (long) texture.height * 4L;
+                if (required <= 0L || required > Integer.MAX_VALUE
+                        || texture.rgba.length < (int) required) {
+                    continue;
+                }
+                byIndex.put(Integer.valueOf(texture.index), texture);
+            }
+        }
+
+        OotBridgeSession.TextureUpdate get(int index) {
+            return byIndex.get(Integer.valueOf(index));
+        }
+
+        int size() {
+            return byIndex.size();
+        }
+    }
+
+    private static final class VertexPool {
+        private final Class159 raw;
+        private final int capacity;
+        private final Map<VertexKey, Integer> shared = new HashMap<VertexKey, Integer>();
+        private int size;
+
+        VertexPool(Class159 raw, int capacity) {
+            this.raw = raw;
+            this.capacity = capacity;
+        }
+
+        int getOrCreate(int x, int y, int z, int nx, int ny, int nz) {
+            VertexKey key = new VertexKey(x, y, z, nx, ny, nz);
+            Integer existing = shared.get(key);
+            if (existing != null) {
+                return existing.intValue();
+            }
+            int index = size++;
+            if (index >= capacity || index >= MAX_MATRIX_VERTICES) {
+                throw new IllegalStateException("Link generated vertex capacity exceeded");
+            }
+            raw.anIntArray1782[index] = x;
+            raw.anIntArray1777[index] = y;
+            raw.anIntArray1797[index] = z;
+            shared.put(key, Integer.valueOf(index));
+            return index;
+        }
+
+        int size() {
+            return size;
+        }
+    }
+
     private static final class VertexKey {
         final int x;
         final int y;
@@ -368,22 +672,14 @@ public final class LinkVisualRenderer {
         final int nx;
         final int ny;
         final int nz;
-        final int uBits;
-        final int vBits;
-        final int materialId;
 
-        VertexKey(int x, int y, int z,
-                int nx, int ny, int nz,
-                int uBits, int vBits, int materialId) {
+        VertexKey(int x, int y, int z, int nx, int ny, int nz) {
             this.x = x;
             this.y = y;
             this.z = z;
             this.nx = nx;
             this.ny = ny;
             this.nz = nz;
-            this.uBits = uBits;
-            this.vBits = vBits;
-            this.materialId = materialId;
         }
 
         @Override
@@ -394,9 +690,6 @@ public final class LinkVisualRenderer {
             result = 31 * result + nx;
             result = 31 * result + ny;
             result = 31 * result + nz;
-            result = 31 * result + uBits;
-            result = 31 * result + vBits;
-            result = 31 * result + materialId;
             return result;
         }
 
@@ -406,9 +699,7 @@ public final class LinkVisualRenderer {
             if (!(object instanceof VertexKey)) return false;
             VertexKey other = (VertexKey) object;
             return x == other.x && y == other.y && z == other.z
-                    && nx == other.nx && ny == other.ny && nz == other.nz
-                    && uBits == other.uBits && vBits == other.vBits
-                    && materialId == other.materialId;
+                    && nx == other.nx && ny == other.ny && nz == other.nz;
         }
     }
 }
