@@ -19,16 +19,20 @@ set(LIBOOT_OOT_REVISION "2" CACHE STRING "" FORCE)
 add_subdirectory("${LIBOOT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/liboot")
 
 add_executable(oot_probe oot_probe.c)
-set_target_properties(oot_probe PROPERTIES
-    C_STANDARD 11
-    C_STANDARD_REQUIRED YES
-    C_EXTENSIONS NO
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/dist"
-)
-target_link_libraries(oot_probe PRIVATE liboot::oot)
+add_executable(oot_bridge oot_bridge.c)
 
-# Keep the native library beside the probe. This avoids PATH/rpath setup during
-# the compatibility proof and mirrors the self-contained Mario sidecar layout.
+foreach(matrix_oot_target IN ITEMS oot_probe oot_bridge)
+    set_target_properties(${matrix_oot_target} PROPERTIES
+        C_STANDARD 11
+        C_STANDARD_REQUIRED YES
+        C_EXTENSIONS NO
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/dist"
+    )
+    target_link_libraries(${matrix_oot_target} PRIVATE liboot::oot)
+endforeach()
+
+# Keep the native library beside the probe/sidecar. This avoids PATH/rpath setup
+# and mirrors the self-contained Mario sidecar layout.
 set_target_properties(oot PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/dist"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/dist"
@@ -36,5 +40,5 @@ set_target_properties(oot PROPERTIES
 )
 
 if(UNIX AND NOT APPLE)
-    set_target_properties(oot_probe PROPERTIES BUILD_RPATH "$ORIGIN")
+    set_target_properties(oot_probe oot_bridge PROPERTIES BUILD_RPATH "$ORIGIN")
 endif()
