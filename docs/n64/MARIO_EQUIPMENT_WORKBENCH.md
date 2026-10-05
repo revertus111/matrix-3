@@ -10,67 +10,107 @@ The workbench is developer tooling over the established Mario renderer, attachme
 
 ## Protocol-v2 semantic geometry
 
-The preferred workflow requires the rebuilt semantic bridge.
+The preferred workflow uses the semantic bridge.
 
 Workbench status shows:
 
 - bridge protocol version;
 - semantic geometry availability;
-- active coverage profile;
+- active replacement/coverage profile;
 - shared semantic FACE width / height / depth;
-- protected part counts;
-- removable part counts;
+- face-insert source triangle count;
+- native part counts;
 - masked source triangle count.
 
 Protocol-v2 part ids:
 
 ```text
-FACE             protected
-EYES             protected
-MOUSTACHE        protected
-CAP              removable
-HAIR_SIDEBURN    removable
-HAIR_BACK        removable
+FACE
+EYES
+MOUSTACHE
+CAP
+HAIR_SIDEBURN
+HAIR_BACK
 UNKNOWN          always preserved
 ```
 
-The complete mixed FACE mesh is protected. Mario's nose is inside FACE and therefore cannot be removed by `FULL_HELM_SAFE`.
+Static source evidence establishes FACE local +Y as face-out/front and local Z as left/right.
 
-## Coverage controls
+## Replacement / coverage profiles
 
-### Keep all Mario head parts
+### Keep all
 
-No semantic head geometry is removed.
+No semantic Mario head geometry is removed.
 
-Use this for hats/crowns or for before/after comparison.
+Use this for before/after comparison or headgear that should sit over the original Mario head.
 
-### Full helm safe
+### Cap/hair only (`FULL_HELM_SAFE`)
 
-Removes only:
+Removes:
 
 - CAP
 - HAIR_SIDEBURN
 - HAIR_BACK
 
-Keeps FACE, EYES, MOUSTACHE and all UNKNOWN geometry.
+Keeps the whole FACE/EYES/MOUSTACHE set.
 
-This is deliberately conservative. If runtime testing proves some beige side/back skull inside FACE still needs removal, subdivide FACE later using source-local mesh evidence; do not return to a whole-body cylinder as the normal solution.
+This is the conservative V7 overlay profile.
+
+### Head shell closed (`HEAD_SHELL_CLOSED`)
+
+Removes every known semantic Mario head part:
+
+- FACE
+- EYES
+- MOUSTACHE
+- CAP
+- HAIR_SIDEBURN
+- HAIR_BACK
+
+The revision-830 helmet becomes the complete visible head shell.
+
+This is the correct first test for fully closed/full-face helmets because the helmet no longer needs to physically contain Mario's original skull geometry.
+
+### Head shell + Mario face (`HEAD_SHELL_FACE`)
+
+Uses the helmet as the head shell but restores Mario identity inside the face opening:
+
+- CAP / HAIR stay removed;
+- EYES and MOUSTACHE remain;
+- only the front slice of mixed FACE remains;
+- rear/side FACE geometry is removed using source-verified local +Y.
+
+The **Mario FACE front slice %** control changes the cut plane:
+
+- higher percentage = keep only farther-forward nose/central-face geometry;
+- lower percentage = keep more cheeks/side face.
+
+The default is `55%` and is only a starting hypothesis.
+
+This V8 proof deliberately keeps the surviving Mario face at its normal animated scale and location. Do not add another face renderer/transform unless runtime testing proves the opening is correct but the face itself needs independent scale or XYZ.
 
 `Apply semantic coverage only while a helmet is equipped` should normally remain enabled.
 
-## Shared fit reference
+## Replacement-shell fitting
 
-Under protocol v2 the attachment adapter and auto-fit use the same display-list-local FACE reference.
+Replacement-shell profiles stop using the old estimated inner-cavity multiplier.
 
-Static source evidence establishes:
+When entering `HEAD_SHELL_CLOSED` or `HEAD_SHELL_FACE`:
 
-- FACE local Z = left/right;
-- FACE local +Y = face-out/front;
-- the remaining local axis supplies FACE height.
+- active helmet auto-fit is reset;
+- the adapter's existing outer-silhouette baseline remains the starting size;
+- `MarioHelmetAutoFit` returns manual multiplier `1.0` for the shell baseline;
+- normal Scale / head-local X/Y/Z / Yaw remains available for small visual corrections.
 
-Helmet baseline width therefore comes from FACE left/right width. Mario's forward-projecting nose depth does not force the helmet larger.
+The point is no longer "make Mario's skull fit inside the helmet." The point is "make the revision-830 shell look correctly proportioned on Mario's animated body."
 
-The final helmet scale remains uniform. Revision-830 helmet outer bounds/cavity ratios are still approximations, so visual calibration remains useful.
+## Shared FACE reference
+
+Under protocol v2 the attachment adapter and auto-fit use the same semantic FACE reference.
+
+The first V7 runtime test exposed raw source FACE W/H/D `538/320/530` being compared directly with Matrix item-model units. `MarioSemanticGeometry` now converts the local FACE reference through the native posed-head scale and Matrix Mario model scale before fit math consumes it.
+
+Mario's nose depth does not drive shell width.
 
 ## Helmet transform calibration
 
@@ -80,7 +120,7 @@ Controls:
 - **Head-local X / Y / Z** — seating corrections.
 - **Yaw delta** — item correction on top of the established Mario helmet base yaw.
 - **Flip helmet 180°** — explicit item correction only.
-- **Reset / recalc fit** — clears session correction and lets the auto-fit baseline resolve again.
+- **Reset / recalc fit** — clears session correction and lets auto-fit resolve again.
 - **Freeze pose** — freezes Matrix-visible Mario while the native worker remains live.
 
 ## Legacy geometric cutter
@@ -88,8 +128,6 @@ Controls:
 The old body-height/radius cutter remains only for protocol-v1 debugging.
 
 When semantic protocol v2 metadata is available, those geometric controls are ignored.
-
-Do not use the old cutter as the normal full-helmet solution; it cannot guarantee nose/face protection.
 
 ## Orientation truth
 
@@ -99,12 +137,12 @@ Authoritative transform/sign notes remain in:
 docs/n64/TRANSFORM_CONVENTIONS.md
 ```
 
-Important established rules:
+Established rules:
 
 - native `faceAngle` remains world-facing authority;
 - Mario helmet base yaw remains the accepted worn-model correction;
 - the runtime-proven V4 opposite head delta is consumed as inverse/transpose;
-- source-local face axes are geometry metadata, not a replacement for runtime world-facing validation.
+- source-local face axes are geometry metadata, not a substitute for runtime world-facing validation.
 
 ## Save / handoff
 
@@ -114,17 +152,19 @@ Important established rules:
 docs/n64/MARIO_EQUIPMENT_RUNTIME.md
 ```
 
-The snapshot includes helmet transform, protocol/semantic availability, coverage profile, FACE W/H/D and part counts. `Copy markdown` copies the same data.
+The snapshot includes helmet transform, semantic availability, replacement profile, FACE W/H/D, front-slice %, face-insert triangle count and native part counts.
 
-## Recommended V7 workflow
+## Recommended V8 workflow
 
-1. Rebuild the native bridge with `make bootstrap`.
-2. Equip the target helmet and enter Mario mode.
-3. Confirm protocol `v2` and semantic metadata `AVAILABLE`.
-4. For a full helmet, press `Full helm safe`.
-5. Judge the silhouette before changing scale.
-6. Freeze Pose.
-7. Use Scale / X / Y / Z / Yaw only for small final seating corrections.
-8. Unfreeze and check idle/turn/jump/backflip/ground-pound.
-9. Compare `Keep all` vs `Full helm safe` if geometry looks suspicious.
-10. Save/copy the profile once the result is visually accepted.
+1. `git pull origin main`.
+2. Eclipse clean/build under Java 8. No native rebuild if semantic v2 already works.
+3. Equip the target helmet and enter Mario mode.
+4. Confirm protocol `v2` and semantic metadata `AVAILABLE`.
+5. Freeze Pose.
+6. Try **Head shell closed** first.
+7. Try **Head shell + Mario face**.
+8. If too much beige side/back face remains, raise `Mario FACE front slice %`.
+9. If too much face disappears, lower it.
+10. Use helmet Scale / X / Y / Z / Yaw only for shell seating.
+11. Unfreeze and check idle/turn/jump/backflip/ground-pound.
+12. Only after this visual test decide whether Mario's surviving face needs its own scale/XYZ transform.
