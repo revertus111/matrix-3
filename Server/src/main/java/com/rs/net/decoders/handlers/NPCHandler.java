@@ -70,8 +70,13 @@ import com.rs.utils.Utils;
 public class NPCHandler {
 
     public static void handleExamine(final Player player, InputStream stream) {
-	boolean forceRun = stream.readUnsignedByteC() == 1;
+	int requestFlag = stream.readUnsignedByteC();
 	int npcIndex = stream.readUnsignedShort128();
+	if (requestFlag == 2) {
+	    com.rs.net.decoders.LinkCombatPacketBridge.requestManualMelee(player, npcIndex);
+	    return;
+	}
+	boolean forceRun = requestFlag == 1;
 	if (forceRun)
 	    player.setRun(forceRun);
 	final NPC npc = World.getNPCs().get(npcIndex);

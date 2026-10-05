@@ -9,37 +9,22 @@ import com.rs.game.player.Equipment;
 import com.rs.game.player.Player;
 import com.rs.game.player.actions.PlayerCombatNew;
 import com.rs.game.player.content.Combat;
-import com.rs.io.InputStream;
 
 /**
  * Server authority for imported OoT Link action-combat requests.
  *
- * Packet 26 is a Matrix3-owned variable-length custom-action envelope. Subtype 1
- * requests one melee combat cycle against a specific loaded NPC. This class does
- * not install PlayerCombatNew into ActionManager, so a contact request can never
- * become RuneScape's normal repeating auto-combat loop.
+ * The client marks an NPC-examine packet with reserved run-flag value 2 when a
+ * native Link sword animation reaches its contact frame. NPCHandler diverts only
+ * that reserved value here; normal examine flags 0/1 keep their stock behavior.
+ * This class does not install PlayerCombatNew into ActionManager, so a contact
+ * request can never become RuneScape's normal repeating auto-combat loop.
  */
-final class LinkCombatPacketBridge {
-
-    private static final int SUBTYPE_MANUAL_MELEE = 1;
+public final class LinkCombatPacketBridge {
 
     private LinkCombatPacketBridge() {
     }
 
-    static void handle(Player player, InputStream stream) {
-        if (player == null || stream == null || stream.getRemaining() < 3) {
-            return;
-        }
-
-        int subtype = stream.readUnsignedByteC();
-        if (subtype != SUBTYPE_MANUAL_MELEE) {
-            return;
-        }
-        int npcIndex = stream.readUnsignedShort128();
-        requestManualMelee(player, npcIndex);
-    }
-
-    private static void requestManualMelee(Player player, int npcIndex) {
+    public static void requestManualMelee(Player player, int npcIndex) {
         if (!player.hasStarted() || !player.clientHasLoadedMapRegion()
                 || player.isDead() || player.isLocked()
                 || player.getEmotesManager().isDoingEmote()) {
@@ -82,7 +67,7 @@ final class LinkCombatPacketBridge {
         /*
          * Pre-check range before start(). PlayerCombatNew.process() normally owns
          * follow/path setup when out of range; action combat must never turn a
-         * sword-contact packet into click-to-follow behavior.
+         * sword-contact request into click-to-follow behavior.
          */
         if (!PlayerCombatNew.isWithinDistance(player, npc)) {
             return;
