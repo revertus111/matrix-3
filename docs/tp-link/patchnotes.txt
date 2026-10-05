@@ -32,3 +32,15 @@
 - The generated progress report reported all code and data `100.00% matched`; overall linking was `87.13%` (`2583 / 2608 files`).
 - Builder ended with `TP LINK DONOR BUILD SUCCESS` and confirmed the pinned source/workspace.
 - Bundle 1.1 donor bootstrap is now runtime VERIFIED. Next active work is Bundle 1.2: establish the exact local Kmdl/AlAnm extraction path and prove authentic TP Link model + BCK animation + right-item joint preservation.
+
+2026-10-05 - Bundle 1.2 TP Link extraction + visible animation/socket proof
+- Added a deterministic local Link-only extraction probe using the verified donor workspace and decomp-toolkit VFS. It reads `Kmdl.arc` and `AlAnm.arc` from the prepared GZ2E01 donor without whole-disc manual extraction.
+- Added J3D validation for `al.bmd`, `al_head.bmd`, `al_hands.bmd`, `al_face.bmd`, right hand joint `0xE`, right weapon/item joint `0xF`, and authentic WAIT / WALK-DASH / CUT BCK families.
+- The probe now selects one real idle clip, one real locomotion clip and one real sword-cut clip and rejects selected animations that do not contain joint `0xF`.
+- Added `native/tools/tp-link-visual-proof.py`, which uses a pinned local-only MIT J3D converter (`snuri00/demake-engine@a134ff49cc74585c6b11f881293796e45c973c75`) to decode BMD skinning and BCK Hermite animation, then software-renders `idle.gif`, `walk.gif`, `sword.gif` and a combined `tp-link-proof.gif`.
+- The visual proof attaches Link's head/hands/face pieces to the body skeleton using TP joint-name aliases and writes a local manifest with mesh/skeleton/animation diagnostics.
+- Added a visible per-frame red marker sourced from the animated body right-weapon joint `0xF`; the marker is projected from the sampled BCK world transform, not hard-coded to the image.
+- Added an isolated local Python 3.12+ visual-proof venv under `%LOCALAPPDATA%\Matrix3\TPLinkTools`; NumPy/Pillow and the pinned converter remain outside the Matrix3 repository.
+- Added `native/tools/probe-tp-link.cmd` and a `PROBE TP LINK` button to Matrix3 Native Builder for one-click runtime testing.
+- Updated PROJECT/TESTLIST with the consolidated acceptance gate: authentic TP Link renders, real idle/walk/sword clips animate, and the `0xF` marker remains attached to the weapon joint.
+- Status: implementation is verified-static. Bundle 1.2 remains NEEDS TEST until the generated visual proof is accepted on the user's real donor assets.
