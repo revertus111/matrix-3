@@ -12,19 +12,18 @@ struct CombatOverlay {
     float weight;
 };
 
-/* XYZ Euler channel offsets, degrees. The right arm chain advances along local
- * +X. V4 deliberately keeps the torso neutral and uses one readable shoulder
- * sweep, a restrained forearm bend and small wrist roll. This avoids the V3
- * full-upper-body fold while preserving the proven additive/socket path. */
+/* XYZ Euler channel offsets, degrees. Slots are now the right shoulder pivot,
+ * upper arm, forearm and hand. The shoulder owns the large swing so the whole
+ * arm travels from the body; downstream joints only shape the blade path. */
 static void combat_overlay_evaluate(struct CombatOverlay *state, int mode,
         uint32_t request, int16_t rotation[4][3])
 {
     static const float times[5] = {0, .20f, .45f, .70f, 1};
     static const float poses[5][4][3] = {
         {{0,0,0},{0,0,0},{0,0,0},{0,0,0}},
-        {{0,0,0},{0,-40,-28},{10,-18,-24},{16,0,20}},
-        {{0,0,0},{0,60,14},{-10,30,10},{-18,0,-24}},
-        {{0,0,0},{0,32,24},{-6,16,18},{-8,0,-14}},
+        {{0,-55,-35},{0,-12,-8},{8,-15,-18},{18,0,15}},
+        {{0,65,25},{0,18,10},{-10,24,12},{-20,0,-20}},
+        {{0,38,20},{0,10,8},{-6,14,10},{-10,0,-10}},
         {{0,0,0},{0,0,0},{0,0,0},{0,0,0}}
     };
     memset(rotation, 0, 4 * 3 * sizeof(int16_t));
