@@ -36,3 +36,9 @@
 - Link render caches reset outside Link mode so a sidecar restart cannot reuse a stale geometry sequence on rapid re-entry.
 - Updated Zelda project/checklist with the exact first-live build, Ctrl+L controls, expected console proof, failure distinctions, and known intentional limitations.
 - Status: new Phase 1 integration is `verified-static`; native sidecar compile and Matrix in-game behavior are `UNKNOWN` until the user's next runtime session.
+
+2026-10-05 - Fix OoT native builder MSYS2 environment mismatch
+- Runtime builder screenshot showed exit 127 with `CMake is missing from MSYS2 MinGW64` before compilation began.
+- Root cause: `native/tools/build-oot.cmd` launched `msys2_shell.cmd -mingw64`, while the already-verified NTSC-U 1.2 probe/build path uses MSYS2 UCRT64.
+- Updated the one-click OoT builder to launch `-ucrt64` and report UCRT64-specific prerequisite failures, matching the proven toolchain instead of requiring a second MinGW64 CMake installation.
+- Status: builder fix is `verified-static`; rerun required to confirm native sidecar compilation.
