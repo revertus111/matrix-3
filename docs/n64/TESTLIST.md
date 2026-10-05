@@ -1,5 +1,20 @@
 # N64 Client Console Runtime Test List
 
+## Temporary vanilla RS3 collision handoff
+
+1. [ ] `git pull origin main`, Eclipse Java 8 refresh/clean/build, launch/login once. No native sidecar rebuild is required for this Java-only collision slice.
+2. [ ] Ctrl+M into Mario and verify camera-relative WASD still drives Mario movement/action animations.
+3. [ ] Run directly into a normal RuneScape wall, solid scenery object and blocked floor edge; Mario must not cross them.
+4. [ ] Hold movement against a blocked destination for several seconds; no accumulated native X/Z jump/teleport may occur when turning away or releasing the key.
+5. [ ] Test cardinal directions plus diagonal movement at a clipped corner; resulting X/Z must follow the same vanilla server route/collision rules as ordinary RuneScape walking.
+6. [ ] Jump, backflip and ground-pound while moving into a wall. Native action/animation/Y may continue, but horizontal Matrix movement must remain collision-valid.
+7. [ ] Walk over normal terrain height changes; the existing Matrix terrain/Y rebasing must remain stable under the native jump overlay.
+8. [ ] Ctrl+M out and confirm the normal RuneScape player is already at the server-owned position with no snap back to an old pre-Mario X/Z baseline.
+9. [ ] Re-enter Mario mode and confirm there is no stale native X/Z offset or unsolicited walk request.
+10. [ ] Verify F/custom combat, Shift crouch/ground-pound, N64 diagnostics and sleep-guard behavior remain unchanged.
+
+Acceptance note: this is intentionally an interim Matrix/server collision owner. It does **not** mark the planned RuneScape-surface -> libsm64 Phase 3 collision adapter as implemented.
+
 ## Custom combat v3 - one consolidated acceptance session
 
 ### Runtime evidence accepted 2026-10-04
