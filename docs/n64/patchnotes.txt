@@ -31,4 +31,6 @@
 - Extended semantic bridge to v3 with latched combat requests and same-frame right-hand matrix; Java retains v1/v2 compatibility.
 - Attached equipped 830 worn weapon via native socket; gated F routing on weapon/socket readiness and retained stock combat authority.
 - Added Custom combat tab with preview, status and session grip controls; documented calibration uncertainty and runtime gate.
-- Added ROM-free production curve/native writer/Java protocol tests; native build and focused checks pass, in-game acceptance pending.
+- Added ROM-free production curve/native writer/Java protocol tests; native build and focused checks pass.
+- Diagnosed the first failed Windows acceptance attempt: `dist/sm64_bridge.exe` was locked, so the linker returned `Permission denied` and the new v3 sidecar was not produced for that run.
+- Runtime 2026-10-04: equipped revision-830 sword attachment is visible on Mario and F triggers the custom native 1H slash. Core Bundle 4.3 proof VERIFIED; broader movement/cleanup/NPC/stability regressions remain pending.
