@@ -3,6 +3,7 @@ package game.console;
 import game.Mario64Diagnostics;
 import game.MarioEquipmentWorkbench;
 import game.MarioWeaponCombat;
+import game.AlternateCharacterController;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -44,6 +45,7 @@ public final class N64Panel extends JPanel {
     private final JTabbedPane gameTabs = new JTabbedPane();
     private final Timer refreshTimer;
     private final JLabel combatStatus = valueLabel();
+    private final JCheckBox runeScapeClipping = new JCheckBox("RuneScape clipping (tile-based)");
 
     private final JLabel modeValue = valueLabel();
     private final JLabel characterValue = valueLabel();
@@ -150,6 +152,14 @@ public final class N64Panel extends JPanel {
         header.add(Box.createVerticalStrut(3));
         header.add(ConsoleTheme.subtitleLabel(
                 "Imported-game diagnostics and development workspaces"));
+        header.add(Box.createVerticalStrut(8));
+        styleCheckBox(runeScapeClipping);
+        runeScapeClipping.setSelected(AlternateCharacterController.isRuneScapeClippingEnabled());
+        runeScapeClipping.setToolTipText(
+                "Mario + Link. Off: continuous local movement. On: existing tile clipping; returns to the server position.");
+        runeScapeClipping.addActionListener(e -> AlternateCharacterController.setRuneScapeClippingEnabled(
+                runeScapeClipping.isSelected()));
+        header.add(runeScapeClipping);
         return header;
     }
 
@@ -595,6 +605,7 @@ public final class N64Panel extends JPanel {
     }
 
     private void refresh() {
+        runeScapeClipping.setSelected(AlternateCharacterController.isRuneScapeClippingEnabled());
         combatStatus.setText(MarioWeaponCombat.getStatus());
         refreshWorkbench();
 

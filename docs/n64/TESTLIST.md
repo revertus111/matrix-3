@@ -1,5 +1,22 @@
 # N64 Client Console Runtime Test List
 
+## Default free movement / optional RuneScape clipping - 2026-10-05
+
+Current priority: restore continuous native X/Z for Mario AND Link. The earlier tile handoff is runtime-rejected for free-movement feel; it remains available only through the optional checkbox.
+
+1. [ ] Pull, Eclipse Java 8 refresh/clean/build, launch/login. No native rebuild required by this patch.
+2. [ ] Client Console -> N64 header: `RuneScape clipping (tile-based)` starts unchecked. It controls both characters.
+3. [ ] Ctrl+M: make short taps, reverse direction and move across 10+ tiles. Free movement must stop at arbitrary positions with no tile-boundary pause, clamp or tile-walk request. Recheck WASD while rotating the camera.
+4. [ ] Jump/backflip/ground-pound and F retain native action behavior. World scenery intentionally does not block X/Z with clipping OFF.
+5. [ ] Ctrl+M out, Ctrl+L in: repeat taps, diagonal/reverse motion and long movement. Link uses interpolated native X/Z and its existing uniform model scale.
+6. [ ] With each character, enable clipping: local presentation returns to its tracked Matrix/server baseline and existing tile clipping resumes. This mode deliberately retains the old tile restrictions; it is not continuous world collision.
+7. [ ] Disable clipping again, release/repress movement: free motion resumes without accumulated native-distance jumps or pending tile requests from the free path.
+8. [ ] Exit/re-enter each character, switch Mario/Link, and logout/relog. No local free offset carries into normal RuneScape mode or another player instance.
+
+Known limits: free movement is local presentation, not authoritative multiplayer travel. Normal Matrix corrections remain authoritative; an outstanding stock route can still correct presentation. Toggling clipping ON or exiting restores the underlying baseline. Native proof-floor/world bounds still exist. Proper continuous RuneScape world collision is future work.
+
+Automated: `python3 tests/n64/test_free_movement.py` with JDK on PATH (or JAVA/JAVAC overrides). Production shared controller, free-movement helper and both drivers compile against engine stubs with Java 8 target; 6,017 checks pass. Complete OoT Java bridge compiles and 112 production interpolation samples pass. Full client/native runtime acceptance remains pending.
+
 ## Shared screen-relative WASD - Mario and Link (2026-10-05)
 
 Status: implemented / verified-static; runtime acceptance pending. This steering patch does not fix the separately tracked tile-handoff hitching.

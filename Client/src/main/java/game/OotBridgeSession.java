@@ -94,6 +94,36 @@ public final class OotBridgeSession {
         return worker == null ? null : worker.getLatestFrame();
     }
 
+    /** One native tick delayed; position remains continuous between 20 Hz frames. */
+    static NativePosition getInterpolatedPosition() {
+        Worker worker = current;
+        PositionFrames frames = worker == null ? null : worker.positionFrames;
+        return frames == null ? null : frames.sample(System.nanoTime());
+    }
+
+    static final class NativePosition {
+        final float x, z;
+        NativePosition(float x, float z) { this.x = x; this.z = z; }
+    }
+
+    private static final class PositionFrames {
+        final float oldX, oldZ, x, z;
+        final long receivedNanos;
+        PositionFrames(LinkFrame previous, LinkFrame latest) {
+            oldX = previous == null ? latest.x : previous.x;
+            oldZ = previous == null ? latest.z : previous.z;
+            x = latest.x;
+            z = latest.z;
+            receivedNanos = latest.receivedNanos;
+        }
+        NativePosition sample(long now) {
+            float alpha = Math.max(0.0F, Math.min(1.0F,
+                    (float) (now - receivedNanos) / STEP_NANOS));
+            return new NativePosition(oldX + (x - oldX) * alpha,
+                    oldZ + (z - oldZ) * alpha);
+        }
+    }
+
     private static final class Worker implements Runnable {
         private final File bridge;
         private final File rom;
@@ -105,6 +135,7 @@ public final class OotBridgeSession {
         private volatile String failureReason;
         private volatile InputState inputState = InputState.IDLE;
         private volatile LinkFrame latestFrame;
+        private volatile PositionFrames positionFrames;
         private volatile Process process;
         private Thread thread;
 
@@ -151,6 +182,11 @@ public final class OotBridgeSession {
 
         LinkFrame getLatestFrame() {
             return latestFrame;
+        }
+
+        private void publishFrame(LinkFrame frame) {
+            positionFrames = new PositionFrames(latestFrame, frame);
+            latestFrame = frame;
         }
 
         void setInput(InputState input) {
@@ -202,15 +238,15 @@ public final class OotBridgeSession {
                 output = new BufferedOutputStream(localProcess.getOutputStream(), 16 * 1024);
 
                 readHandshake(input);
-                latestFrame = retainTextureCatalog(step(output, input, InputState.IDLE));
-                latestFrame = retainTextureCatalog(step(output, input, InputState.IDLE));
+                publishFrame(retainTextureCatalog(step(output, input, InputState.IDLE)));
+                publishFrame(retainTextureCatalog(step(output, input, InputState.IDLE)));
                 ready = true;
                 System.out.println(
                         "[OoT Bridge] Persistent session READY (20 Hz + Link materials, protocol v2)");
 
                 long nextStep = System.nanoTime();
                 while (running) {
-                    latestFrame = retainTextureCatalog(step(output, input, inputState));
+                    publishFrame(retainTextureCatalog(step(output, input, inputState)));
                     nextStep += STEP_NANOS;
                     long now = System.nanoTime();
                     long waitNanos = nextStep - now;

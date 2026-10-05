@@ -9,6 +9,18 @@ package game;
  */
 public final class AlternateCharacterController {
 
+    // UI requests only; each driver applies transitions on the client thread.
+    // Free movement is the default for this local development controller.
+    private static volatile boolean runeScapeClippingEnabled;
+
+    public static boolean isRuneScapeClippingEnabled() {
+        return runeScapeClippingEnabled;
+    }
+
+    public static void setRuneScapeClippingEnabled(boolean enabled) {
+        runeScapeClippingEnabled = enabled;
+    }
+
     public enum CharacterId {
         MARIO,
         LINK

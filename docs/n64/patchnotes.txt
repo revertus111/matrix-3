@@ -1,3 +1,10 @@
+2026-10-05 - Default continuous free movement / optional RuneScape clipping
+- Restored local native X/Z as default for Mario and added equivalent continuous Link movement; free mode sends no WASD walk packets and applies no tile-boundary clamp.
+- Added one shared N64 header clipping checkbox, OFF by default; ON retains existing RuneScape tile clipping and its known tile restrictions.
+- Added shared free-position baseline/restore handling and immutable one-native-tick-delayed OoT X/Z interpolation; mode transitions run on the client thread.
+- Preserved shared screen-relative steering, native action inputs and server authority. Free movement is local presentation; enabling clipping or exiting restores the underlying baseline.
+- Java 8-targeted focused checks: 6,017 production-driver assertions and 112 production interpolation samples pass. Full client build/runtime feel remains pending; no native rebuild required.
+
 2026-10-04 - N64 Client Console workspace / Mario 64 flight recorder
 - Added first-class N64 Client Console workspace and Mario runtime recorder.
 

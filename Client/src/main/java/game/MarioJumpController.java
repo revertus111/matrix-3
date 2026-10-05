@@ -9,6 +9,10 @@ package game;
  */
 public final class MarioJumpController {
 
+    private static final AlternateCharacterFreeMovement freeMovement =
+            new AlternateCharacterFreeMovement();
+    private static boolean clippingWasEnabled;
+
     // Presentation calibration only. libsm64 remains the action/physics owner.
     private static final float DEFAULT_SM64_TO_MATRIX_Y_SCALE = 3.0F;
     private static final float DEFAULT_SM64_TO_MATRIX_XZ_SCALE = 3.0F;
@@ -129,6 +133,13 @@ public final class MarioJumpController {
             return;
         }
 
+        boolean clipping = AlternateCharacterController.isRuneScapeClippingEnabled();
+        if (baselineValid && clipping != clippingWasEnabled) {
+            restoreGroundBaseline(player);
+            resetPresentation();
+        }
+        clippingWasEnabled = clipping;
+
         Sm64BridgeSession.NativePosition latestNative = Sm64BridgeSession.getLatestPosition();
         if (!baselineValid) {
             // Do not feed movement/actions until Matrix and native baselines exist.
@@ -141,9 +152,9 @@ public final class MarioJumpController {
             Class240 position = player.method5394().aClass240_2647;
             collisionTileX = player.screenX[0];
             collisionTileY = player.screenY[0];
-            groundX = tileCenter(player, collisionTileX);
+            groundX = clipping ? tileCenter(player, collisionTileX) : position.aFloat2653;
             groundY = position.aFloat2656;
-            groundZ = tileCenter(player, collisionTileY);
+            groundZ = clipping ? tileCenter(player, collisionTileY) : position.aFloat2657;
             nativeGroundY = latestNative.y;
             baselineValid = true;
             appliedPositionValid = false;
@@ -151,7 +162,7 @@ public final class MarioJumpController {
             pendingAuthorityTileValid = false;
             System.out.println("[SM64 Bridge] Native state -> Matrix transform ACTIVE (Y scale "
                     + SM64_TO_MATRIX_Y_SCALE + ", XZ scale " + SM64_TO_MATRIX_XZ_SCALE
-                    + ", collision owner vanilla RS3 / continuous handoff)");
+                    + (clipping ? ", vanilla RS3 tile clipping)" : ", continuous free movement / clipping OFF)"));
             System.out.println("[Mario] Controls: camera-relative WASD move, Space jump, F attack, Shift crouch/ground-pound");
         }
 
@@ -175,6 +186,20 @@ public final class MarioJumpController {
              * doing that every accepted tile was the source of the visible hitch.
              */
             groundY = currentY;
+        }
+
+        if (!clipping) {
+            freeMovement.apply(player, interpolatedNative.x, interpolatedNative.z,
+                    SM64_TO_MATRIX_XZ_SCALE);
+            Class240 freePosition = player.method5394().aClass240_2647;
+            float height = Math.max(0.0F, interpolatedNative.y - nativeGroundY);
+            lastAppliedX = freePosition.aFloat2653;
+            lastAppliedY = groundY - height * SM64_TO_MATRIX_Y_SCALE;
+            lastAppliedZ = freePosition.aFloat2657;
+            player.method5395(lastAppliedX, lastAppliedY, lastAppliedZ);
+            appliedPositionValid = true;
+            Mario64Diagnostics.observeRuntime(player);
+            return;
         }
 
         float nativeDeltaX = 0.0F;
@@ -470,7 +495,13 @@ public final class MarioJumpController {
         if (player == null || !baselineValid) {
             return;
         }
-        player.method5395(groundX, groundY, groundZ);
+        if (!clippingWasEnabled) {
+            freeMovement.restore(player);
+            Class240 position = player.method5394().aClass240_2647;
+            player.method5395(position.aFloat2653, groundY, position.aFloat2657);
+        } else {
+            player.method5395(groundX, groundY, groundZ);
+        }
     }
 
     private static float resolveVerticalScale() {
@@ -504,6 +535,7 @@ public final class MarioJumpController {
     }
 
     private static void resetPresentation() {
+        freeMovement.reset();
         MarioWeaponCombat.reset();
         baselineValid = false;
         appliedPositionValid = false;

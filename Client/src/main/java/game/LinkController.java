@@ -3,11 +3,15 @@ package game;
 /**
  * Matrix3 client-thread adapter for Link-mode liboot input/state.
  *
- * Phase 1 keeps Matrix/server walking and collision authoritative for X/Z. liboot
- * receives the same camera-relative input so it owns Link's animation/action
- * state, while the first render proof stays isolated from combat authority.
+ * Default X/Z is local continuous native presentation. The optional RuneScape
+ * clipping mode retains stock tile walking. liboot owns animation/action state;
+ * free movement does not change the authoritative server position.
  */
 public final class LinkController {
+
+    private static final AlternateCharacterFreeMovement freeMovement =
+            new AlternateCharacterFreeMovement();
+    private static boolean clippingWasEnabled;
 
     private static final int WALK_RETRY_CYCLES = 10;
     private static final float MOVE_DIRECTION_DEADZONE = 0.20F;
@@ -56,8 +60,23 @@ public final class LinkController {
 
         AlternateCharacterController.ControlState controls =
                 AlternateCharacterController.sampleControls();
+        boolean clipping = AlternateCharacterController.isRuneScapeClippingEnabled();
+        if (clipping != clippingWasEnabled) {
+            freeMovement.restore(player);
+            resetMovement();
+            clippingWasEnabled = clipping;
+        }
         publishControls(controls);
-        requestVanillaRuneScapeStep(player, controls);
+        if (clipping) {
+            requestVanillaRuneScapeStep(player, controls);
+        } else {
+            OotBridgeSession.LinkFrame frame = OotBridgeSession.getLatestFrame();
+            OotBridgeSession.NativePosition position = OotBridgeSession.getInterpolatedPosition();
+            LinkCharacterFit.Profile fit = frame == null ? null : LinkCharacterFit.resolve(player, frame);
+            if (position != null && fit != null) {
+                freeMovement.apply(player, position.x, position.z, fit.scale);
+            }
+        }
     }
 
     private static void publishControls(AlternateCharacterController.ControlState controls) {
@@ -151,16 +170,19 @@ public final class LinkController {
 
     private static void enterLinkMode() {
         resetMovement();
+        clippingWasEnabled = AlternateCharacterController.isRuneScapeClippingEnabled();
         AlternateCharacterInputKeyboard.install();
         captureHeldActionGuards();
         OotBridgeSession.start();
         System.out.println(
                 "[OoT] Controls: camera-relative WASD move, Space A/action, F B/sword, Shift Z-target");
         System.out.println(
-                "[OoT] Phase 1: Matrix walking/collision owns X/Z; Link B does not send an NPC attack packet yet.");
+                "[OoT] Movement: " + (clippingWasEnabled ? "RuneScape tile clipping" : "continuous free / clipping OFF")
+                + "; Link B does not send an NPC attack packet yet.");
     }
 
     private static void exitLinkMode() {
+        freeMovement.restore(Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976);
         OotBridgeSession.stop();
         /*
          * Link->Mario can transition in the same client tick. Mario installs the
@@ -175,6 +197,7 @@ public final class LinkController {
     }
 
     private static void fallbackToRuneScape(String reason) {
+        freeMovement.restore(Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976);
         System.out.println("[OoT Bridge] Falling back to RuneScape control: " + reason);
         OotBridgeSession.stop();
         AlternateCharacterInputKeyboard.uninstall();
@@ -191,6 +214,7 @@ public final class LinkController {
     }
 
     private static void resetMovement() {
+        freeMovement.reset();
         lastWalkTargetX = Integer.MIN_VALUE;
         lastWalkTargetY = Integer.MIN_VALUE;
         lastWalkRequestCycle = Integer.MIN_VALUE;

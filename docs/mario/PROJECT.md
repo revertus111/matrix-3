@@ -1,5 +1,15 @@
 # Mario 64 in Matrix3 / Revision 830
 
+## Active priority - 2026-10-05 restore free movement and clipping toggle
+
+- User runtime report rejects tile-bound movement; AAA approved restoring the pre-clipping movement feel and a small shared clipping toggle for Mario and Link.
+- Implemented: continuous native X/Z is now default. `AlternateCharacterFreeMovement` applies sub-tile native deltas without tile clamps or walk packets; Mario retains its established interpolated native XYZ/action pipeline and Link adds one-tick-delayed 20 Hz X/Z interpolation.
+- N64 header checkbox `RuneScape clipping (tile-based)` enables the existing stock tile-walk/clamp path for both characters. It starts OFF; switching is handled on the client thread. The shared screen-relative input owner remains unchanged.
+- Free movement is local presentation only. Enabling clipping or exiting restores the tracked Matrix/server baseline; unrelated external corrections remain authoritative. Continuous RuneScape world collision and multiplayer travel are not claimed.
+- Static gate: shared controller/helper/both production drivers compile with Java 8 target against engine stubs; 6,017 production-driver checks pass, including multi-tile free travel with zero packets, sub-tile stop/restart, toggle routing, baseline restoration and external corrections. Complete OoT bridge compiles; 112 interpolation samples pass. Full Eclipse build and visual/runtime acceptance pending.
+- Resume here: run the default-free/optional-clipping section at the top of `docs/n64/TESTLIST.md` for Mario AND Link. Do not return to tuning tile handoffs as the default movement path.
+- This priority supersedes older always-on clipping/current-steering descriptions below; unrelated animation/equipment checkpoints remain preserved.
+
 ## Active steering checkpoint - 2026-10-05
 
 User AAA approved one universal screen-relative WASD controller for Mario, Link and future N64 drivers.
