@@ -9,12 +9,12 @@ package game;
  */
 public final class MarioJumpController {
 
-    // Presentation calibration only. libsm64 remains the movement/physics owner.
+    // Presentation calibration only. libsm64 remains the action/physics owner.
     private static final float DEFAULT_SM64_TO_MATRIX_Y_SCALE = 3.0F;
-    private static final float DEFAULT_SM64_TO_MATRIX_XZ_SCALE = 3.0F;
     private static final float SM64_TO_MATRIX_Y_SCALE = resolveVerticalScale();
-    private static final float SM64_TO_MATRIX_XZ_SCALE = resolveHorizontalScale();
     private static final float EXTERNAL_POSITION_EPSILON = 0.5F;
+    private static final int WALK_RETRY_CYCLES = 10;
+    private static final float MOVE_DIRECTION_DEADZONE = 0.20F;
 
     /*
      * Keep libsm64's camera basis fixed and encode Matrix's already-resolved
@@ -37,12 +37,15 @@ public final class MarioJumpController {
     private static float groundX;
     private static float groundY;
     private static float groundZ;
-    private static float nativeGroundX;
     private static float nativeGroundY;
-    private static float nativeGroundZ;
     private static float lastAppliedX;
     private static float lastAppliedY;
     private static float lastAppliedZ;
+    private static float requestedWorldMoveX;
+    private static float requestedWorldMoveZ;
+    private static int lastWalkTargetX = Integer.MIN_VALUE;
+    private static int lastWalkTargetY = Integer.MIN_VALUE;
+    private static int lastWalkRequestCycle = Integer.MIN_VALUE;
 
     private MarioJumpController() {
     }
@@ -120,17 +123,16 @@ public final class MarioJumpController {
             groundX = position.aFloat2653;
             groundY = position.aFloat2656;
             groundZ = position.aFloat2657;
-            nativeGroundX = latestNative.x;
             nativeGroundY = latestNative.y;
-            nativeGroundZ = latestNative.z;
             baselineValid = true;
             appliedPositionValid = false;
             System.out.println("[SM64 Bridge] Native state -> Matrix transform ACTIVE (Y scale "
-                    + SM64_TO_MATRIX_Y_SCALE + ", XZ scale " + SM64_TO_MATRIX_XZ_SCALE + ")");
+                    + SM64_TO_MATRIX_Y_SCALE + ", XZ owner vanilla RS3 walking/collision)");
             System.out.println("[Mario] Controls: camera-relative WASD move, Space jump, F attack, Shift crouch/ground-pound");
         }
 
         publishControls();
+        requestVanillaRuneScapeStep(player);
 
         Sm64BridgeSession.NativePosition interpolatedNative =
                 Sm64BridgeSession.getInterpolatedPosition();
@@ -145,9 +147,9 @@ public final class MarioJumpController {
         float currentZ = position.aFloat2657;
         if (appliedPositionValid) {
             /*
-             * Matrix/server-owned corrections remain authoritative underneath the
-             * temporary Mario presentation offset. Rebase only the corrected axis
-             * instead of fighting normal RuneScape movement/terrain ownership.
+             * Matrix/server walking owns X/Z and terrain corrections. Mario only
+             * overlays native vertical displacement. Rebase any external change
+             * instead of fighting RuneScape movement/collision ownership.
              */
             if (Math.abs(currentX - lastAppliedX) > EXTERNAL_POSITION_EPSILON) {
                 groundX = currentX;
@@ -160,27 +162,95 @@ public final class MarioJumpController {
             }
         }
 
+        /*
+         * Always accept the live Matrix X/Z as ground truth. This is the temporary
+         * vanilla-RS3 collision mode: normal walk requests go to the server and the
+         * ordinary player movement/update path decides whether/how X/Z advances.
+         * libsm64 still receives the same movement input for authentic Mario action
+         * and animation state, but native X/Z is deliberately not applied locally.
+         */
+        groundX = currentX;
+        groundZ = currentZ;
+
         float nativeHeight = interpolatedNative.y - nativeGroundY;
         if (nativeHeight < 0.0F) {
             nativeHeight = 0.0F;
         }
 
-        float targetX = groundX + (interpolatedNative.x - nativeGroundX) * SM64_TO_MATRIX_XZ_SCALE;
         // Matrix altitude increases as scene-Y decreases.
         float targetY = groundY - nativeHeight * SM64_TO_MATRIX_Y_SCALE;
-        float targetZ = groundZ + (interpolatedNative.z - nativeGroundZ) * SM64_TO_MATRIX_XZ_SCALE;
-        player.method5395(targetX, targetY, targetZ);
-        lastAppliedX = targetX;
+        player.method5395(currentX, targetY, currentZ);
+        lastAppliedX = currentX;
         lastAppliedY = targetY;
-        lastAppliedZ = targetZ;
+        lastAppliedZ = currentZ;
         appliedPositionValid = true;
 
         Mario64Diagnostics.observeRuntime(player);
     }
 
+    /**
+     * Temporary collision handoff: translate the camera-relative Mario movement
+     * intent into Matrix3's existing scene-walk packet. The normal server
+     * route/collision owner then validates walls, objects, blocked floor and
+     * diagonal legality and returns movement through the stock player update path.
+     * No custom clip masks or parallel Mario collision map are introduced here.
+     */
+    private static void requestVanillaRuneScapeStep(Player player) {
+        if (player == null || client.aClass195_8589 == null) {
+            return;
+        }
+
+        int dx = directionStep(requestedWorldMoveX);
+        int dz = directionStep(requestedWorldMoveZ);
+        if (dx == 0 && dz == 0) {
+            lastWalkTargetX = Integer.MIN_VALUE;
+            lastWalkTargetY = Integer.MIN_VALUE;
+            return;
+        }
+
+        int currentTileX = player.screenX[0];
+        int currentTileY = player.screenY[0];
+        int targetTileX = currentTileX + dx;
+        int targetTileY = currentTileY + dz;
+
+        if (targetTileX < 0 || targetTileY < 0
+                || targetTileX >= client.aClass613_8605.method7347(-520836217)
+                || targetTileY >= client.aClass613_8605.method7278(277214477)) {
+            return;
+        }
+
+        boolean targetChanged = targetTileX != lastWalkTargetX || targetTileY != lastWalkTargetY;
+        boolean retryDue = lastWalkRequestCycle == Integer.MIN_VALUE
+                || client.cycles - lastWalkRequestCycle >= WALK_RETRY_CYCLES;
+        if (!targetChanged && !retryDue) {
+            return;
+        }
+
+        Class572_Sub25 packet = IncomingPacket.method4108(targetTileX, targetTileY, 0, 0);
+        if (packet == null) {
+            return;
+        }
+        client.aClass195_8589.method2929(packet, (byte) -1);
+        lastWalkTargetX = targetTileX;
+        lastWalkTargetY = targetTileY;
+        lastWalkRequestCycle = client.cycles;
+    }
+
+    private static int directionStep(float value) {
+        if (value > MOVE_DIRECTION_DEADZONE) {
+            return 1;
+        }
+        if (value < -MOVE_DIRECTION_DEADZONE) {
+            return -1;
+        }
+        return 0;
+    }
+
     private static void publishIdleInput() {
         AlternateCharacterController.ControlState controls =
                 AlternateCharacterController.sampleControls();
+        requestedWorldMoveX = 0.0F;
+        requestedWorldMoveZ = 0.0F;
         Sm64BridgeSession.setInput(
                 LIBSM64_NEUTRAL_CAMERA_X,
                 LIBSM64_NEUTRAL_CAMERA_Z,
@@ -229,6 +299,8 @@ public final class MarioJumpController {
         float rightZ = -forwardX;
         float worldMoveX = controls.moveX * rightX + controls.moveY * forwardX;
         float worldMoveZ = controls.moveX * rightZ + controls.moveY * forwardZ;
+        requestedWorldMoveX = worldMoveX;
+        requestedWorldMoveZ = worldMoveZ;
 
         boolean weaponCombat = MarioWeaponCombat.updateInput(buttonB && !combatAttackWasDown);
         Sm64BridgeSession.setCombatInput(
@@ -301,12 +373,6 @@ public final class MarioJumpController {
                 DEFAULT_SM64_TO_MATRIX_Y_SCALE);
     }
 
-    private static float resolveHorizontalScale() {
-        return resolvePositiveScale(
-                "matrix3.sm64.horizontalScale",
-                DEFAULT_SM64_TO_MATRIX_XZ_SCALE);
-    }
-
     private static float resolvePositiveScale(String propertyName, float defaultValue) {
         String configured = System.getProperty(propertyName);
         if (configured == null || configured.trim().isEmpty()) {
@@ -332,12 +398,15 @@ public final class MarioJumpController {
         groundX = 0.0F;
         groundY = 0.0F;
         groundZ = 0.0F;
-        nativeGroundX = 0.0F;
         nativeGroundY = 0.0F;
-        nativeGroundZ = 0.0F;
         lastAppliedX = 0.0F;
         lastAppliedY = 0.0F;
         lastAppliedZ = 0.0F;
+        requestedWorldMoveX = 0.0F;
+        requestedWorldMoveZ = 0.0F;
+        lastWalkTargetX = Integer.MIN_VALUE;
+        lastWalkTargetY = Integer.MIN_VALUE;
+        lastWalkRequestCycle = Integer.MIN_VALUE;
     }
 
     public static boolean isAirborne() {
@@ -354,4 +423,3 @@ public final class MarioJumpController {
         return nativeHeight <= 0.0F ? 0.0F : nativeHeight * SM64_TO_MATRIX_Y_SCALE;
     }
 }
-
