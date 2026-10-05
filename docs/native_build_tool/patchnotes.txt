@@ -1,0 +1,5 @@
+2026-10-05 - One-click native builder
+- Added root `Native Builder.bat` launcher with Mario and OoT build buttons.
+- Mario build always runs from `native/sm64-bridge`, force-stops stale `sm64_bridge.exe`, runs `make bootstrap`, then `make test-combat`.
+- OoT build always runs from `native/oot-bridge` and reports missing MSYS2 CMake before invoking its bootstrap target.
+- Build windows remain open with explicit SUCCESS/FAILED output; current terminal directory is irrelevant.
