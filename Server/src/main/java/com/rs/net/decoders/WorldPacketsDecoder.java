@@ -657,7 +657,7 @@ public final class WorldPacketsDecoder extends Decoder {
 												player.getPackets().sendGameMessage("This cannot be cured.");
 												return;
 											} else if (!spot.isDiseased()) {
-												player.getPackets().sendGameMessage("Your patch is in perfect health.");
+												player.getPackets().sendGameMessage("Your patch is not diseased.");
 												return;
 											}
 											player.lock(3);
@@ -971,8 +971,11 @@ public final class WorldPacketsDecoder extends Decoder {
 		//System.out.println("packet: "+packetId +", "+ Thread.currentThread().getName());
 		if (opcode == PING_PACKET) {
 			player.getPackets().sendPing();
-		}else if(opcode == 26) {
-			LinkCombatPacketBridge.handle(player, stream);
+		}else if(opcode == 26) { //testing
+			int shorta = stream.readShort();
+			boolean b =  stream.readUnsignedByte() == 1;
+			String s = stream.readString();
+			System.out.println("p26: "+shorta+", "+b+", "+s);
 		}else if (opcode == CUTSCENE_DONE_PACKET) {
 			@SuppressWarnings("unused")
 			boolean done = stream.readUnsignedByte() == 1;
@@ -1174,7 +1177,7 @@ public final class WorldPacketsDecoder extends Decoder {
 				LoginClientChannelManager.sendReliablePacket(LoginChannelsPacketEncoder.encodeAccountVarUpdate(player.getUsername(), LoginProtocol.VAR_TYPE_DISPLAY_NAME, Utils.formatPlayerNameForDisplay(value)).getBuffer());
 				//player.getPackets().sendGameMessage("Feature disabled due to rework.");
 			} else if (player.getTemporaryAttributtes().remove(Key.CLAN_MOTTO) == Boolean.TRUE)
-				ClansManager.setMottoInterface(player, value);
+				ClansManager.setClanMottoInterface(player, value);
 		} else if (opcode == ENTER_INTEGER_PACKET) {
 			if (!player.isRunning() || player.isDead() || !player.getInterfaceManager().containsInputTextInterface())
 				return;
@@ -1263,7 +1266,7 @@ public final class WorldPacketsDecoder extends Decoder {
 				if (player.getTemporaryAttributtes().remove("trade_isRemove") != null)
 					player.getTrade().removeItem(trade_item_X_Slot, value);
 				else
-					player.getTrade().addItem(item, value);
+					player.getTrade().addItem(trade_item_X_Slot, value);
 			} else if (player.getInterfaceManager().containsInterface(403) && player.getTemporaryAttributtes().get("PlanksConvert") != null) {
 				Sawmill.convertPlanks(player, (Plank) player.getTemporaryAttributtes().remove("PlanksConvert"), value);
 			} else if (player.getInterfaceManager().containsInterface(902) && player.getTemporaryAttributtes().get("PlankMake") != null) {
@@ -1281,8 +1284,8 @@ public final class WorldPacketsDecoder extends Decoder {
 			} else if (player.getTemporaryAttributtes().remove("withdrawingPouch") == Boolean.TRUE) {
 				player.getMoneyPouch().sendDynamicInteraction(value, true, MoneyPouch.TYPE_POUCH_INVENTORY);
 			} else if (player.getControlerManager().getControler() != null && player.getTemporaryAttributtes().get(Key.SERVANT_REQUEST_ITEM) != null) {
-				Integer type = (Integer) player.getTemporaryAttributtes().get(Key.SERVANT_REQUEST_TYPE);
-				Integer item = (Integer) player.getTemporaryAttributtes().get(Key.SERVANT_REQUEST_ITEM);
+				Integer type = (Integer) player.getTemporaryAttributtes().remove(Key.SERVANT_REQUEST_TYPE);
+				Integer item = (Integer) player.getTemporaryAttributtes().remove(Key.SERVANT_REQUEST_ITEM);
 				if (!player.getHouse().isLoaded() || !player.getHouse().getPlayers().contains(player) || type == null || item == null)
 					return;
 				player.getHouse().getServantInstance().requestType(item, value, type.byteValue());
@@ -1315,8 +1318,8 @@ public final class WorldPacketsDecoder extends Decoder {
 					if (player.getFamiliar() != null)
 						player.getFamiliar().dissmissFamiliar(false);
 					player.getPrayer().closeAllPrayers();
-					player.getSkills().set(skill, value);
-					player.getSkills().setXp(skill, Skills.getXPForLevel(value));
+					player.getSkills().set(selectedSkill, value);
+					player.getSkills().setXp(selectedSkill, Skills.getXPForLevel(value));
 					player.getAppearence().generateAppearenceData();
 					player.getInventory().removeItemMoneyPouch(new Item(995, price));
 					player.getDialogueManager().startDialogue("SimpleMessage", "As your coins transmute, you begin feel like your forgetting something...");
@@ -1534,7 +1537,7 @@ public final class WorldPacketsDecoder extends Decoder {
 			if (!player.hasStarted())
 				return;
 			if (player.getCurrentFriendsChat() != null)
-				player.getFriendsIgnores().getFriendsChat().kickMember(player, Utils.formatPlayerNameForDisplay(stream.readString()));
+				player.getCurrentFriendsChat().kickMember(player, Utils.formatPlayerNameForDisplay(stream.readString()));
 		} else if (opcode == KICK_CLAN_CHAT_PACKET) {
 			if (!player.hasStarted())
 				return;
@@ -1589,9 +1592,11 @@ public final class WorldPacketsDecoder extends Decoder {
 			QuickChatOptionDefinition option = QuickChatOptionDefinition.loadOption(qcFileId);
 			if (option.dynamicDataTypes != null) {
 				data = new long[option.dynamicDataTypes.length];
-				for(int i = 0; i < option.dynamicDataTypes.length; i++) {
-					if(option.getType(i).clientToServerBytes > 0)
+				for (int i = 0; i < option.dynamicDataTypes.length; i++) {
+					if (option.getType(i).clientToServerBytes > 0) {
 						data[i] = stream.readDynamic(option.getType(i).clientToServerBytes);
+					}
+
 				}
 			}
 			player.getFriendsIgnores().sendPrivateMessage(target, option, data);
@@ -1610,16 +1615,18 @@ public final class WorldPacketsDecoder extends Decoder {
 			QuickChatOptionDefinition option = QuickChatOptionDefinition.loadOption(qcFileId);
 			if (option.dynamicDataTypes != null) {
 				data = new long[option.dynamicDataTypes.length];
-				for(int i = 0; i < option.dynamicDataTypes.length; i++) {
-					if(option.getType(i).clientToServerBytes > 0)
+				for (int i = 0; i < option.dynamicDataTypes.length; i++) {
+					if (option.getType(i).clientToServerBytes > 0) {
 						data[i] = stream.readDynamic(option.getType(i).clientToServerBytes);
+					}
+
 				}
 			}
 			if (quickChatType == 0)
 				player.sendPublicChatMessage(new QuickChatMessage(player, option, data));
 			else if (quickChatType == 1) {
 				if (player.getCurrentFriendsChat() != null)
-					player.getFriendsIgnores().getFriendsChat().sendMessage(player, option, data);
+					player.getCurrentFriendsChat().sendMessage(player, option, data);
 			} else if (quickChatType == 2)
 				player.sendClanChannelQuickMessage(new QuickChatMessage(player, option, data));
 			else if (quickChatType == 3)
@@ -1656,7 +1663,7 @@ public final class WorldPacketsDecoder extends Decoder {
 				if (player.getCurrentFriendsChat() != null) {
 					if(message.equals("[Attempting to kick/ban user from this Friends Chat.]")) 
 						return;
-					player.getFriendsIgnores().getFriendsChat().sendMessage(player, message);
+					player.getCurrentFriendsChat().sendMessage(player, message);
 				}
 			} else if (chatType == 2)
 				player.sendClanChannelMessage(new ChatMessage(message));
@@ -1665,8 +1672,11 @@ public final class WorldPacketsDecoder extends Decoder {
 			else {
 				//Think i also fixed the large view scene thing, but just incase, spoof message
 				if (player.getControlerManager().getControler() instanceof DungeonController) {
-					for(Player party : player.getDungManager().getParty().getTeam()) {
-						party.sendPublicChatMessage(new PublicChatMessage(player.getDisplayName()+": <col=7fa9ff>"+message, effects));
+					for (Player party : player.getDungManager().getParty().getTeam()) {
+						/*if (player.getLocalPlayerUpdate().getLocalPlayers()[party.getIndex()] == null || party.getLocalPlayerUpdate().getLocalPlayers()[player.getIndex()] == null) {
+							party.getPackets().sendGameMessage(player.getDisplayName() + ":<col=7fa9ff> " + message);
+						}*/
+						party.getPackets().sendPublicMessage(player, new PublicChatMessage(message, effects));
 					}
 				} else
 					player.sendPublicChatMessage(new PublicChatMessage(message, effects));
@@ -1691,7 +1701,7 @@ public final class WorldPacketsDecoder extends Decoder {
 			else if (player.getTemporaryAttributtes().get("MottifCustomize") != null)
 				ClansManager.setMottifColor(player, colorId);
 			else if (player.getTemporaryAttributtes().remove(Key.COSTUME_COLOR_CUSTOMIZE) != null)
-				SkillCapeCustomizer.handleCostumeCustomizerColor(player, colorId);
+				SkillCapeCustomizer.handleCostumeColor(player, colorId);
 		} else if (opcode == REPORT_ABUSE_PACKET) {
 			if (!player.hasStarted())
 				return;
