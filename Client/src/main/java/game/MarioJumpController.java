@@ -16,6 +16,14 @@ public final class MarioJumpController {
     private static final float SM64_TO_MATRIX_XZ_SCALE = resolveHorizontalScale();
     private static final float EXTERNAL_POSITION_EPSILON = 0.5F;
 
+    /*
+     * Keep libsm64's camera basis fixed and encode Matrix's already-resolved
+     * screen-relative movement as a world-space stick vector. This avoids a
+     * second camera-handedness conversion at the native boundary.
+     */
+    private static final float LIBSM64_NEUTRAL_CAMERA_X = 0.0F;
+    private static final float LIBSM64_NEUTRAL_CAMERA_Z = 1.0F;
+
     private static int lastTickCycle = Integer.MIN_VALUE;
     private static Player lastPlayer;
     private static boolean modeWasMario;
@@ -173,9 +181,9 @@ public final class MarioJumpController {
     private static void publishIdleInput() {
         AlternateCharacterController.ControlState controls =
                 AlternateCharacterController.sampleControls();
-        AlternateCharacterController.PlanarDirection camera = controls.cameraForward;
         Sm64BridgeSession.setInput(
-                -camera.x, -camera.z,
+                LIBSM64_NEUTRAL_CAMERA_X,
+                LIBSM64_NEUTRAL_CAMERA_Z,
                 0.0F, 0.0F,
                 false, false, false);
         Mario64Diagnostics.observeControls(controls, false, false, false);
@@ -201,17 +209,32 @@ public final class MarioJumpController {
         boolean buttonZ = !crouchReleaseRequired && controls.modifierAction;
 
         /*
-         * VERIFIED runtime failure classification: with the correct live
-         * Construction camera selected, W/S and A/D were both reversed together.
-         * That is a 180-degree basis error, not an individual stick-axis error.
-         * Keep the shared Matrix camera-forward semantic untouched and rotate the
-         * Mario/libsm64 camera-look basis by 180 degrees at this adapter boundary.
+         * Construction's accepted RTS movement maps local screen input with:
+         *   right = (forwardZ, -forwardX)
+         *   world = localX * right + localY * forward
+         *
+         * verified-static against libsm64:
+         *   cameraYaw = atan2s(camLookZ, camLookX)
+         *   controller.stickX = -64 * input.stickX
+         *   controller.stickY =  64 * input.stickY
+         *   intendedYaw = atan2s(-stickY, stickX) + cameraYaw
+         *
+         * With neutral camLook=(0,+1), publishing stick=(-worldX,-worldZ)
+         * makes libsm64's intendedYaw point at the exact Matrix world vector.
+         * This removes all camera sign/handedness interpretation from libsm64.
          */
+        float forwardX = controls.cameraForward.x;
+        float forwardZ = controls.cameraForward.z;
+        float rightX = forwardZ;
+        float rightZ = -forwardX;
+        float worldMoveX = controls.moveX * rightX + controls.moveY * forwardX;
+        float worldMoveZ = controls.moveX * rightZ + controls.moveY * forwardZ;
+
         Sm64BridgeSession.setInput(
-                -controls.cameraForward.x,
-                -controls.cameraForward.z,
-                controls.moveX,
-                controls.moveY,
+                LIBSM64_NEUTRAL_CAMERA_X,
+                LIBSM64_NEUTRAL_CAMERA_Z,
+                -worldMoveX,
+                -worldMoveZ,
                 buttonA,
                 buttonB,
                 buttonZ);
