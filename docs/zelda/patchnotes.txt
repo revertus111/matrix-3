@@ -118,3 +118,16 @@
 - Restored the proven tessellation ceiling to 4 subdivisions per edge (`matrix3.oot.textureSubdivisions=0..4`) while keeping the V4 70-degree smoothing and four-tap texture filter. This preserves the presentation improvements without crossing the verified raw-model index envelope.
 - No native rebuild is required; this is a Java-only renderer correction.
 - Status: exact runtime failure is diagnosed from the user log and the correction is `verified-static` pending the next Eclipse run.
+
+2026-10-05 - Adult Link skeleton sockets + first revision-830 helmet proof staged
+- User confirmed the reason Adult Link was scaled into the revision-830 character envelope: equipment should stay close to native Matrix scale rather than being heavily resized through Mario's geometry-envelope fitter.
+- Kept the Link equipment architecture separate from Mario. No Mario equipment workbench, Mario head-envelope fit, or Mario socket code is used by the new Link equipment path.
+- Verified upstream liboot's `OoTSkeletonPose` contract: 21 world-space joints plus parent indices, stored at `PLAYER_LIMB_* - 1` specifically so host engines can attach objects to semantic joints such as head/hands.
+- Upgraded the persistent sidecar binary protocol from V2 to V3. Each frame now streams skeleton joint count, parent table, and world-space joint positions before the existing geometry/material payload. A fresh native rebuild is therefore required once.
+- `OotBridgeSession` validates/publishes the V3 skeleton payload in immutable `LinkFrame` snapshots and exposes package-local joint accessors.
+- Added `LinkSkeletonSockets` with semantic Adult Link joint constants. The first HEAD socket converts HEAD/HAT/COLLAR/shoulder pose through the same `LinkCharacterFit` transform as the body and derives an animated local basis from the real OoT pose.
+- Added `LinkEquipmentAdapter` as the first socket consumer. It reads the currently equipped revision-830 hat-slot item, loads its normal worn raw model, recenters the item mesh, keeps default scale at 1.0, and renders it on the live Adult Link HEAD socket only while Link replacement is healthy.
+- Added small diagnostic calibration properties for helmet scale/offset/pitch/yaw/roll and head->hat anchor blend. These are for first-proof correction only; preserve the initial screenshot before tuning.
+- Registered Link equipment rendering immediately after Link body rendering in the established `Class578.method6834(...)` preview/render seam.
+- Updated Zelda PROJECT/TESTLIST to make protocol-V3 skeleton + helmet proof the Resume Here target.
+- Status: implementation is `verified-static`; native V3 build, Eclipse compile, skeletonJoints=21, first 830 helmet placement/orientation and animated tracking remain `UNKNOWN` pending runtime test.
