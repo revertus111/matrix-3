@@ -11,7 +11,7 @@ echo ================================================
 echo.
 
 if not exist "%PY_BOOTSTRAP%" (
-    echo ERROR: TP Link private Python bootstrap was not found:
+    echo ERROR: TP Link visual Python bootstrap was not found:
     echo   %PY_BOOTSTRAP%
     goto :fail
 )
@@ -30,7 +30,7 @@ echo.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%PROBE_SCRIPT%"
 set "RC=%ERRORLEVEL%"
 
-if "%RC%"=="0" goto :success
+if "%RC%"=="0" goto :generated
 
 echo.
 echo ================================================
@@ -51,14 +51,16 @@ echo.
 pause
 exit /b %RC%
 
-:success
+:generated
 echo.
 echo ================================================
-echo TP LINK VISUAL PROOF PASS
+echo TP LINK VISUAL PROOF GENERATED
 echo ================================================
 echo The combined idle / walk / sword GIF should open automatically.
-echo Verify that Link renders correctly and the red 0xF marker follows his weapon joint.
-echo This is the local asset proof; Matrix3 in-client rendering is the next bundle.
+echo Cyan 0xE marks Link's right hand. Red 0xF marks the right item/weapon joint.
+echo The TP al_swb sword model is attached to 0xF for the socket diagnostic.
+echo This is NOT a visual PASS until the generated GIF is inspected and accepted.
+echo Matrix3 in-client rendering remains the next bundle only after that acceptance.
 echo.
 pause
 exit /b 0
