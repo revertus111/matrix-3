@@ -138,8 +138,9 @@ final class LinkCharacterFit {
              * anInt11610. AbstractModel.method1382() is the minimum vertex Y.
              * Normal Matrix player geometry uses negative Y above the local ground
              * origin, so its magnitude is the rendered head-to-ground reference.
+             * method8310's decompiler byte parameter is unused by the accessor.
              */
-            int minimumY = player.method8310();
+            int minimumY = player.method8310((byte) 0);
             if (minimumY == 0) {
                 return Float.NaN;
             }
