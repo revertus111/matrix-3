@@ -1,13 +1,15 @@
 package game;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Matrix-native presentation adapter for liboot's animated adult-Link geometry.
  *
- * Phase 1 V1 intentionally uses liboot vertex colour only. Exact OoT texture
- * material translation is deferred until the basic native->Matrix geometry seam
- * is runtime-proven against the user's NTSC-U 1.2 ROM.
+ * Protocol V2 carries OoT positions, normals, colours, UVs, per-triangle texture
+ * indices, and local-ROM texture updates. Textures are registered at runtime in
+ * Matrix's existing material path; no OoT texture bytes are written to the cache.
  */
 public final class LinkVisualRenderer {
 
@@ -17,7 +19,9 @@ public final class LinkVisualRenderer {
             BASE_MODEL_FLAGS | TRANSFORM_FLAGS | 0x1f01f | 0x80000;
     private static final int FINAL_MODEL_FLAGS = BASE_MODEL_FLAGS | TRANSFORM_FLAGS;
     private static final int MAX_MATRIX_VERTICES = 65535;
+    private static final int DIRECT_UV_TEXTURE_INDEX = 32766;
     private static final long MAX_FRAME_AGE_NANOS = 500000000L;
+    private static final float NORMAL_QUANTIZE = 1024.0F;
 
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
@@ -29,6 +33,8 @@ public final class LinkVisualRenderer {
     private static int lastRenderedCycle = Integer.MIN_VALUE;
     private static long lastLoggedSequence = -1L;
     private static long lastFailedSequence = -1L;
+    private static int cachedUniqueVertices;
+    private static int cachedTexturedFaces;
 
     private LinkVisualRenderer() {
     }
@@ -58,6 +64,8 @@ public final class LinkVisualRenderer {
         if (fit == null) {
             return;
         }
+
+        LinkTextureRegistry.prepare(renderer, frame);
 
         if (cachedRenderer != renderer
                 || cachedSequence != frame.sequence
@@ -93,11 +101,13 @@ public final class LinkVisualRenderer {
                 lastLoggedSequence = frame.sequence;
                 System.out.println("[OoT Visual] Native ADULT Link -> Matrix Model ACTIVE"
                         + " triangles=" + frame.triangleCount
+                        + " uniqueVerts=" + cachedUniqueVertices
+                        + " texturedFaces=" + cachedTexturedFaces
                         + " anim=" + frame.animId
                         + " action=" + frame.action
                         + " scale=" + fit.scale
                         + " fit=" + (fit.forcedScale ? "forced" : fit.autoFit ? "830-auto" : "fallback")
-                        + " colour=liboot-vertex-v1");
+                        + " material=oot-uv-texture-v2");
             }
         } catch (RuntimeException ex) {
             if (lastFailedSequence != frame.sequence) {
@@ -113,6 +123,8 @@ public final class LinkVisualRenderer {
         cachedSequence = -1L;
         cachedFitRevision = -1L;
         cachedModel = null;
+        cachedUniqueVertices = 0;
+        cachedTexturedFaces = 0;
         lastRenderedCycle = Integer.MIN_VALUE;
         lastLoggedSequence = -1L;
         lastFailedSequence = -1L;
@@ -121,9 +133,14 @@ public final class LinkVisualRenderer {
 
     private static boolean isUsable(OotBridgeSession.LinkFrame frame) {
         if (frame == null || !frame.skeletonAvailable || frame.triangleCount <= 0
-                || frame.positions == null || frame.colors == null
+                || frame.positions == null || frame.normals == null
+                || frame.colors == null || frame.uvs == null
+                || frame.triangleTextures == null
                 || frame.positions.length < frame.triangleCount * 9
-                || frame.colors.length < frame.triangleCount * 9) {
+                || frame.normals.length < frame.triangleCount * 9
+                || frame.colors.length < frame.triangleCount * 9
+                || frame.uvs.length < frame.triangleCount * 6
+                || frame.triangleTextures.length < frame.triangleCount) {
             return false;
         }
         long age = System.nanoTime() - frame.receivedNanos;
@@ -133,46 +150,78 @@ public final class LinkVisualRenderer {
     private static Model buildModel(Class106 renderer, OotBridgeSession.LinkFrame frame,
             LinkCharacterFit.Profile fit) {
         int triangles = frame.triangleCount;
-        int vertices = triangles * 3;
-        if (triangles <= 0 || vertices > MAX_MATRIX_VERTICES) {
+        int maxVertices = triangles * 3;
+        if (triangles <= 0 || maxVertices > MAX_MATRIX_VERTICES) {
             return null;
         }
 
-        Class159 raw = new Class159(vertices, triangles, 0);
-        raw.anInt1791 = vertices;
-        raw.anInt1775 = vertices;
+        Class159 raw = new Class159(maxVertices, triangles, 0);
         raw.anInt1778 = triangles;
+        raw.anIntArray1774 = new int[maxVertices];
+        raw.aFloatArray1771 = new float[maxVertices];
+        raw.aFloatArray1784 = new float[maxVertices];
+        raw.uvCoordVertexA = new byte[triangles];
+        raw.uvCoordVertexB = new byte[triangles];
+        raw.uvCoordVertexC = new byte[triangles];
 
         Arrays.fill(raw.anIntArray1813, -1);
         Arrays.fill(raw.anIntArray1780, -1);
         Arrays.fill(raw.faceTextures, (short) -1);
         Arrays.fill(raw.faceTextureIndexes, (short) -1);
 
+        Map<VertexKey, Integer> sharedVertices = new HashMap<VertexKey, Integer>(maxVertices * 2);
+        int uniqueVertices = 0;
+        int texturedFaces = 0;
+
         for (int triangle = 0; triangle < triangles; triangle++) {
-            int vertexBase = triangle * 3;
             int positionBase = triangle * 9;
             int colorBase = triangle * 9;
+            int uvBase = triangle * 6;
+            int ootTexture = frame.triangleTextures[triangle];
+            int materialId = ootTexture == 0xffff
+                    ? -1
+                    : LinkTextureRegistry.materialIdFor(ootTexture);
+            int[] faceVertex = new int[3];
             int sumR = 0;
             int sumG = 0;
             int sumB = 0;
 
             for (int vertex = 0; vertex < 3; vertex++) {
-                int rawVertex = vertexBase + vertex;
                 int p = positionBase + vertex * 3;
                 int c = colorBase + vertex * 3;
+                int uv = uvBase + vertex * 2;
 
-                /*
-                 * Matrix owns host X/Z while liboot owns Link pose/root-height.
-                 * Uniform auto-fit preserves adult Link's OoT proportions. The
-                 * calibrated native standing floor maps to Matrix local Y=0,
-                 * while native root-height deltas remain visible for jumps/actions.
-                 */
-                raw.anIntArray1782[rawVertex] = Math.round(
-                        (frame.positions[p] - frame.x) * fit.scale);
-                raw.anIntArray1777[rawVertex] = Math.round(
-                        fit.toMatrixY(frame.positions[p + 1], frame.y));
-                raw.anIntArray1797[rawVertex] = Math.round(
-                        (frame.positions[p + 2] - frame.z) * fit.scale);
+                int x = Math.round((frame.positions[p] - frame.x) * fit.scale);
+                int y = Math.round(fit.toMatrixY(frame.positions[p + 1], frame.y));
+                int z = Math.round((frame.positions[p + 2] - frame.z) * fit.scale);
+                int nx = quantizeNormal(frame.normals[p]);
+                int ny = quantizeNormal(-frame.normals[p + 1]);
+                int nz = quantizeNormal(frame.normals[p + 2]);
+                float u = finiteOrZero(frame.uvs[uv]);
+                float v = finiteOrZero(frame.uvs[uv + 1]);
+
+                VertexKey key = new VertexKey(
+                        x, y, z, nx, ny, nz,
+                        Float.floatToIntBits(u), Float.floatToIntBits(v),
+                        materialId);
+                Integer existing = sharedVertices.get(key);
+                int rawVertex;
+                if (existing != null) {
+                    rawVertex = existing.intValue();
+                } else {
+                    rawVertex = uniqueVertices++;
+                    if (rawVertex >= MAX_MATRIX_VERTICES) {
+                        return null;
+                    }
+                    sharedVertices.put(key, Integer.valueOf(rawVertex));
+                    raw.anIntArray1782[rawVertex] = x;
+                    raw.anIntArray1777[rawVertex] = y;
+                    raw.anIntArray1797[rawVertex] = z;
+                    raw.anIntArray1774[rawVertex] = rawVertex;
+                    raw.aFloatArray1771[rawVertex] = u;
+                    raw.aFloatArray1784[rawVertex] = v;
+                }
+                faceVertex[vertex] = rawVertex;
 
                 sumR += unitColor(frame.colors[c]);
                 sumG += unitColor(frame.colors[c + 1]);
@@ -180,12 +229,23 @@ public final class LinkVisualRenderer {
             }
 
             // Negating model Y mirrors one axis; swap B/C to preserve winding.
-            raw.aShortArray1786[triangle] = (short) vertexBase;
-            raw.aShortArray1787[triangle] = (short) (vertexBase + 2);
-            raw.aShortArray1789[triangle] = (short) (vertexBase + 1);
+            raw.aShortArray1786[triangle] = (short) faceVertex[0];
+            raw.aShortArray1787[triangle] = (short) faceVertex[2];
+            raw.aShortArray1789[triangle] = (short) faceVertex[1];
             raw.faceColours[triangle] = rgbToRsHsl(
                     sumR / 3, sumG / 3, sumB / 3);
+
+            if (materialId >= 0) {
+                raw.faceTextures[triangle] = (short) materialId;
+                raw.faceTextureIndexes[triangle] = (short) DIRECT_UV_TEXTURE_INDEX;
+                texturedFaces++;
+            }
         }
+
+        raw.anInt1791 = uniqueVertices;
+        raw.anInt1775 = uniqueVertices;
+        cachedUniqueVertices = uniqueVertices;
+        cachedTexturedFaces = texturedFaces;
 
         try {
             Model model = renderer.method1755(raw, RAW_BUILD_FLAGS, 0, 64, 850);
@@ -198,6 +258,17 @@ public final class LinkVisualRenderer {
                     + ex.getClass().getSimpleName() + ": " + ex.getMessage());
             return null;
         }
+    }
+
+    private static int quantizeNormal(float value) {
+        if (Float.isNaN(value) || Float.isInfinite(value)) {
+            return 0;
+        }
+        return Math.round(value * NORMAL_QUANTIZE);
+    }
+
+    private static float finiteOrZero(float value) {
+        return Float.isNaN(value) || Float.isInfinite(value) ? 0.0F : value;
     }
 
     private static int unitColor(float value) {
@@ -249,5 +320,56 @@ public final class LinkVisualRenderer {
 
     private static int clamp(int value, int min, int max) {
         return value < min ? min : value > max ? max : value;
+    }
+
+    private static final class VertexKey {
+        final int x;
+        final int y;
+        final int z;
+        final int nx;
+        final int ny;
+        final int nz;
+        final int uBits;
+        final int vBits;
+        final int materialId;
+
+        VertexKey(int x, int y, int z,
+                int nx, int ny, int nz,
+                int uBits, int vBits, int materialId) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.nx = nx;
+            this.ny = ny;
+            this.nz = nz;
+            this.uBits = uBits;
+            this.vBits = vBits;
+            this.materialId = materialId;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = x;
+            result = 31 * result + y;
+            result = 31 * result + z;
+            result = 31 * result + nx;
+            result = 31 * result + ny;
+            result = 31 * result + nz;
+            result = 31 * result + uBits;
+            result = 31 * result + vBits;
+            result = 31 * result + materialId;
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object object) {
+            if (this == object) return true;
+            if (!(object instanceof VertexKey)) return false;
+            VertexKey other = (VertexKey) object;
+            return x == other.x && y == other.y && z == other.z
+                    && nx == other.nx && ny == other.ny && nz == other.nz
+                    && uBits == other.uBits && vBits == other.vBits
+                    && materialId == other.materialId;
+        }
     }
 }
