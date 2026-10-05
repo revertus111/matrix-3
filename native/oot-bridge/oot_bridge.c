@@ -11,10 +11,11 @@
 #include "liboot_engine.h"
 
 #define EXPECTED_ROM_SIZE 33554432u
-#define BINARY_PROTOCOL_VERSION 2u
+#define BINARY_PROTOCOL_VERSION 3u
 #define BINARY_CMD_STEP 1u
 #define MAX_STREAM_TRIANGLES 4096u
 #define MAX_STREAM_TEXTURES OOT_ENGINE_MAX_TEXTURES
+#define MAX_STREAM_JOINTS OOT_SKELETON_MAX_JOINTS
 
 static uint8_t g_texture_sent[MAX_STREAM_TEXTURES];
 static uint32_t g_texture_revision[MAX_STREAM_TEXTURES];
@@ -165,6 +166,32 @@ static int send_handshake(void)
         && fflush(stdout) == 0;
 }
 
+static int send_skeleton(const OoTEngineFrame *frame)
+{
+    uint32_t joint_count;
+    uint32_t joint;
+
+    if (frame == NULL || frame->skeletonAvailable == 0u) {
+        return write_u32_le(0u);
+    }
+
+    joint_count = (uint32_t)frame->skeleton.numJoints;
+    if (joint_count == 0u || joint_count > MAX_STREAM_JOINTS) {
+        fprintf(stderr, "[OoT Bridge] invalid skeleton joint count: %u\n", joint_count);
+        return 0;
+    }
+
+    if (!write_u32_le(joint_count)) {
+        return 0;
+    }
+    for (joint = 0u; joint < joint_count; ++joint) {
+        if (!write_u32_le((uint32_t)frame->skeleton.parent[joint])) {
+            return 0;
+        }
+    }
+    return write_float_array(&frame->skeleton.jointPos[0][0], (size_t)joint_count * 3u);
+}
+
 static int texture_is_referenced(const OoTEngineFrame *frame, uint32_t texture_index)
 {
     uint32_t triangle;
@@ -295,6 +322,7 @@ static int send_frame(OoTEngine *engine, uint32_t sequence, const OoTEngineFrame
             || !write_u32_le((uint32_t)(int32_t)frame->link.animId)
             || !write_float_le(frame->link.animFrame)
             || !write_bytes(flags, sizeof(flags))
+            || !send_skeleton(frame)
             || !write_u32_le(triangles)
             || !write_float_array(frame->geometry.position, vertex_floats)
             || !write_float_array(frame->geometry.normal, vertex_floats)
@@ -393,7 +421,7 @@ int main(int argc, char **argv)
         goto done;
     }
     fprintf(stderr,
-            "[OoT Bridge] persistent NTSC-U 1.2 session READY (20 Hz, protocol v%u + materials)\n",
+            "[OoT Bridge] persistent NTSC-U 1.2 session READY (20 Hz, protocol v%u + materials + skeleton)\n",
             BINARY_PROTOCOL_VERSION);
 
     for (;;) {
