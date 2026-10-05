@@ -24,7 +24,7 @@ Acceptance remains:
 [OoT NTSC12] RESULT: PASS
 ```
 
-## Phase 1 — Adult Link material V2 runtime proof
+## Phase 1 — Adult Link material V2 + local-player replacement proof
 
 ### Current accepted baseline
 
@@ -43,7 +43,7 @@ OOT_AGE_ADULT
 
 ### Mandatory rebuild for this slice
 
-Material fidelity changed the native binary protocol from V1 to **V2**. Pulling Java alone is not enough.
+Material fidelity changed the native binary protocol from V1 to **V2**. Pulling Java alone is not enough if the current local bridge is still V1.
 
 ```sh
 git pull origin main
@@ -69,7 +69,7 @@ If Java reports an unsupported protocol version, the old V1 `oot_bridge.exe` is 
 ### Controls
 
 - **Ctrl+L** — Link mode on/off.
-- **WASD** — camera-relative movement request; Matrix/server walking remains actual X/Z authority for this phase.
+- **WASD** — screen-relative N64 movement request; Matrix/server walking remains actual X/Z authority for this phase.
 - **Space** — OoT A/action.
 - **F** — OoT B/sword; must not issue Matrix NPC damage yet.
 - **Shift** — OoT Z input; host target binding is not implemented yet.
@@ -93,8 +93,6 @@ The exact counts may vary with pose/equipment. For the material proof, `material
 
 ### Material V2 acceptance
 
-Keep the normal RuneScape local-player model visible for this test; it is still the fail-safe/reference model.
-
 Verify in one runtime session:
 
 - [ ] Both native and Java READY lines report **protocol v2**.
@@ -108,16 +106,32 @@ Verify in one runtime session:
 - [ ] Idle/movement animation continues without model explosion, pumping scale, or texture swimming.
 - [ ] Space and F still change native Link action/animation state where the flat proof world allows it.
 - [ ] F still causes **no Matrix NPC damage/XP**.
-- [ ] Ctrl+L exits cleanly and vanilla RuneScape control returns.
-- [ ] Ctrl+L re-entry starts a fresh native session and textures return instead of remaining missing/stale.
+
+### Local RuneScape body replacement acceptance
+
+The 830 local-player body should now disappear automatically after Link has produced a fresh successful Matrix render. This is presentation-only suppression; the underlying RuneScape appearance/equipment state remains intact.
+
+Verify:
+
+- [ ] On initial Ctrl+L activation, the 830 body may be visible briefly during startup/warm-up.
+- [ ] Once `[OoT Visual] ... ACTIVE` has rendered successfully, **only Link remains visible** at the local-player position.
+- [ ] Remote RuneScape players remain visible normally.
+- [ ] Link does not vanish simply because the RuneScape body is suppressed.
+- [ ] Ctrl+L exit restores the normal 830 player body immediately.
+- [ ] Re-entering Link mode suppresses the 830 body again only after Link successfully renders.
+- [ ] If the OoT sidecar is unavailable/stops or Link frames become stale, the 830 body fails open and becomes visible again.
+- [ ] A model-build/render failure does not leave the local player permanently invisible.
+
+The suppression gate is intentionally strict: the latest liboot frame and latest successful Link draw must both be fresh (<= 500 ms). Link has no cached suppression grace period.
 
 ### What to capture
 
-For the first V2 run, preserve:
+For the first combined V2/replacement run, preserve:
 
 1. the console output from Ctrl+L activation through the first `[OoT Visual]` line;
-2. one front/three-quarter screenshot of adult Link;
-3. if textures look wrong, one close screenshot showing the face/tunic/shield orientation.
+2. one front/three-quarter screenshot showing Link **without** the 830 body underneath him;
+3. if textures look wrong, one close screenshot showing the face/tunic/shield orientation;
+4. if suppression fails, note whether the 830 body never disappeared or Link/830 both disappeared.
 
 Do **not** make random UV tweaks before preserving the first result.
 
@@ -128,7 +142,7 @@ Do **not** make random UV tweaks before preserving the first result.
 - Full OoT/N64 alpha-test, decal-depth, and cull-flag parity is not implemented in this V2 slice.
 - Runtime textures are synthetic Matrix materials backed by GPU textures only; no OoT texture files are written into the 830 cache.
 - Matrix may evict GPU textures through its normal LRU; the Link texture registry is expected to re-upload retained local-ROM pixels automatically.
-- The RuneScape local-player model is intentionally still visible for this proof.
+- Local-player replacement reuses the existing Mario/Player suppression seam; it does not mutate the RuneScape appearance object.
 
 ### Failure distinctions
 
@@ -142,16 +156,16 @@ Do **not** make random UV tweaks before preserving the first result.
 - textures visible but vertically inverted -> UV V-axis convention problem; preserve screenshot before patching.
 - textures visible but badly scrambled -> direct UV/material-index problem, not an auto-fit problem.
 - Link fits correctly but remains visually faceted -> smoothing/topology issue after materials are proven.
+- Link visible + 830 body still visible continuously -> local-player suppression readiness/gate issue.
+- both Link and 830 body disappear -> suppression is not failing open correctly; exit Ctrl+L and preserve the console before another patch.
 
 ## Remaining Phase 1 behavior checks
 
-After material V2 is accepted:
+After material V2 + local-player replacement are accepted:
 
-- [ ] Verify camera-relative WASD does not drive the detached/RTS camera while Link owns input.
+- [ ] Verify screen-relative WASD does not drive the detached/RTS camera while Link owns input.
 - [ ] Verify actual X/Z travel continues through Matrix/server walking and collision.
 - [ ] Consolidate idle, movement/turn, one A/action/jump, and B/sword animation in one session.
-- [ ] Add fail-open suppression of the local RuneScape model only while fresh Link frames render successfully.
-- [ ] Exit/failure must restore RuneScape player model/input immediately.
 - [ ] Expose stable adult-Link skeleton/socket transforms for helmet, sword, shield, gloves, boots, amulet, cape, then torso/legs fitting.
 
 ## Later combat and menu acceptance
