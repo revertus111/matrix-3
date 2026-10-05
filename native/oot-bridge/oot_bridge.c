@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
+
 #include "liboot_engine.h"
 
 #define EXPECTED_ROM_SIZE 33554432u
@@ -45,6 +50,19 @@ static int read_rom(const char *path, uint8_t **out_data, size_t *out_size)
     *out_data = data;
     *out_size = (size_t)length;
     return 1;
+}
+
+static int configure_binary_stdio(void)
+{
+#ifdef _WIN32
+    if (_setmode(_fileno(stdin), _O_BINARY) == -1) {
+        return 0;
+    }
+    if (_setmode(_fileno(stdout), _O_BINARY) == -1) {
+        return 0;
+    }
+#endif
+    return setvbuf(stdout, NULL, _IONBF, 0) == 0;
 }
 
 static int read_exact(void *buffer, size_t length)
@@ -193,6 +211,10 @@ int main(int argc, char **argv)
         fprintf(stderr, "usage: %s --binary <legally-obtained-ntsc-u-1.2-rom>\n", argv[0]);
         return 2;
     }
+    if (!configure_binary_stdio()) {
+        fprintf(stderr, "[OoT Bridge] failed to configure binary stdio\n");
+        return 1;
+    }
     if (!read_rom(argv[2], &rom, &rom_size) || rom_size != EXPECTED_ROM_SIZE) {
         fprintf(stderr, "[OoT Bridge] expected exact 32 MiB NTSC-U 1.2 ROM\n");
         goto done;
@@ -248,11 +270,6 @@ int main(int argc, char **argv)
         goto done;
     }
 
-    /* Binary stdout is protocol-only. All diagnostics go to stderr. */
-    if (setvbuf(stdout, NULL, _IONBF, 0) != 0) {
-        fprintf(stderr, "[OoT Bridge] failed to configure binary stdout\n");
-        goto done;
-    }
     if (!send_handshake()) {
         goto done;
     }
