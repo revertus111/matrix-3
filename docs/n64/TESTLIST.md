@@ -2,20 +2,22 @@
 
 ## Temporary vanilla RS3 collision handoff
 
-Runtime finding 2026-10-05: the first handoff correctly blocked RuneScape scenery, but direct stock walk ownership made Mario visibly tile-bounded. Collision itself is `VERIFIED`; continuous presentation over that authority is the current acceptance gate.
+Runtime finding 2026-10-05: vanilla RS3 collision itself is `VERIFIED`, but the first continuous hybrid pass is runtime-rejected because every accepted tile visibly hitched when the collision baseline recentered. The current gate is the zero-snap pending-authority handoff.
 
 1. [ ] `git pull origin main`, Eclipse Java 8 refresh/clean/build, launch/login once. No native sidecar rebuild is required for this Java-only collision/presentation slice.
-2. [ ] Ctrl+M into Mario and tap W/A/S/D briefly. Mario must be able to stop at a visibly sub-tile position instead of committing an immediate full tile step.
-3. [ ] Hold movement across open ground. Mario should move continuously; there must be no obvious tile-centre snap/pause cadence while vanilla RS3/server walking continues to own legal crossings underneath.
-4. [x] Run directly into normal RuneScape collision. The previous runtime proved vanilla collision blocks Mario from crossing scenery. `VERIFIED` for the stock handoff; recheck after smoothing.
-5. [ ] Hold movement into a wall/solid object for several seconds, then turn away. Mario should clamp near the boundary, slide/leave cleanly, and must not teleport from accumulated native X/Z.
-6. [ ] Test diagonal movement at a clipped corner. Illegal diagonal crossing must remain blocked; a legal cardinal component should not manufacture a through-corner jump.
-7. [ ] Jump, backflip and ground-pound while moving into collision. Native action/animation/Y may continue, but visible X/Z must remain inside the vanilla-authoritative collision envelope.
-8. [ ] Walk over normal terrain height changes; Matrix terrain/Y rebasing must remain stable under the native jump overlay.
-9. [ ] Release movement near/after an accepted tile crossing. Stock RuneScape interpolation must not drag visible Mario back to a tile centre after native movement has stopped.
-10. [ ] Ctrl+M out and confirm normal RuneScape presentation restores to the server-owned baseline without leaving the local Mario offset behind.
-11. [ ] Re-enter Mario mode and confirm there is no stale presentation offset or unsolicited walk request.
-12. [ ] Verify F/custom combat, Shift crouch/ground-pound, N64 diagnostics and sleep-guard behavior remain unchanged.
+2. [ ] Ctrl+M into Mario and tap W/A/S/D briefly. Mario must stop at genuine sub-tile positions instead of committing an immediate full tile step.
+3. [ ] Hold one direction across at least 8-10 open tiles. There must be no periodic hitch, tile-centre tug, snap, pause cadence or visible rebase each time vanilla RS accepts another tile.
+4. [x] Run directly into normal RuneScape collision. Vanilla collision blocks Mario from crossing scenery. `VERIFIED`; recheck after the zero-snap handoff.
+5. [ ] Hold movement into a wall/solid object for several seconds. Mario may reach the legal half-tile boundary but must not visually cross it while the vanilla tile request is rejected.
+6. [ ] Turn away from the blocked wall after holding into it. Mario must leave smoothly with no accumulated native-X/Z teleport or delayed snap.
+7. [ ] Test repeated legal tile crossings followed by sudden direction changes. An accepted next tile must not queue additional hidden tiles before Mario reaches its shared boundary.
+8. [ ] Test diagonal movement at a clipped corner. Illegal diagonal crossing must remain blocked; a legal cardinal component must not manufacture a through-corner jump.
+9. [ ] Jump, backflip and ground-pound while moving into collision. Native action/animation/Y may continue, but visible X/Z must remain collision-valid and hitch-free.
+10. [ ] Walk over normal terrain height changes; Matrix terrain/Y rebasing must remain stable under the native jump overlay.
+11. [ ] Release movement just before, on and just after a legal tile boundary. There must be no correction toward either tile centre when movement stops.
+12. [ ] Ctrl+M out and confirm normal RuneScape presentation restores to the current legal server-owned baseline without leaving Mario's local presentation offset behind.
+13. [ ] Re-enter Mario mode and confirm there is no stale presentation offset, pending authority tile or unsolicited walk request.
+14. [ ] Verify F/custom combat, Shift crouch/ground-pound, N64 diagnostics and sleep-guard behavior remain unchanged.
 
 Acceptance note: this remains an interim Matrix/server collision owner. It does **not** mark the planned RuneScape-surface -> libsm64 Phase 3 collision adapter as implemented.
 
@@ -122,4 +124,3 @@ Older v1/v2 sidecar: Java connects with original STEP layout, custom combat repo
 - [ ] No floating helmet, frozen pose, stale coverage, or Mario masking remains after exit.
 - [ ] Re-enter Mario mode and semantic metadata/helmet attachment initialize cleanly.
 - [ ] Normal RuneScape appearance/server authority remain unchanged outside Mario mode.
-
