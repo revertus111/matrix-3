@@ -120,8 +120,7 @@ public final class AlternateCharacterController {
 
         @Override
         public boolean supportsCombatStyle(CombatStyle style) {
-            // Phase 1 deliberately does not expose Matrix combat authority yet.
-            return false;
+            return style == CombatStyle.MELEE;
         }
     };
 
@@ -178,8 +177,8 @@ public final class AlternateCharacterController {
                 moveX,
                 moveY,
                 rawKeyDown(INTERNAL_JUMP_KEY),
-                rawKeyDown(INTERNAL_PRIMARY_KEY),
-                rawKeyDown(INTERNAL_MODIFIER_KEY),
+                rawPrimaryDown(),
+                rawModifierDown(),
                 getCameraForward());
     }
 
