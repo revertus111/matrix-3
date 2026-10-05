@@ -3,7 +3,7 @@ package game;
 import java.util.Arrays;
 
 /**
- * Matrix-native presentation adapter for liboot's animated Link geometry.
+ * Matrix-native presentation adapter for liboot's animated adult-Link geometry.
  *
  * Phase 1 V1 intentionally uses liboot vertex colour only. Exact OoT texture
  * material translation is deferred until the basic native->Matrix geometry seam
@@ -18,14 +18,13 @@ public final class LinkVisualRenderer {
     private static final int FINAL_MODEL_FLAGS = BASE_MODEL_FLAGS | TRANSFORM_FLAGS;
     private static final int MAX_MATRIX_VERTICES = 65535;
     private static final long MAX_FRAME_AGE_NANOS = 500000000L;
-    private static final float DEFAULT_MODEL_SCALE = 3.0F;
-    private static final float MODEL_SCALE = resolveModelScale();
 
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
 
     private static Class106 cachedRenderer;
     private static long cachedSequence = -1L;
+    private static long cachedFitRevision = -1L;
     private static Model cachedModel;
     private static int lastRenderedCycle = Integer.MIN_VALUE;
     private static long lastLoggedSequence = -1L;
@@ -55,8 +54,16 @@ public final class LinkVisualRenderer {
             return;
         }
 
-        if (cachedRenderer != renderer || cachedSequence != frame.sequence || cachedModel == null) {
-            Model rebuilt = buildModel(renderer, frame);
+        LinkCharacterFit.Profile fit = LinkCharacterFit.resolve(player, frame);
+        if (fit == null) {
+            return;
+        }
+
+        if (cachedRenderer != renderer
+                || cachedSequence != frame.sequence
+                || cachedFitRevision != fit.revision
+                || cachedModel == null) {
+            Model rebuilt = buildModel(renderer, frame, fit);
             if (rebuilt == null) {
                 if (lastFailedSequence != frame.sequence) {
                     lastFailedSequence = frame.sequence;
@@ -67,6 +74,7 @@ public final class LinkVisualRenderer {
             }
             cachedRenderer = renderer;
             cachedSequence = frame.sequence;
+            cachedFitRevision = fit.revision;
             cachedModel = rebuilt;
         }
 
@@ -83,11 +91,12 @@ public final class LinkVisualRenderer {
             cachedModel.method1375(TRANSFORM, RENDER_BOUNDS, 0);
             if (lastLoggedSequence < 0L) {
                 lastLoggedSequence = frame.sequence;
-                System.out.println("[OoT Visual] Native Link -> Matrix Model ACTIVE"
+                System.out.println("[OoT Visual] Native ADULT Link -> Matrix Model ACTIVE"
                         + " triangles=" + frame.triangleCount
                         + " anim=" + frame.animId
                         + " action=" + frame.action
-                        + " scale=" + MODEL_SCALE
+                        + " scale=" + fit.scale
+                        + " fit=" + (fit.forcedScale ? "forced" : fit.autoFit ? "830-auto" : "fallback")
                         + " colour=liboot-vertex-v1");
             }
         } catch (RuntimeException ex) {
@@ -102,10 +111,12 @@ public final class LinkVisualRenderer {
     private static void resetPresentationCache() {
         cachedRenderer = null;
         cachedSequence = -1L;
+        cachedFitRevision = -1L;
         cachedModel = null;
         lastRenderedCycle = Integer.MIN_VALUE;
         lastLoggedSequence = -1L;
         lastFailedSequence = -1L;
+        LinkCharacterFit.resetSession();
     }
 
     private static boolean isUsable(OotBridgeSession.LinkFrame frame) {
@@ -119,7 +130,8 @@ public final class LinkVisualRenderer {
         return age >= 0L && age <= MAX_FRAME_AGE_NANOS;
     }
 
-    private static Model buildModel(Class106 renderer, OotBridgeSession.LinkFrame frame) {
+    private static Model buildModel(Class106 renderer, OotBridgeSession.LinkFrame frame,
+            LinkCharacterFit.Profile fit) {
         int triangles = frame.triangleCount;
         int vertices = triangles * 3;
         if (triangles <= 0 || vertices > MAX_MATRIX_VERTICES) {
@@ -150,17 +162,17 @@ public final class LinkVisualRenderer {
                 int c = colorBase + vertex * 3;
 
                 /*
-                 * liboot geometry is emitted in OoT world space. Matrix owns the
-                 * host X/Z transform, so subtract Link's native X/Z root. Native
-                 * Y remains relative to the fixed flat-floor proof world so jump
-                 * and action root-height motion remains visible.
+                 * Matrix owns host X/Z while liboot owns Link pose/root-height.
+                 * Uniform auto-fit preserves adult Link's OoT proportions. The
+                 * calibrated native standing floor maps to Matrix local Y=0,
+                 * while native root-height deltas remain visible for jumps/actions.
                  */
                 raw.anIntArray1782[rawVertex] = Math.round(
-                        (frame.positions[p] - frame.x) * MODEL_SCALE);
+                        (frame.positions[p] - frame.x) * fit.scale);
                 raw.anIntArray1777[rawVertex] = Math.round(
-                        -frame.positions[p + 1] * MODEL_SCALE);
+                        fit.toMatrixY(frame.positions[p + 1], frame.y));
                 raw.anIntArray1797[rawVertex] = Math.round(
-                        (frame.positions[p + 2] - frame.z) * MODEL_SCALE);
+                        (frame.positions[p + 2] - frame.z) * fit.scale);
 
                 sumR += unitColor(frame.colors[c]);
                 sumG += unitColor(frame.colors[c + 1]);
@@ -233,23 +245,6 @@ public final class LinkVisualRenderer {
         else if (l > 192) s >>= 2;
         else if (l > 179) s >>= 1;
         return (short) (((h >> 2) << 10) | ((s >> 5) << 7) | (l >> 1));
-    }
-
-    private static float resolveModelScale() {
-        String configured = System.getProperty("matrix3.oot.modelScale");
-        if (configured == null || configured.trim().isEmpty()) {
-            return DEFAULT_MODEL_SCALE;
-        }
-        try {
-            float parsed = Float.parseFloat(configured.trim());
-            if (parsed > 0.0F && !Float.isNaN(parsed) && !Float.isInfinite(parsed)) {
-                return parsed;
-            }
-        } catch (NumberFormatException ignored) {
-        }
-        System.out.println("[OoT Visual] Invalid matrix3.oot.modelScale='" + configured
-                + "'; using " + DEFAULT_MODEL_SCALE);
-        return DEFAULT_MODEL_SCALE;
     }
 
     private static int clamp(int value, int min, int max) {
