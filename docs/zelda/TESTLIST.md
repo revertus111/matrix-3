@@ -2,196 +2,162 @@
 
 ## Phase 0 — NTSC-U 1.2 native compatibility
 
-### Scope
+Phase 0.2/0.3 already passed against the user's exact 32 MiB NTSC-U 1.2 ROM (MD5 `57a9719ad547c516342e1a15d5c28c3d`).
 
-This is the bounded NTSC-U 1.2 compatibility proof. Phase 0.2/0.3 have already passed against the user's exact ROM.
+Pinned dependencies:
 
-The bridge pins:
+- `Cycl0o0/liboot` — `25208734c8ca388638f0ce63841e166fac9e5acb`
+- `zeldaret/oot` — `269d03016cd0e3d7a0b8925e02b97a319c1d0e8d`
 
-- `Cycl0o0/liboot` at `25208734c8ca388638f0ce63841e166fac9e5acb`
-- `zeldaret/oot` at `269d03016cd0e3d7a0b8925e02b97a319c1d0e8d`
+ROM bytes and ROM-derived textures remain local and must never be committed.
 
-ROM bytes and extracted assets stay local under the user's control and are never copied into the repository.
-
-### Prerequisites
-
-Use an MSYS2 UCRT64 shell on Windows with:
-
-- Git
-- Python 3
-- CMake
-- a C11 compiler/toolchain
-
-The supplied retail ROM must be the 32 MiB NTSC-U 1.2 image already identified as MD5 `57a9719ad547c516342e1a15d5c28c3d`.
-
-### Repeat Phase 0 proof if needed
-
-From `native/oot-bridge`:
+To repeat the native compatibility proof if needed:
 
 ```sh
+cd native/oot-bridge
 make probe OOT_ROM="Legend of Zelda, The - Ocarina of Time (U) (V1.2) [!].z64"
 ```
 
-Acceptance remains the final line:
+Acceptance remains:
 
 ```text
 [OoT NTSC12] RESULT: PASS
 ```
 
-A successful compile or engine-create alone is not a compatibility proof.
+## Phase 1 — Adult Link material V2 runtime proof
 
-## Phase 1 — Matrix3 Link presentation
+### Current accepted baseline
 
-### Current runtime state
+Already runtime observed:
 
-The first live Matrix render is already observed: recognizable OoT Link geometry rendered at the local player, but the original proof scale was far too small. The next acceptance slice is **adult Link auto-fit** against the live 830 local-player height.
+- recognizable adult OoT Link renders inside Matrix3;
+- adult auto-fit now places Link approximately in the 830 player height/floor envelope;
+- the user considers Link slightly large and his OoT head proportionally large, but that is **not a blocker** for the equipment-fit architecture;
+- keep Link uniformly scaled and fit future 830 gear to Link rather than deforming Link into RuneScape proportions.
 
-The native sidecar explicitly sets:
+The native sidecar must continue to use:
 
 ```text
 OOT_AGE_ADULT
 ```
 
-Do not switch this fit test to child Link.
+### Mandatory rebuild for this slice
 
-### Build
-
-Pull the approved bundle:
+Material fidelity changed the native binary protocol from V1 to **V2**. Pulling Java alone is not enough.
 
 ```sh
 git pull origin main
 ```
 
-Build through the one-click OoT native builder or in **MSYS2 UCRT64**:
+Then rebuild the OoT bridge with the one-click OoT native builder, or in **MSYS2 UCRT64**:
 
 ```sh
 cd /c/Users/rever/Desktop/Matrix3/native/oot-bridge
 make bootstrap
 ```
 
-The build must produce:
+Required output:
 
 ```text
 native/oot-bridge/build/dist/oot_bridge.exe
 ```
 
-The exact NTSC-U 1.2 ROM may remain beside the bridge source as:
+Then refresh/clean the Client project in Eclipse and launch normally with Java 8.
 
-```text
-native/oot-bridge/Legend of Zelda, The - Ocarina of Time (U) (V1.2) [!].z64
-```
+If Java reports an unsupported protocol version, the old V1 `oot_bridge.exe` is still being used; rebuild the native sidecar before changing code.
 
-ROM extensions are ignored by the bridge-local `.gitignore` and must remain untracked.
+### Controls
 
-### Launch / activation
-
-Launch the Matrix3 client normally from Eclipse/Java 8.
-
-Use:
-
-- **Ctrl+L** — toggle Link mode on/off.
-- **WASD** — camera-relative movement request. Matrix's existing walk packet/server collision remains X/Z authority.
-- **Space** — OoT A/action input.
-- **F** — OoT B/sword input. This phase must **not** issue a Matrix NPC attack packet.
-- **Shift** — OoT Z-target input. Full Matrix target binding is not implemented yet.
-- **Ctrl+M** — Mario mode remains separate and must still work independently.
+- **Ctrl+L** — Link mode on/off.
+- **WASD** — camera-relative movement request; Matrix/server walking remains actual X/Z authority for this phase.
+- **Space** — OoT A/action.
+- **F** — OoT B/sword; must not issue Matrix NPC damage yet.
+- **Shift** — OoT Z input; host target binding is not implemented yet.
+- **Ctrl+M** — Mario remains separate.
 
 ### Expected console proof
 
-On Ctrl+L activation, expect lines equivalent to:
+On Ctrl+L activation expect lines equivalent to:
 
 ```text
 [Alternate Character] Controller mode: LINK
 [OoT] Controls: camera-relative WASD move, Space A/action, F B/sword, Shift Z-target
-[OoT Bridge] persistent NTSC-U 1.2 session READY (20 Hz, protocol v1)
-[OoT Bridge] Persistent session READY (20 Hz + Link geometry, protocol v1)
+[OoT Bridge] persistent NTSC-U 1.2 session READY (20 Hz, protocol v2 + materials)
+[OoT Bridge] Persistent session READY (20 Hz + Link materials, protocol v2)
 [OoT Fit] ADULT Link profile source=830-auto matrixHeight=... nativeH/W/D=... floorLocalY=... scale=...
-[OoT Visual] Native ADULT Link -> Matrix Model ACTIVE triangles=... scale=... fit=830-auto ...
+[OoT Material] Runtime texture bridge ACTIVE materials=... materialBase=... source=local-ROM-RGBA
+[OoT Visual] Native ADULT Link -> Matrix Model ACTIVE triangles=... uniqueVerts=... texturedFaces=... anim=... action=... scale=... fit=830-auto material=oot-uv-texture-v2
 ```
 
-If the live Matrix player height is not ready on the very first frame, one temporary fallback line is allowed:
+The exact counts may vary with pose/equipment. For the material proof, `materials` and `texturedFaces` must both be greater than zero.
 
-```text
-[OoT Fit] Adult Link waiting for live 830 height; temporary fallback scale=...
-```
+### Material V2 acceptance
 
-It should then upgrade to `source=830-auto` once the RuneScape player bound is available.
-
-### Adult auto-fit acceptance
-
-For this proof the RuneScape local-player model intentionally remains visible as the comparison reference.
+Keep the normal RuneScape local-player model visible for this test; it is still the fail-safe/reference model.
 
 Verify in one runtime session:
 
-- [ ] Ctrl+L enters Link mode and starts the native sidecar without crashing/freezing the client.
-- [x] Recognizable Link geometry renders inside Matrix3. Previously runtime observed; original scale was too small.
-- [ ] Console reports `[OoT Fit] ADULT Link profile source=830-auto ...`.
-- [ ] Adult Link's **feet are approximately on the same Matrix ground plane** as the 830 player.
-- [ ] Adult Link's **head height is close to the 830 character's visible height** instead of the previous tiny scale.
-- [ ] Link remains uniformly scaled: OoT proportions look intact rather than tall/thin or wide/squashed.
-- [ ] Link remains upright and centered around the Matrix player transform.
-- [ ] Walking/idle animation does not cause the whole model to pump larger/smaller; the fit stays fixed for the session.
-- [ ] Space/root-height animation still moves vertically instead of being flattened by ground alignment.
-- [ ] Ctrl+L exit/re-entry recalibrates cleanly and does not reuse stale scale/floor state.
+- [ ] Both native and Java READY lines report **protocol v2**.
+- [ ] `[OoT Material] Runtime texture bridge ACTIVE ...` appears with `materials > 0`.
+- [ ] `[OoT Visual] ... material=oot-uv-texture-v2` appears with `texturedFaces > 0`.
+- [ ] Adult Link remains at approximately the accepted 830 height/floor alignment.
+- [ ] Link now has recognizably mapped OoT textures instead of broad flat triangle colours.
+- [ ] Face/tunic/boots/sword/shield surfaces are not obviously scrambled across unrelated polygons.
+- [ ] Triangle-by-triangle/crystalline shading is substantially reduced compared with the V1 screenshot.
+- [ ] Intended hard edges remain hard; smoothing must not visibly melt sword/shield/body silhouettes together.
+- [ ] Idle/movement animation continues without model explosion, pumping scale, or texture swimming.
+- [ ] Space and F still change native Link action/animation state where the flat proof world allows it.
+- [ ] F still causes **no Matrix NPC damage/XP**.
+- [ ] Ctrl+L exits cleanly and vanilla RuneScape control returns.
+- [ ] Ctrl+L re-entry starts a fresh native session and textures return instead of remaining missing/stale.
 
-If the automatic height is visually close but needs a small global correction, use a JVM property rather than hardcoding a new scale:
+### What to capture
 
-```text
--Dmatrix3.oot.fitMultiplier=1.05
-```
+For the first V2 run, preserve:
 
-`matrix3.oot.modelScale` is still supported as an explicit forced-scale diagnostic override, but normal testing should leave it unset so `830-auto` is exercised.
+1. the console output from Ctrl+L activation through the first `[OoT Visual]` line;
+2. one front/three-quarter screenshot of adult Link;
+3. if textures look wrong, one close screenshot showing the face/tunic/shield orientation.
 
-### Remaining first-live behavior checks
+Do **not** make random UV tweaks before preserving the first result.
 
-- [ ] WASD does not drive the detached/RTS camera while Link owns movement input.
-- [ ] WASD movement remains camera-relative and actual X/Z travel follows Matrix/server walking and collision.
-- [ ] Link's animation responds to movement rather than remaining frozen.
-- [ ] Space changes Link's native A/action animation/state where the flat liboot proof world allows it.
-- [ ] F produces native B/sword behavior/animation and does **not** cause a RuneScape NPC attack packet/damage.
-- [ ] Shift can be held/released without breaking input; full host target behavior is not required in this slice.
-- [ ] Ctrl+L exits Link mode cleanly, releases the sidecar/input wrapper, and returns vanilla RuneScape controls.
-- [ ] Re-entering with Ctrl+L starts a fresh usable Link session.
-- [ ] Ctrl+M after Link exit still activates Mario normally.
+### Known V2 approximations
 
-### Known intentional limitations
+- liboot UVs are sent as their original normalized coordinates and Matrix direct-UV mode is used. Runtime will establish whether Matrix's V axis matches liboot; a vertically flipped texture is a convention issue, not a failed native bridge.
+- liboot texture wrap `repeat` and `clamp` are mapped; `mirror` currently degrades to Matrix repeat at this adapter seam.
+- Full OoT/N64 alpha-test, decal-depth, and cull-flag parity is not implemented in this V2 slice.
+- Runtime textures are synthetic Matrix materials backed by GPU textures only; no OoT texture files are written into the 830 cache.
+- Matrix may evict GPU textures through its normal LRU; the Link texture registry is expected to re-upload retained local-ROM pixels automatically.
+- The RuneScape local-player model is intentionally still visible for this proof.
 
-- RuneScape local-player model is still rendered as a fail-safe/comparison baseline.
-- Link uses liboot vertex colours only; OoT texture/material fidelity is not wired yet.
-- The new fit matches overall height/floor with one uniform scale. It does **not** yet deform Link to match RuneScape shoulders/hips.
-- `LinkCharacterFit` records Link native height/width/depth as groundwork, but 830 helmet/body/glove/boot/cape sockets are a later equipment slice.
-- Matrix terrain/objects are not loaded into liboot yet; the native sidecar uses a broad flat proof floor.
-- Matrix/server walking owns actual X/Z travel for this phase.
-- Link B/sword input has no RuneScape damage/XP bridge yet.
-- Z-target has no Matrix NPC target binding yet.
+### Failure distinctions
 
-### Failure handling
+- `unsupported OoT bridge protocol version: 1 ... rebuild ... protocol v2` -> old native sidecar; rebuild `native/oot-bridge`.
+- `OoT sidecar not found` -> native build/path problem.
+- `OoT NTSC-U 1.2 ROM not found` -> local ROM path problem.
+- `invalid OoT sidecar protocol magic` -> protocol/stdout corruption, preserve full output.
+- `material geometry unavailable` -> liboot did not provide one of normals/UVs/texture indices for the frame.
+- `[OoT Material] texture bridge unavailable: ...` -> Matrix runtime material/GPU seam unavailable; Link should fall back to vertex colour rather than crash.
+- material bridge ACTIVE but `texturedFaces=0` -> triangle texture -> Matrix material mapping problem.
+- textures visible but vertically inverted -> UV V-axis convention problem; preserve screenshot before patching.
+- textures visible but badly scrambled -> direct UV/material-index problem, not an auto-fit problem.
+- Link fits correctly but remains visually faceted -> smoothing/topology issue after materials are proven.
 
-If anything fails, preserve the full client/native console output from Link activation through the failure.
+## Remaining Phase 1 behavior checks
 
-Useful failure distinctions:
+After material V2 is accepted:
 
-- `OoT sidecar not found` -> native build/path issue.
-- `OoT NTSC-U 1.2 ROM not found` -> local ROM path issue.
-- `invalid OoT sidecar protocol magic` -> native/Java protocol mismatch or stdout contamination.
-- `OoT Link geometry truncated` / invalid triangle count -> native geometry-capacity/protocol issue.
-- bridge READY but no `[OoT Visual] ... ACTIVE` -> Matrix render-model path issue.
-- `[OoT Visual] ... ACTIVE` plus `fit=fallback` only -> Matrix player height reference was not resolved.
-- `fit=830-auto` but wrong size/floor -> auto-fit calibration issue, not bridge compatibility failure.
-
-## Later Phase 1 acceptance
-
-After adult Link scale/floor presentation is accepted:
-
-- [ ] Add fail-open RuneScape local-player suppression only while fresh Link frames render successfully.
-- [ ] Exit/failure restores the RuneScape player model/input immediately.
-- [ ] Add OoT texture/material fidelity without regressing geometry stability.
-- [ ] Expose stable Link skeleton/socket transforms for equipment fitting.
+- [ ] Verify camera-relative WASD does not drive the detached/RTS camera while Link owns input.
+- [ ] Verify actual X/Z travel continues through Matrix/server walking and collision.
+- [ ] Consolidate idle, movement/turn, one A/action/jump, and B/sword animation in one session.
+- [ ] Add fail-open suppression of the local RuneScape model only while fresh Link frames render successfully.
+- [ ] Exit/failure must restore RuneScape player model/input immediately.
+- [ ] Expose stable adult-Link skeleton/socket transforms for helmet, sword, shield, gloves, boots, amulet, cape, then torso/legs fitting.
 
 ## Later combat and menu acceptance
 
 - [ ] Sword contact requires an active swing window and valid reach/target contact.
 - [ ] Weapon speed changes attack cadence while RuneScape stats determine hit and damage outcomes.
-- [ ] Valid damage grants the configured per-hit skill XP; misses and blocked hits follow explicit XP rules.
-- [ ] Inventory opens and closes while the Matrix world continues.
+- [ ] Valid damage grants configured per-hit skill XP; misses/blocks follow explicit XP rules.
+- [ ] Inventory opens/closes while the Matrix world continues.
 - [ ] Ranged, magic, and item actions remain usable through the same Link control owner.
