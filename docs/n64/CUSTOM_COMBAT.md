@@ -1,7 +1,7 @@
 # Mario custom combat proof
 
-Status: implemented / NEEDS RUNTIME ACCEPTANCE. Approved by the 2026-10-04 SAP AAA handoff.
-Primary target: MARIO_COMBAT_1H_SLASH (wire family 1). Stab waits for visual acceptance.
+Status: RUNTIME PROOF ACCEPTED / REGRESSION CHECKS PENDING. Approved by the 2026-10-04 SAP AAA handoff.
+Primary target: MARIO_COMBAT_1H_SLASH (wire family 1) is runtime-VERIFIED 2026-10-04. Stab remains deferred until explicitly selected as the next scope.
 
 ## Source-established ownership (verified-static)
 
@@ -39,12 +39,16 @@ Grip origin from worn-model bounds (85% down Y), initial length and artistic sla
 ## Checks completed
 
 - Exact pinned patch applies; patched libsm64 and sidecar compile on Linux GCC.
-- Production native joint guards, offset application, leg isolation and stale-socket invalidation pass a linked native test.
 - Production slash endpoints, bounded weights and request lifecycle pass `make test-combat`.
+- The committed ROM-free frame fixture manually seeds `rightHandAvailable` and a synthetic hand matrix; it validates v3 writer/parser alignment but does NOT independently prove live Mario joint/socket traversal.
 - Production Java parser consumes two C-written v3 frames with exact alignment; v1/v2 compatibility, semantic/socket fields, frozen metadata and truncation checks pass.
 - Actual Class261 transform produces the expected rotated/scaled/Y-converted point.
 - Java 8 release compile: bridge and new weapon class (weapon class uses isolated Matrix API stubs); Java 8 syntax parse: all changed Java files.
-- Full Eclipse client build, Windows/MSYS2 build, ROM-driven visual pose, grip and gameplay regressions remain UNKNOWN / pending. No in-game VERIFIED claim is made.
+- First Windows `make bootstrap` attempt failed at the final sidecar link because `dist/sm64_bridge.exe` was locked (`Permission denied`), so that first in-game attempt did not exercise v3 custom combat.
+- Runtime 2026-10-04: equipped revision-830 sword renders attached to Mario's hand in the live Matrix3 client. `VERIFIED`.
+- Runtime 2026-10-04: pressing F triggers the custom native MARIO_COMBAT_1H_SLASH animation. `VERIFIED`.
+- Because Java only routes custom weapon combat when protocol v3, a live hand socket, and a rendered weapon model are ready, the successful slash proves the core v3/socket/request integration path is active at runtime.
+- Moving-slash leg continuity, held-F no-replay, freeze/unfreeze, unequip fallback, Ctrl+M/relog cleanup, remote-player isolation, NPC damage/XP integration and sustained stability remain pending unless separately runtime-confirmed.
 
 ## Optional repeatable checks
 
