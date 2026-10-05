@@ -129,6 +129,7 @@ public final class LinkVisualRenderer {
         lastLoggedSequence = -1L;
         lastFailedSequence = -1L;
         LinkCharacterFit.resetSession();
+        LinkTextureRegistry.resetSession();
     }
 
     private static boolean isUsable(OotBridgeSession.LinkFrame frame) {
