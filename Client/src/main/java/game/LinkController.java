@@ -3,6 +3,10 @@ package game;
 /**
  * Matrix3 client-thread adapter for Link-mode liboot input/state.
  *
+ * Common input/camera/movement policy and combat ownership live in the shared
+ * alternate-character controllers. This class only adapts Link/liboot-specific
+ * native state (stick signs, native action frames and native presentation).
+ *
  * Default X/Z is local continuous native presentation. The optional RuneScape
  * clipping mode retains stock tile walking. liboot owns animation/action state;
  * free movement does not change the authoritative server position.
@@ -15,6 +19,9 @@ public final class LinkController {
 
     private static final int WALK_RETRY_CYCLES = 10;
     private static final float MOVE_DIRECTION_DEADZONE = 0.20F;
+    private static final long MAX_ARMED_NATIVE_TICKS = 12L;
+    private static final float CONTACT_FRAME = positiveFloatProperty(
+            "matrix3.oot.combatContactFrame", 2.0F);
 
     private static int lastTickCycle = Integer.MIN_VALUE;
     private static boolean modeWasLink;
@@ -96,18 +103,34 @@ public final class LinkController {
         boolean buttonZ = !targetReleaseRequired && controls.modifierAction;
 
         /*
-         * Matrix owns target acquisition because the native OoT simulation has no
-         * Matrix NPC actor to focus. While Z is held, feed the locked target
-         * direction into OoT's existing camera-look basis and still send native Z.
-         * This preserves liboot action/pose ownership while making movement and B
-         * actions target-relative to the selected Matrix NPC.
+         * Matrix target acquisition is shared for every imported character.
+         * Link only consumes the resulting direction as liboot's live camera/look
+         * basis while native Z remains pressed.
          */
         AlternateCharacterController.PlanarDirection inputForward =
-                LinkCombatController.update(
-                        player, buttonB, buttonZ, controls.cameraForward);
+                AlternateCharacterCombatBridge.updateTargeting(
+                        player, buttonZ, controls.cameraForward);
         if (inputForward == null) {
             inputForward = controls.cameraForward;
         }
+
+        /*
+         * Link contributes only native action/animation evidence. Shared combat
+         * owns attack-edge arming, one-shot protection, target selection and the
+         * common server-authoritative manual-melee request.
+         */
+        OotBridgeSession.LinkFrame frame = OotBridgeSession.getLatestFrame();
+        AlternateCharacterCombatBridge.updateNativeMeleeContact(
+                player,
+                AlternateCharacterController.CharacterId.LINK,
+                buttonB,
+                controls.cameraForward,
+                frame == null ? -1L : frame.sequence,
+                frame == null ? 0 : frame.action,
+                frame == null ? 0 : frame.animId,
+                frame == null ? 0.0F : frame.animFrame,
+                CONTACT_FRAME,
+                MAX_ARMED_NATIVE_TICKS);
 
         /* verified-static, liboot 25208734 / OoT 269d0301:
          * Lib_GetControlStickData uses Math_Atan2S(relY,-relX). Negate the
@@ -183,7 +206,7 @@ public final class LinkController {
 
     private static void enterLinkMode() {
         resetMovement();
-        LinkCombatController.reset();
+        AlternateCharacterCombatBridge.reset();
         clippingWasEnabled = AlternateCharacterController.isRuneScapeClippingEnabled();
         AlternateCharacterInputKeyboard.install();
         captureHeldActionGuards();
@@ -192,12 +215,12 @@ public final class LinkController {
                 "[OoT] Controls: camera-relative WASD move, Space A/action, F B/sword, Shift hold Z-target");
         System.out.println(
                 "[OoT] Movement: " + (clippingWasEnabled ? "RuneScape tile clipping" : "continuous free / clipping OFF")
-                + "; sword damage is server-authoritative at native contact.");
+                + "; shared action combat is server-authoritative at native contact.");
     }
 
     private static void exitLinkMode() {
         freeMovement.restore(Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976);
-        LinkCombatController.reset();
+        AlternateCharacterCombatBridge.reset();
         OotBridgeSession.stop();
         /*
          * Link->Mario can transition in the same client tick. Mario installs the
@@ -214,7 +237,7 @@ public final class LinkController {
     private static void fallbackToRuneScape(String reason) {
         freeMovement.restore(Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976);
         System.out.println("[OoT Bridge] Falling back to RuneScape control: " + reason);
-        LinkCombatController.reset();
+        AlternateCharacterCombatBridge.reset();
         OotBridgeSession.stop();
         AlternateCharacterInputKeyboard.uninstall();
         resetMovement();
@@ -234,5 +257,19 @@ public final class LinkController {
         lastWalkTargetX = Integer.MIN_VALUE;
         lastWalkTargetY = Integer.MIN_VALUE;
         lastWalkRequestCycle = Integer.MIN_VALUE;
+    }
+
+    private static float positiveFloatProperty(String name, float defaultValue) {
+        try {
+            String value = System.getProperty(name);
+            if (value == null || value.trim().isEmpty()) {
+                return defaultValue;
+            }
+            float parsed = Float.parseFloat(value.trim());
+            return Float.isNaN(parsed) || Float.isInfinite(parsed) || parsed < 0.0F
+                    ? defaultValue : parsed;
+        } catch (RuntimeException ignored) {
+            return defaultValue;
+        }
     }
 }

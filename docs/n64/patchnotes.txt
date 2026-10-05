@@ -1,3 +1,11 @@
+2026-10-05 - Shared imported-character controller/combat ownership cleanup
+- Added authoritative `docs/n64/PROJECT.md`: Mario, Link and future imported characters share Matrix-owned input/camera/movement policy, targeting, attack lifecycle, packet routing and server combat; per-character classes are native adapters only.
+- Replaced Link-only client combat ownership with `AlternateCharacterCombatBridge`; Link now supplies liboot action/animation/frame evidence into the shared native-contact gate instead of owning its own NPC scanner/packet path.
+- Mario's existing `AlternateCharacterCombatBridge.requestPrimaryMeleeAttack()` path now uses the same one-shot manual-melee envelope as Link instead of stock RuneScape ATTACK_NPC auto-combat.
+- Added shared server authority `AlternateCharacterCombatPacketBridge`; the historical `LinkCombatPacketBridge` is now a no-logic compatibility delegate for the existing NPC handler seam.
+- Deleted `LinkCombatController.java`. Common target lock, forward fallback, one-shot intent and server validation are no longer duplicated per character.
+- Added `docs/n64/SHARED_CONTROLLERS_TESTLIST.md`; static ownership is verified, Eclipse Java 8/client/server runtime acceptance remains pending. No native rebuild required.
+
 2026-10-05 - Native-axis steering correction / current-main delivery
 - Corrected Mario's native adapter to camera (0,+1), stick (-worldMoveX,-worldMoveZ). Pinned libsm64 fd118132 equations show the previous live-camera/raw-positive-stick input reversed both screen axes.
 - Corrected Link's horizontal native stick to -moveX while retaining +moveY, the live camera/locked-target inputForward and native Z action. Pinned liboot 25208734 / OoT 269d0301 equations show the previous positive horizontal stick reversed left/right.
