@@ -64,3 +64,9 @@
 - Existing incompatible `bin`-layout visual venvs are deleted and recreated as native `Scripts\python.exe` venvs.
 - If native CPython 3.12/3.13 is not already available, `PROBE TP LINK` now automatically installs Python 3.13 for the current user through `winget` (`Python.Python.3.13`), then creates the isolated visual venv and installs NumPy/Pillow from wheels.
 - Status: native visual-toolchain fix is verified-static; authentic model/BCK/socket extraction remains runtime VERIFIED; visible GIF rendering remains NEEDS TEST.
+
+2026-10-05 - Resolve freshly installed Windows CPython without restarting Native Builder
+- Fourth Bundle 1.2 runtime probe successfully installed Windows CPython 3.13.15 through `winget`, but the same PowerShell process could not immediately rediscover the new interpreter and stopped before venv creation.
+- Native visual Python discovery now reads PEP 514-style PythonCore 3.12/3.13 install paths from HKCU/HKLM in addition to known per-user paths, `py.exe`, and native PATH.
+- After automatic installation, the probe retries discovery briefly before failing, so a successful install can continue into native venv creation in the same run instead of requiring a Native Builder restart.
+- Status: Python installation is runtime VERIFIED; same-process interpreter rediscovery is verified-static; visible GIF rendering remains NEEDS TEST.
