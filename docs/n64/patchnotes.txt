@@ -43,6 +43,13 @@
 - Requests are de-duplicated and retried at a bounded cadence while a direction is held; no custom clip-mask table or parallel Mario collision map was introduced.
 - This is an interim collision handoff only. It does not implement the planned Phase 3 RuneScape-surface -> libsm64 collision adapter.
 
+2026-10-05 - Continuous Mario presentation over vanilla RS3 collision
+- Runtime confirmed the vanilla handoff blocks scenery correctly but made Mario feel tile-bounded.
+- Restored native libsm64 X/Z as a local continuous presentation delta while keeping RuneScape/server walking as the legal tile-crossing authority.
+- Vanilla walk requests are now delayed until Mario approaches the edge of the current authoritative position, so short taps can stop at sub-tile positions instead of immediately committing a full RuneScape step.
+- Visible Mario X/Z is bounded to a 240-unit envelope around the stock Matrix/server position; blocked crossings therefore clamp near the tile edge and discard continued native penetration instead of accumulating a later teleport.
+- Stock Matrix movement updates rebase the authoritative collision baseline without dragging the visible Mario back to tile centres; no client collision-mask duplicate or native collision ingestion was added.
+
 2026-10-04 - Mario 1H slash V2 visual tuning
 - Shortened the proven native slash overlay from 24 to 16 ticks (~0.53 seconds at 30 Hz) so it reads as an attack instead of a slow punch.
 - Reworked torso/right-arm keyframes with stronger wind-up, faster cross-body contact, and explicit forearm/wrist participation while preserving the existing additive locomotion overlay and right-hand socket.
