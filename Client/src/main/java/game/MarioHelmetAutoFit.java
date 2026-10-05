@@ -5,10 +5,10 @@ import java.util.Arrays;
 /**
  * One-shot mathematical default for Mario helmet scale.
  *
- * Protocol-v2 semantic geometry supplies a stable display-list-local FACE
- * reference shared with the equipment adapter. Legacy protocol-v1 frames keep the
- * older current-pose measurement only as a fail-open fallback. Manual workbench
- * calibration remains the final visual authority after this initial estimate.
+ * Protocol-v2 semantic geometry supplies a stable FACE reference shared with the
+ * equipment adapter. Replacement-shell coverage deliberately stops treating the
+ * helmet as a cavity that must contain Mario's skull; the worn model becomes the
+ * visible head shell and starts from the adapter's outer-silhouette baseline.
  */
 final class MarioHelmetAutoFit {
 
@@ -85,6 +85,29 @@ final class MarioHelmetAutoFit {
             return Float.NaN;
         }
 
+        /*
+         * Replacement-shell mode is intentionally NOT a cavity fit. Mario's head
+         * geometry is being replaced by the worn model, so the adapter's existing
+         * outer-silhouette baseline is already the correct starting scale. Returning
+         * 1.0 prevents the old 0.72/0.82 cavity heuristic from inflating the shell.
+         */
+        if (semanticReference && MarioEquipmentWorkbench.isReplacementShellCoverage()) {
+            float multiplier = 1.0F;
+            if (lastLoggedItemId != itemId) {
+                lastLoggedItemId = itemId;
+                System.out.println("[SM64 Equipment AutoFit] item=" + itemId
+                        + " name=" + helmet.name
+                        + " reference=semantic-face"
+                        + " fitMode=replacement-shell"
+                        + " headW/H/D=" + head.width + "/" + head.height + "/" + head.depth
+                        + " helmetOuterW/H/D=" + outer.width + "/" + outer.height + "/" + outer.depth
+                        + " baseAutoFit=" + oldAutoFit
+                        + " desiredAutoFit=" + oldAutoFit
+                        + " manualScale=" + multiplier);
+            }
+            return multiplier;
+        }
+
         float widthClearance = Math.max(minimumClearance, head.width * clearanceFraction);
         float heightClearance = Math.max(minimumClearance, head.height * clearanceFraction);
         float targetWidth = head.width + widthClearance * 2.0F;
@@ -133,6 +156,7 @@ final class MarioHelmetAutoFit {
             System.out.println("[SM64 Equipment AutoFit] item=" + itemId
                     + " name=" + helmet.name
                     + " reference=" + (semanticReference ? "semantic-face" : "legacy-current-pose")
+                    + " fitMode=cavity-proxy"
                     + " headW/H/D=" + head.width + "/" + head.height + "/" + head.depth
                     + " helmetOuterW/H/D=" + outer.width + "/" + outer.height + "/" + outer.depth
                     + " cavityH=" + cavityHorizontal
