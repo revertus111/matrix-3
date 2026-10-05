@@ -5,3 +5,7 @@
 - Reworked the slash so the shoulder pivot owns the large swing while downstream joints only shape the blade path.
 - Updated the ROM-free combat test to require shoulder plus downstream limb motion and preserve endpoint/request lifecycle checks.
 - Runtime visual acceptance remains pending.
+
+2026-10-05 - V5 native patch hunk-length fix
+- Fixed the gfx_adapter patch hunk new-line count from 49 to 51 so the generated combat socket function includes both closing braces.
+- No animation values, joint ownership, protocol, socket math or weapon rendering behavior changed.
