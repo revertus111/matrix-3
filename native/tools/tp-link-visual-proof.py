@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 
+HAND_JOINT = 0x0E
 WEAPON_JOINT = 0x0F
 HEAD_JOINT = 0x04
 CENTER_JOINT = 0x00
@@ -19,6 +20,17 @@ def require_file(path, label):
     if not path.is_file():
         raise FileNotFoundError(f"{label} was not found: {path}")
     return path
+
+
+def find_named_file(root, wanted):
+    root = Path(root)
+    matches = sorted(
+        [p for p in root.rglob(wanted) if p.is_file()],
+        key=lambda p: str(p).lower(),
+    )
+    if not matches:
+        raise FileNotFoundError(f"{wanted} was not found under {root}")
+    return matches[0]
 
 
 def choose_body_joint(body_model, index, expected):
@@ -100,25 +112,57 @@ def project_point(preview, point, positions, size, yaw, pitch):
     return float(x), float(y)
 
 
-def annotate_frame(image, clip_name, joint_name, marker_xy):
+def draw_marker(draw, marker_xy, label, color, radius, cross):
+    if marker_xy is None:
+        return
+
+    x, y = marker_xy
+    draw.ellipse(
+        (x - radius, y - radius, x + radius, y + radius),
+        outline=color,
+        width=3,
+    )
+    if cross:
+        draw.line((x - 14, y, x + 14, y), fill=color, width=2)
+        draw.line((x, y - 14, x, y + 14), fill=color, width=2)
+    draw.text((x + 14, y - 7), label, fill=color)
+
+
+def annotate_frame(
+    image,
+    clip_name,
+    hand_name,
+    weapon_name,
+    hand_xy,
+    weapon_xy,
+):
     from PIL import ImageDraw
 
     draw = ImageDraw.Draw(image)
-    draw.rectangle((10, 10, 280, 58), fill=(0, 0, 0))
+    draw.rectangle((10, 10, 365, 58), fill=(0, 0, 0))
     draw.text((18, 16), f"TP Link - {clip_name}", fill=(255, 255, 255))
-    draw.text((18, 36), "REAL BCK / body + head + hands + face", fill=(210, 210, 210))
+    draw.text(
+        (18, 36),
+        "REAL BCK / body + head + hands + face + al_swb",
+        fill=(210, 210, 210),
+    )
 
-    if marker_xy is not None:
-        x, y = marker_xy
-        radius = 9
-        draw.ellipse(
-            (x - radius, y - radius, x + radius, y + radius),
-            outline=(255, 64, 64),
-            width=3,
-        )
-        draw.line((x - 14, y, x + 14, y), fill=(255, 64, 64), width=2)
-        draw.line((x, y - 14, x, y + 14), fill=(255, 64, 64), width=2)
-        draw.text((x + 14, y - 7), f"0xF {joint_name}", fill=(255, 96, 96))
+    draw_marker(
+        draw,
+        hand_xy,
+        f"0xE {hand_name}",
+        (64, 208, 255),
+        radius=7,
+        cross=False,
+    )
+    draw_marker(
+        draw,
+        weapon_xy,
+        f"0xF {weapon_name}",
+        (255, 64, 64),
+        radius=9,
+        cross=True,
+    )
 
 
 def render_clip(
@@ -126,7 +170,8 @@ def render_clip(
     anim,
     preview,
     output,
-    joint_name,
+    hand_name,
+    weapon_name,
     size=(640, 560),
     yaw=0.58,
     pitch=0.22,
@@ -175,9 +220,19 @@ def render_clip(
                         f"animation {anim['name']!r} only has {len(pose)} joints; "
                         "weapon joint 0xF is missing"
                     )
+
+                hand_world = pose[HAND_JOINT].reshape(3, 4)[:, 3]
                 weapon_world = pose[WEAPON_JOINT].reshape(3, 4)[:, 3]
                 positions = preview.skinned_positions(data, t)
-                marker_xy = project_point(
+                hand_xy = project_point(
+                    preview,
+                    hand_world,
+                    positions,
+                    size=size,
+                    yaw=yaw,
+                    pitch=pitch,
+                )
+                weapon_xy = project_point(
                     preview,
                     weapon_world,
                     positions,
@@ -185,16 +240,27 @@ def render_clip(
                     yaw=yaw,
                     pitch=pitch,
                 )
-                annotate_frame(image, anim["name"], joint_name, marker_xy)
+                annotate_frame(
+                    image,
+                    anim["name"],
+                    hand_name,
+                    weapon_name,
+                    hand_xy,
+                    weapon_xy,
+                )
                 rendered.append(image.copy())
                 marker_samples.append(
                     {
                         "frame": float(frame_index),
                         "time_seconds": float(t),
-                        "world": [float(v) for v in weapon_world],
-                        "screen": None
-                        if marker_xy is None
-                        else [float(marker_xy[0]), float(marker_xy[1])],
+                        "hand_world": [float(v) for v in hand_world],
+                        "hand_screen": None
+                        if hand_xy is None
+                        else [float(hand_xy[0]), float(hand_xy[1])],
+                        "weapon_world": [float(v) for v in weapon_world],
+                        "weapon_screen": None
+                        if weapon_xy is None
+                        else [float(weapon_xy[0]), float(weapon_xy[1])],
                     }
                 )
     finally:
@@ -238,6 +304,7 @@ def main():
     head_path = require_file(selected.get("head"), "al_head.bmd")
     hands_path = require_file(selected.get("hands"), "al_hands.bmd")
     face_path = require_file(selected.get("face"), "al_face.bmd")
+    sword_model_path = find_named_file(args.out.resolve() / "raw" / "Kmdl", "al_swb.bmd")
     idle_path = require_file(selected.get("idle"), "idle BCK")
     walk_path = require_file(selected.get("walk"), "walk/run BCK")
     sword_path = require_file(selected.get("sword"), "sword BCK")
@@ -249,10 +316,17 @@ def main():
     head_model = bmd.BmdModel(head_path.read_bytes())
     hands_model = bmd.BmdModel(hands_path.read_bytes())
     face_model = bmd.BmdModel(face_path.read_bytes())
+    sword_model = bmd.BmdModel(sword_model_path.read_bytes())
 
+    right_hand_name = choose_body_joint(body_model, HAND_JOINT, "handr")
     right_weapon_name = choose_body_joint(body_model, WEAPON_JOINT, "weaponr")
     head_joint_name = choose_body_joint(body_model, HEAD_JOINT, "head")
     center_joint_name = body_model.joints[CENTER_JOINT]["name"]
+
+    if len(sword_model.joints) != 1:
+        raise RuntimeError(
+            f"al_swb.bmd has {len(sword_model.joints)} joints; expected the known rigid one-joint weapon model"
+        )
 
     part_models = {
         "head": head_model,
@@ -265,6 +339,7 @@ def main():
         (head_path.read_bytes(), head_joint_name),
         (hands_path.read_bytes(), center_joint_name),
         (face_path.read_bytes(), head_joint_name),
+        (sword_model_path.read_bytes(), right_weapon_name),
     ]
 
     mesh_data = bmd.build_mesh(
@@ -329,6 +404,7 @@ def main():
             anim,
             preview,
             gif_path,
+            right_hand_name,
             right_weapon_name,
         )
         clip_results[role] = result
@@ -347,7 +423,7 @@ def main():
     )
 
     visual_manifest = {
-        "status": "PASS",
+        "status": "NEEDS_VISUAL_ACCEPTANCE",
         "converter": {
             "repo": "https://github.com/snuri00/demake-engine",
             "pin": "a134ff49cc74585c6b11f881293796e45c973c75",
@@ -358,6 +434,7 @@ def main():
             "head": str(head_path),
             "hands": str(hands_path),
             "face": str(face_path),
+            "sword_model": str(sword_model_path),
         },
         "attachment_aliases": aliases,
         "attachment_diagnostics": alias_diagnostics,
@@ -366,10 +443,16 @@ def main():
             "triangles": int(data["mesh"]["vertex_count"] // 3),
             "joints": int(len(data["skeleton"]["parents"])),
         },
+        "right_hand": {
+            "index": HAND_JOINT,
+            "name": right_hand_name,
+            "marker": "cyan circle rendered from each sampled BCK world-space hand pose",
+        },
         "weapon_socket": {
             "index": WEAPON_JOINT,
             "name": right_weapon_name,
-            "marker": "rendered from each sampled BCK world-space joint pose",
+            "marker": "red cross/circle rendered from each sampled BCK world-space item pose",
+            "proof_attachment": str(sword_model_path),
         },
         "animations": clip_results,
         "outputs": {
@@ -385,13 +468,14 @@ def main():
 
     summary_path = visual_dir / "visual-summary.txt"
     summary = [
-        "Matrix3 Twilight Princess Link VISUAL proof: PASS",
+        "Matrix3 Twilight Princess Link VISUAL proof: GENERATED - NEEDS VISUAL ACCEPTANCE",
         "",
         f"Body: {body_path.name}",
-        f"Attached: {head_path.name}, {hands_path.name}, {face_path.name}",
+        f"Attached: {head_path.name}, {hands_path.name}, {face_path.name}, {sword_model_path.name}",
         f"Mesh: {visual_manifest['mesh']['triangles']} triangles / "
         f"{visual_manifest['mesh']['vertices']} vertices",
         f"Skeleton: {visual_manifest['mesh']['joints']} joints",
+        f"Right hand: 0x{HAND_JOINT:X} {right_hand_name}",
         f"Weapon socket: 0x{WEAPON_JOINT:X} {right_weapon_name}",
         "Animations:",
     ]
@@ -406,15 +490,20 @@ def main():
         f"Combined proof: {combined_path}",
         f"Visual manifest: {visual_manifest_path}",
         "",
-        "The red cross/circle is computed from Link's animated right-weapon joint 0xF.",
-        "This proves local BMD skinning + real BCK playback + socket tracking.",
+        "Cyan circle = animated body right-hand joint 0xE.",
+        "Red cross/circle = animated body right-item/weapon joint 0xF.",
+        "al_swb.bmd is rigidly attached to body joint 0xF for this diagnostic proof.",
+        "A successful renderer exit only means the artifacts were generated; visual PASS still requires user acceptance.",
         "It does not yet prove TP Link rendering inside the Matrix3 client.",
     ]
     summary_path.write_text("\n".join(summary) + "\n", encoding="utf-8")
 
-    print("TP LINK VISUAL PROOF PASS")
+    print("TP LINK VISUAL PROOF GENERATED")
     print(f"Combined GIF: {combined_path}")
+    print(f"Right hand: 0x{HAND_JOINT:X} {right_hand_name}")
     print(f"Weapon joint: 0x{WEAPON_JOINT:X} {right_weapon_name}")
+    print(f"Attached proof sword: {sword_model_path.name}")
+    print("Visual acceptance: REQUIRED")
     print(f"Summary: {summary_path}")
 
 
