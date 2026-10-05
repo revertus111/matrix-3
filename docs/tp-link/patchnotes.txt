@@ -44,3 +44,9 @@
 - Added `native/tools/probe-tp-link.cmd` and a `PROBE TP LINK` button to Matrix3 Native Builder for one-click runtime testing.
 - Updated PROJECT/TESTLIST with the consolidated acceptance gate: authentic TP Link renders, real idle/walk/sword clips animate, and the `0xF` marker remains attached to the weapon joint.
 - Status: implementation is verified-static. Bundle 1.2 remains NEEDS TEST until the generated visual proof is accepted on the user's real donor assets.
+
+2026-10-05 - Fix TP Link visual-proof venv interpreter detection
+- First Bundle 1.2 runtime probe VERIFIED the donor-side asset stage: `al.bmd` parsed with 35 joints; `0xE = handR`; `0xF = weaponR`; authentic `waitb.bck`, `dasha.bck`, and `cutl.bck` were selected successfully.
+- Visual setup then failed after creating the isolated venv because the selected MSYS2 Python produced a POSIX-style `venv\bin\python.exe`, while the launcher assumed only Windows `venv\Scripts\python.exe`.
+- `probe-tp-link.ps1` now resolves the venv interpreter across `Scripts\python.exe`, `bin\python.exe`, and `bin\python3.exe`, reuses the already-created environment when valid, and reports a targeted error if none exists.
+- Status: asset extraction/model/BCK/socket stage is runtime VERIFIED; visible GIF rendering remains NEEDS TEST.
