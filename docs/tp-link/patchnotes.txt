@@ -70,3 +70,9 @@
 - Native visual Python discovery now reads PEP 514-style PythonCore 3.12/3.13 install paths from HKCU/HKLM in addition to known per-user paths, `py.exe`, and native PATH.
 - After automatic installation, the probe retries discovery briefly before failing, so a successful install can continue into native venv creation in the same run instead of requiring a Native Builder restart.
 - Status: Python installation is runtime VERIFIED; same-process interpreter rediscovery is verified-static; visible GIF rendering remains NEEDS TEST.
+
+2026-10-05 - Treat already-installed Windows Python as success
+- Fifth Bundle 1.2 runtime probe reached native visual Python setup and `winget` reported Python 3.13 was already installed with no newer package available. `winget install` returned a nonzero no-upgrade status, which the generic external-command wrapper incorrectly promoted to a fatal error before interpreter discovery could continue.
+- Native visual Python discovery now also checks 32-bit/alternate PythonCore registry locations, per-user/system install paths, the per-user Python launcher, `python3.13.exe`/`python3.12.exe` app aliases, and a narrow scan of `%LOCALAPPDATA%\Programs\Python`.
+- The Python install step is now idempotent: a nonzero `winget` status is tolerated when a valid native CPython 3.12/3.13 interpreter can be resolved afterward; only the combination of a failed install status and no usable interpreter remains fatal.
+- Donor extraction/model/BCK/socket remains runtime VERIFIED; visible GIF rendering remains NEEDS TEST.
