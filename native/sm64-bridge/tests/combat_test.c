@@ -14,20 +14,18 @@ int main(int argc, char **argv) {
     combat_overlay_evaluate(&test, 1, 1, pose);
     assert_zero(pose);
     assert(test.active && test.time == 0);
-    int limbMotion = 0;
-    int shoulderSweep = 0;
+    int shoulderMotion = 0;
+    int downstreamMotion = 0;
     for(int frame=1;frame<=COMBAT_SLASH_TICKS;frame++) {
         combat_overlay_evaluate(&test, 1, 1, pose);
         assert(test.time >= 0 && test.time <= 1);
         assert(test.weight >= 0 && test.weight <= 1);
-        /* V4 intentionally keeps the torso neutral; motion belongs to the right limb. */
-        for(int a=0;a<3;a++) assert(pose[0][a] == 0);
+        if (pose[0][1] != 0 || pose[0][2] != 0) shoulderMotion = 1;
         for(int j=1;j<4;j++) for(int a=0;a<3;a++) {
-            if (pose[j][a] != 0) limbMotion = 1;
+            if (pose[j][a] != 0) downstreamMotion = 1;
         }
-        if (pose[1][1] != 0 || pose[1][2] != 0) shoulderSweep = 1;
     }
-    assert(limbMotion && shoulderSweep && !test.active);
+    assert(shoulderMotion && downstreamMotion && !test.active);
     assert_zero(pose);
     combat_overlay_evaluate(&test, 1, 1, pose);
     assert(!test.active); /* Held request cannot replay the slash. */
@@ -54,6 +52,6 @@ int main(int argc, char **argv) {
         assert(write_binary_frame(7,&state));
         assert(write_binary_frame(8,&state));
     }
-    fprintf(stderr,"PASS production slash endpoints, V4 neutral torso/limb motion, bounded weights, request lifecycle and v3 frame writer\n");
+    fprintf(stderr,"PASS production slash endpoints, shoulder-driven limb motion, bounded weights, request lifecycle and v3 frame writer\n");
     return 0;
 }
