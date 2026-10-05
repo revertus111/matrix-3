@@ -1,5 +1,23 @@
 # N64 Client Console Runtime Test List
 
+## OoT Link Z-targeting / manual melee - 2026-10-05
+
+Status: `verified-static`; runtime acceptance pending. Exact native sword-contact frame is a `HYPOTHESIS` until visually tested.
+
+1. [ ] `git pull origin main`; Eclipse Java 8 refresh/clean/build client and server, then launch/login. No liboot/native rebuild is required for this Java-only slice.
+2. [ ] Ctrl+L into Link near two attackable NPCs. Hold Shift/Z while facing one NPC. Console should print `[OoT Combat] Z lock -> NPC index=...`; Link should keep the same target while it remains loaded and within the drop radius.
+3. [ ] While still holding Shift, use W/A/S/D. Link/native movement should remain target-relative so left/right read as lock-on strafing/orbit behavior rather than reverting to the free camera basis.
+4. [ ] Release Shift. Console should print `Z lock released`, and ordinary camera-relative Link steering should resume immediately.
+5. [ ] Hold Shift on an NPC and press F once. Native OoT sword animation must begin first; exactly one Matrix melee hit may be requested when the animation reaches the contact gate. Holding F must not create repeating RuneScape auto-attacks.
+6. [ ] With Shift released, face an attackable NPC within roughly 3 tiles and press F. Forward fallback may hit that NPC; an NPC behind Link/camera-forward should not be selected by the fallback cone.
+7. [ ] Move the locked NPC out of range, kill/despawn it, or leave its loaded region. Lock must drop/reacquire cleanly and no stale-index hit may occur.
+8. [ ] Equip a ranged/magic weapon and press F in Link mode. Server must reject Link manual melee. Re-equip melee/unarmed and confirm melee authority resumes.
+9. [ ] Verify normal right-click `Examine` still works. Stock NPC examine packets use reserved flag values 0/1; Link contact uses only flag 2 and must never display examine text.
+10. [ ] Exit Link mode and attack/examine NPCs normally in RuneScape mode. Stock `ATTACK_NPC_PACKET`, normal examine, click-to-attack, damage/XP/death and other NPC options must remain unchanged.
+11. [ ] Tune only if visual contact is early/late: JVM property `-Dmatrix3.oot.combatContactFrame=<frame>`. Record the accepted value before marking contact timing `VERIFIED`.
+
+Expected authority: client owns target presentation and native animation gating; server owns attack legality, range, weapon style, cooldown, accuracy, damage, XP, NPC death and drops. The server runs one `PlayerCombatNew` cycle directly and does not install it into `ActionManager`.
+
 ## Live camera-relative steering correction - 2026-10-05
 
 The controller now reads the rendered detached camera transform first. Verify held W while orbiting with mouse/Q/E; the travel vector must curve with the visible camera each tick.
