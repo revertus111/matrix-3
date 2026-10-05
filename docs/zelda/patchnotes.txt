@@ -111,3 +111,10 @@
 - Runtime diagnostics now report `smoothAngle=...`, `textureFilter=4tap`, and `material=oot-rgba-micro-v4`.
 - Scope remains presentation-only: no Link movement, collision, combat authority, or native protocol behavior changed.
 - Status: texture/data path is runtime proven; V4 smoothing/filter fidelity is `verified-static` pending the next Eclipse compile/runtime screenshot.
+
+2026-10-05 - Fix V4 signed-short vertex-index overflow
+- User runtime log showed protocol V2 and adult fit reaching READY, then every V4 model build failed inside Matrix with `ArrayIndexOutOfBoundsException: -32768/-32767` before any Link draw.
+- Root cause: V4's higher tessellation request generated enough distinct `Class159` vertices that triangle vertex references crossed Java's signed-short boundary; index 32768 wrapped to -32768 during raw-model conversion.
+- Restored the proven tessellation ceiling to 4 subdivisions per edge (`matrix3.oot.textureSubdivisions=0..4`) while keeping the V4 70-degree smoothing and four-tap texture filter. This preserves the presentation improvements without crossing the verified raw-model index envelope.
+- No native rebuild is required; this is a Java-only renderer correction.
+- Status: exact runtime failure is diagnosed from the user log and the correction is `verified-static` pending the next Eclipse run.
