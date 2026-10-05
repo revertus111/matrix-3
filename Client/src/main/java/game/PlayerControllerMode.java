@@ -3,33 +3,34 @@ package game;
 /**
  * Matrix3-native activation boundary for alternate local-player controllers.
  *
- * Normal RuneScape control remains the default. Mario behavior is opt-in and
- * currently toggled with Ctrl+M for developer testing. This class owns only the
- * local controller-mode selection; it does not replace Matrix3 movement,
- * clipping, server authority, camera ownership, or rendering.
+ * Normal RuneScape control remains the default. Mario and Link are opt-in
+ * developer modes. This class owns only controller-mode selection; Matrix3 keeps
+ * movement/clipping/server authority, camera ownership, and final rendering.
  */
 public final class PlayerControllerMode {
 
     public enum Mode {
         RUNESCAPE,
-        MARIO
+        MARIO,
+        LINK
     }
 
-    // Class549_Sub1 normalized-key mappings: Ctrl=82, M=70.
+    // Class549_Sub1 normalized-key mappings: Ctrl=82, M=70, L=56.
     private static final int INTERNAL_CTRL_KEY = 82;
     private static final int INTERNAL_M_KEY = 70;
+    private static final int INTERNAL_L_KEY = 56;
 
     private static Mode mode = Mode.RUNESCAPE;
-    private static boolean toggleWasDown;
+    private static boolean marioToggleWasDown;
+    private static boolean linkToggleWasDown;
     private static int lastTickCycle = Integer.MIN_VALUE;
 
     private PlayerControllerMode() {
     }
 
     /**
-     * Polls the existing Matrix3 held-key owner once per client cycle.
-     * Ctrl+M uses rising-edge detection so holding the chord cannot oscillate
-     * repeatedly between modes.
+     * Polls the existing Matrix3 held-key owner once per client cycle. Rising-edge
+     * detection keeps held chords from oscillating between modes.
      */
     public static void tick() {
         if (lastTickCycle == client.cycles) {
@@ -37,11 +38,15 @@ public final class PlayerControllerMode {
         }
         lastTickCycle = client.cycles;
 
-        boolean toggleDown = keyDown(INTERNAL_CTRL_KEY) && keyDown(INTERNAL_M_KEY);
-        if (toggleDown && !toggleWasDown) {
+        boolean marioToggleDown = keyDown(INTERNAL_CTRL_KEY) && keyDown(INTERNAL_M_KEY);
+        boolean linkToggleDown = keyDown(INTERNAL_CTRL_KEY) && keyDown(INTERNAL_L_KEY);
+        if (marioToggleDown && !marioToggleWasDown) {
             setMode(mode == Mode.MARIO ? Mode.RUNESCAPE : Mode.MARIO);
+        } else if (linkToggleDown && !linkToggleWasDown) {
+            setMode(mode == Mode.LINK ? Mode.RUNESCAPE : Mode.LINK);
         }
-        toggleWasDown = toggleDown;
+        marioToggleWasDown = marioToggleDown;
+        linkToggleWasDown = linkToggleDown;
     }
 
     public static void setMode(Mode nextMode) {
@@ -49,7 +54,7 @@ public final class PlayerControllerMode {
             return;
         }
         mode = nextMode;
-        System.out.println("[Mario] Controller mode: " + mode.name());
+        System.out.println("[Alternate Character] Controller mode: " + mode.name());
     }
 
     /**
@@ -58,7 +63,8 @@ public final class PlayerControllerMode {
      */
     static void resetForPlayerLifecycle() {
         mode = Mode.RUNESCAPE;
-        toggleWasDown = keyDown(INTERNAL_CTRL_KEY) && keyDown(INTERNAL_M_KEY);
+        marioToggleWasDown = keyDown(INTERNAL_CTRL_KEY) && keyDown(INTERNAL_M_KEY);
+        linkToggleWasDown = keyDown(INTERNAL_CTRL_KEY) && keyDown(INTERNAL_L_KEY);
         lastTickCycle = Integer.MIN_VALUE;
     }
 
@@ -68,6 +74,10 @@ public final class PlayerControllerMode {
 
     public static boolean isMarioMode() {
         return mode == Mode.MARIO;
+    }
+
+    public static boolean isLinkMode() {
+        return mode == Mode.LINK;
     }
 
     private static boolean keyDown(int internalKey) {
