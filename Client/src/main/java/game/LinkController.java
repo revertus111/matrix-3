@@ -66,7 +66,7 @@ public final class LinkController {
             resetMovement();
             clippingWasEnabled = clipping;
         }
-        publishControls(controls);
+        publishControls(player, controls);
         if (clipping) {
             requestVanillaRuneScapeStep(player, controls);
         } else {
@@ -79,7 +79,8 @@ public final class LinkController {
         }
     }
 
-    private static void publishControls(AlternateCharacterController.ControlState controls) {
+    private static void publishControls(Player player,
+            AlternateCharacterController.ControlState controls) {
         if (spaceReleaseRequired && !controls.jump) {
             spaceReleaseRequired = false;
         }
@@ -94,11 +95,23 @@ public final class LinkController {
         boolean buttonB = !attackReleaseRequired && controls.primaryAction;
         boolean buttonZ = !targetReleaseRequired && controls.modifierAction;
 
-        /* Native OoT resolves the stick against cameraLook. Keep both live so
-         * orbiting the RTS camera changes W/A/S/D immediately. */
+        /*
+         * Matrix owns target acquisition because the native OoT simulation has no
+         * Matrix NPC actor to focus. While Z is held, feed the locked target
+         * direction into OoT's existing camera-look basis and still send native Z.
+         * This preserves liboot action/pose ownership while making movement and B
+         * actions target-relative to the selected Matrix NPC.
+         */
+        AlternateCharacterController.PlanarDirection inputForward =
+                LinkCombatController.update(
+                        player, buttonB, buttonZ, controls.cameraForward);
+        if (inputForward == null) {
+            inputForward = controls.cameraForward;
+        }
+
         OotBridgeSession.setInput(
-                controls.cameraForward.x,
-                controls.cameraForward.z,
+                inputForward.x,
+                inputForward.z,
                 controls.moveX,
                 controls.moveY,
                 buttonA,
@@ -166,19 +179,21 @@ public final class LinkController {
 
     private static void enterLinkMode() {
         resetMovement();
+        LinkCombatController.reset();
         clippingWasEnabled = AlternateCharacterController.isRuneScapeClippingEnabled();
         AlternateCharacterInputKeyboard.install();
         captureHeldActionGuards();
         OotBridgeSession.start();
         System.out.println(
-                "[OoT] Controls: camera-relative WASD move, Space A/action, F B/sword, Shift Z-target");
+                "[OoT] Controls: camera-relative WASD move, Space A/action, F B/sword, Shift hold Z-target");
         System.out.println(
                 "[OoT] Movement: " + (clippingWasEnabled ? "RuneScape tile clipping" : "continuous free / clipping OFF")
-                + "; Link B does not send an NPC attack packet yet.");
+                + "; sword damage is server-authoritative at native contact.");
     }
 
     private static void exitLinkMode() {
         freeMovement.restore(Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976);
+        LinkCombatController.reset();
         OotBridgeSession.stop();
         /*
          * Link->Mario can transition in the same client tick. Mario installs the
@@ -195,6 +210,7 @@ public final class LinkController {
     private static void fallbackToRuneScape(String reason) {
         freeMovement.restore(Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976);
         System.out.println("[OoT Bridge] Falling back to RuneScape control: " + reason);
+        LinkCombatController.reset();
         OotBridgeSession.stop();
         AlternateCharacterInputKeyboard.uninstall();
         resetMovement();
