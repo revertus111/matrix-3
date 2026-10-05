@@ -11,7 +11,7 @@ $alanmDir = Join-Path $rawDir 'AlAnm'
 $dtk = Join-Path $workspace 'build\tools\dtk.exe'
 $probeScript = Join-Path $PSScriptRoot 'tp-link-probe.py'
 $visualScript = Join-Path $PSScriptRoot 'tp-link-visual-proof.py'
-$discDir = Join-Path $workspace "orig\$tpTarget"
+$discDir = Join-Path $workspace "$tpTarget"
 $supportedDiscExtensions = @('.iso', '.gcm', '.rvz', '.wia', '.wbfs', '.ciso', '.nfs', '.gcz', '.tgc')
 $msys2Python = 'C:\msys64\ucrt64\bin\python.exe'
 
@@ -102,7 +102,11 @@ function Get-NativeVisualPythonCandidates {
         'HKCU:\Software\Python\PythonCore\3.13\InstallPath',
         'HKCU:\Software\Python\PythonCore\3.12\InstallPath',
         'HKLM:\Software\Python\PythonCore\3.13\InstallPath',
-        'HKLM:\Software\Python\PythonCore\3.12\InstallPath'
+        'HKLM:\Software\Python\PythonCore\3.12\InstallPath',
+        'HKCU:\Software\Wow6432Node\Python\PythonCore\3.13\InstallPath',
+        'HKCU:\Software\Wow6432Node\Python\PythonCore\3.12\InstallPath',
+        'HKLM:\Software\Wow6432Node\Python\PythonCore\3.13\InstallPath',
+        'HKLM:\Software\Wow6432Node\Python\PythonCore\3.12\InstallPath'
     )) {
         try {
             $installKey = Get-Item -LiteralPath $registryPath -ErrorAction Stop
@@ -118,12 +122,34 @@ function Get-NativeVisualPythonCandidates {
         }
     }
 
-    foreach ($path in @(
+    $knownPaths = @(
         (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python313\python.exe'),
-        (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe')
-    )) {
-        if (Test-Path $path) {
+        (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe'),
+        (Join-Path $env:ProgramFiles 'Python313\python.exe'),
+        (Join-Path $env:ProgramFiles 'Python312\python.exe'),
+        (Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\python3.13.exe'),
+        (Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\python3.12.exe')
+    )
+    foreach ($path in $knownPaths) {
+        if ($path -and (Test-Path $path)) {
             $result += @{ Exe = $path; Prefix = @() }
+        }
+    }
+
+    $pythonProgramsRoot = Join-Path $env:LOCALAPPDATA 'Programs\Python'
+    if (Test-Path $pythonProgramsRoot) {
+        Get-ChildItem -LiteralPath $pythonProgramsRoot -Filter python.exe -File -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+            $result += @{ Exe = $_.FullName; Prefix = @() }
+        }
+    }
+
+    foreach ($launcherPath in @(
+        (Join-Path $env:LOCALAPPDATA 'Programs\Python\Launcher\py.exe'),
+        (Join-Path $env:SystemRoot 'py.exe')
+    )) {
+        if ($launcherPath -and (Test-Path $launcherPath)) {
+            $result += @{ Exe = $launcherPath; Prefix = @('-3.13') }
+            $result += @{ Exe = $launcherPath; Prefix = @('-3.12') }
         }
     }
 
@@ -131,6 +157,13 @@ function Get-NativeVisualPythonCandidates {
     if ($py) {
         $result += @{ Exe = $py.Source; Prefix = @('-3.13') }
         $result += @{ Exe = $py.Source; Prefix = @('-3.12') }
+    }
+
+    foreach ($commandName in @('python3.13.exe', 'python3.12.exe')) {
+        $nativeCommand = Get-Command $commandName -ErrorAction SilentlyContinue
+        if ($nativeCommand) {
+            $result += @{ Exe = $nativeCommand.Source; Prefix = @() }
+        }
     }
 
     $python = Get-Command python.exe -ErrorAction SilentlyContinue
@@ -177,22 +210,41 @@ function Install-NativeVisualPython {
         throw 'Windows CPython 3.12/3.13 is required for the TP Link visual proof, and Windows Package Manager (winget) was not found for automatic installation.'
     }
 
-    Write-Host 'Installing Windows CPython 3.13 for the TP Link visual proof...' -ForegroundColor Cyan
-    Invoke-External -FilePath $winget.Source -Arguments @(
+    Write-Host 'Ensuring Windows CPython 3.13 is installed for the TP Link visual proof...' -ForegroundColor Cyan
+    $wingetArgs = @(
         'install', '--id', $wingetPythonPackage, '--exact',
         '--scope', 'user', '--silent',
         '--accept-package-agreements', '--accept-source-agreements'
-    ) | Out-Host
+    )
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        & $winget.Source @wingetArgs
+        $wingetCode = $LASTEXITCODE
+    }
+    catch {
+        $wingetCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
 
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
         $python = Find-NativeVisualPython
         if ($python) {
+            if ($wingetCode -ne 0) {
+                Write-Host "winget returned $wingetCode, but a valid native CPython 3.12/3.13 install was found; continuing." -ForegroundColor DarkGray
+            }
             return $python
         }
         Start-Sleep -Milliseconds 500
     }
 
-    throw 'Windows CPython 3.13 installation completed, but the interpreter could not be resolved from the Python registry, known per-user install paths, launcher, or native PATH.'
+    if ($wingetCode -ne 0) {
+        throw "winget returned exit code $wingetCode and no usable native CPython 3.12/3.13 interpreter could be resolved."
+    }
+    throw 'Windows CPython 3.13 installation completed, but the interpreter could not be resolved from registry, known install paths, launcher, Windows app aliases, or the local Python programs directory.'
 }
 
 function Resolve-VenvPython {
