@@ -123,28 +123,40 @@ def find_bck_candidates(root):
     )
 
 
-def choose_idle(candidates):
-    exact = ["wait.bck", "waita.bck", "waitb.bck", "waitatos.bck"]
+def choose_by_family(candidates, exact_names, prefixes):
     by_name = {p.name.lower(): p for p in candidates}
-    for name in exact:
+    for name in exact_names:
         if name in by_name:
             return by_name[name]
-    for path in candidates:
-        if path.stem.lower().startswith("wait"):
-            return path
+    for prefix in prefixes:
+        for path in candidates:
+            if path.stem.lower().startswith(prefix):
+                return path
     return None
+
+
+def choose_idle(candidates):
+    return choose_by_family(
+        candidates,
+        ["wait.bck", "waita.bck", "waitb.bck", "waitatos.bck"],
+        ["wait"],
+    )
+
+
+def choose_walk(candidates):
+    return choose_by_family(
+        candidates,
+        ["walk.bck", "walka.bck", "walkb.bck", "dasha.bck", "dashb.bck"],
+        ["walk", "dash"],
+    )
 
 
 def choose_sword(candidates):
-    exact = ["cutl.bck", "cutr.bck", "cutu.bck", "cutt.bck", "cuta.bck"]
-    by_name = {p.name.lower(): p for p in candidates}
-    for name in exact:
-        if name in by_name:
-            return by_name[name]
-    for path in candidates:
-        if path.stem.lower().startswith("cut"):
-            return path
-    return None
+    return choose_by_family(
+        candidates,
+        ["cutl.bck", "cutr.bck", "cutu.bck", "cutt.bck", "cuta.bck"],
+        ["cut"],
+    )
 
 
 def copy_named(src, dest_dir, out_name=None):
@@ -152,6 +164,13 @@ def copy_named(src, dest_dir, out_name=None):
     dest = dest_dir / (out_name or src.name)
     shutil.copy2(src, dest)
     return dest
+
+
+def assert_reaches_weapon(label, info):
+    if info["joint_count"] <= 0x0F:
+        raise RuntimeError(
+            f"{label} BCK has only {info['joint_count']} joints; it does not reach joint 0xF"
+        )
 
 
 def main():
@@ -168,12 +187,14 @@ def main():
     selected.mkdir(parents=True, exist_ok=True)
 
     model_files = {}
+    model_info = {}
     for name in ("al.bmd", "al_head.bmd", "al_hands.bmd", "al_face.bmd"):
         path = find_named_file(kmdl, name)
         model_files[name] = path
+        model_info[name] = parse_bmd(path)
         copy_named(path, selected)
 
-    model = parse_bmd(model_files["al.bmd"])
+    model = model_info["al.bmd"]
     if model["joint_count"] <= 0x0F:
         raise RuntimeError(
             f"al.bmd has only {model['joint_count']} joints; expected right weapon joint 0xF"
@@ -191,29 +212,30 @@ def main():
         raise FileNotFoundError(f"no .bck files found under {alanm}")
 
     idle_path = choose_idle(bcks)
+    walk_path = choose_walk(bcks)
     sword_path = choose_sword(bcks)
     if not idle_path:
         raise FileNotFoundError("no WAIT-family BCK animation found")
+    if not walk_path:
+        raise FileNotFoundError("no WALK/DASH-family BCK animation found")
     if not sword_path:
         raise FileNotFoundError("no CUT-family BCK animation found")
 
     idle = parse_bck(idle_path)
+    walk = parse_bck(walk_path)
     sword = parse_bck(sword_path)
-    if idle["joint_count"] <= 0x0F:
-        raise RuntimeError(
-            f"idle BCK has only {idle['joint_count']} joints; it does not reach joint 0xF"
-        )
-    if sword["joint_count"] <= 0x0F:
-        raise RuntimeError(
-            f"sword BCK has only {sword['joint_count']} joints; it does not reach joint 0xF"
-        )
+    assert_reaches_weapon("idle", idle)
+    assert_reaches_weapon("walk/run", walk)
+    assert_reaches_weapon("sword", sword)
 
     idle_copy = copy_named(idle_path, selected, f"idle_{idle_path.name}")
+    walk_copy = copy_named(walk_path, selected, f"walk_{walk_path.name}")
     sword_copy = copy_named(sword_path, selected, f"sword_{sword_path.name}")
 
     manifest = {
         "status": "PASS",
         "model": model,
+        "model_parts": model_info,
         "socket_contract": {
             "right_hand_index": 0x0E,
             "right_hand_name": joint_0e,
@@ -222,6 +244,7 @@ def main():
         },
         "animations": {
             "idle": idle,
+            "walk": walk,
             "sword": sword,
             "total_bck_files": len(bcks),
         },
@@ -231,6 +254,7 @@ def main():
             "hands": str(selected / "al_hands.bmd"),
             "face": str(selected / "al_face.bmd"),
             "idle": str(idle_copy),
+            "walk": str(walk_copy),
             "sword": str(sword_copy),
         },
     }
@@ -246,14 +270,15 @@ def main():
         f"Right hand 0xE: {joint_0e}",
         f"Right weapon 0xF: {joint_0f}",
         f"Idle clip: {idle_path.name} ({idle['duration_frames']} frames, {idle['joint_count']} joints)",
+        f"Walk/run clip: {walk_path.name} ({walk['duration_frames']} frames, {walk['joint_count']} joints)",
         f"Sword clip: {sword_path.name} ({sword['duration_frames']} frames, {sword['joint_count']} joints)",
         f"BCK clips discovered: {len(bcks)}",
         "",
         f"Selected proof files: {selected}",
         f"Manifest: {manifest_path}",
         "",
-        "This proves authentic TP Link model/skeleton + real BCK animation assets + weapon socket identity.",
-        "It does not yet prove rendering/playback inside Matrix3.",
+        "This proves authentic TP Link model/skeleton + real idle/locomotion/sword BCK assets + weapon socket identity.",
+        "The visual probe is the next gate; Matrix3 in-client rendering is still not proven.",
     ]
     (out / "summary.txt").write_text("\n".join(summary) + "\n", encoding="utf-8")
 
@@ -263,6 +288,7 @@ def main():
     print(f"Right hand 0xE: {joint_0e}")
     print(f"Right weapon 0xF: {joint_0f}")
     print(f"Idle: {idle_path.name} - {idle['duration_frames']} frames")
+    print(f"Walk/run: {walk_path.name} - {walk['duration_frames']} frames")
     print(f"Sword: {sword_path.name} - {sword['duration_frames']} frames")
     print(f"Manifest: {manifest_path}")
 
