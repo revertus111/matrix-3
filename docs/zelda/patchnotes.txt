@@ -13,3 +13,11 @@
 - Added a ROM-local native probe covering engine create, adult/child Link, equipment calls, skeleton availability, nonzero geometry, movement, animation-state advancement, simulation ticks, and clean destroy.
 - Added `docs/zelda/TESTLIST.md` with the single acceptance command and explicit no-false-positive rule: compile/engine-create alone do not complete Phase 0.2/0.3.
 - Status: implementation is `verified-static`; compilation and ROM-backed behavior remain `UNKNOWN` pending the user's local probe.
+
+2026-10-05 - NTSC-U 1.2 native probe runtime PASS
+- User ran the documented bridge proof in MSYS2 UCRT64 against the exact local retail ROM.
+- ROM identifier confirmed 32 MiB z64, North America, revision 2, profile `oot-ntsc-us-1.2`, MD5 `57a9719ad547c516342e1a15d5c28c3d`.
+- Native build completed and linked `oot_probe.exe`. The decompilation emitted expected host-build warnings, including 64-bit pointer-to-32-bit N64 command casts, but no acceptance failure.
+- Engine create, static floor, adult Link create/age/equipment, adult skeleton/geometry, movement, animation-state advancement, child age/equipment switch, child skeleton/geometry, simulation tick advancement, and engine destroy all passed.
+- Probe reported 757 adult triangles and 717 child triangles, then finished with `[OoT NTSC12] RESULT: PASS`.
+- Phase 0.2 and 0.3 are now runtime verified and complete. Phase 0.4 remains open for dependency license/provenance/distribution review before Matrix3 gameplay integration.
