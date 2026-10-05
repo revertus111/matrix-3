@@ -1,0 +1,11 @@
+2026-10-05 - Start Twilight Princess Link workstream / donor bootstrap
+- Pinned initial donor source to zeldaret/tp commit c8fa8c9e2aab72cf4e5db0e5d1c84a9ea6ee6eb0 and target GZ2E01 (GameCube North America).
+- Recorded verified-static TP Link source findings: Kmdl human body resources, explicit human skeleton hierarchy, hand/item joints, layered animation metadata, locomotion families and real sword-cut/finisher animation families.
+- Added a new persistent workstream at docs/tp-link/PROJECT.md with canonical main-goal status, phase/bundle plan, evidence labels and Resume Here state.
+- Added docs/tp-link/TESTLIST.md for the first consolidated donor-build runtime gate.
+- Expanded Matrix3 Native Builder with PREP + BUILD TP LINK.
+- Added native/tools/build-tp.cmd and native/tools/build-tp.ps1. The one-click bootstrap keeps the large donor checkout outside Matrix3 under %LOCALAPPDATA%\Matrix3\TPDecomp, prompts for the user's local disc image only when needed, validates raw ISO/GCM as GZ2E01, pins the donor source, prepares orig/GZ2E01, configures and builds with Ninja.
+- The bootstrap attempts an NTFS hard link first to avoid duplicating the 1.35 GB disc image and falls back to one local copy when a hard link is unavailable.
+- Ninja is reused when installed or installed user-locally through the decomp README's documented Python package path when missing.
+- No Nintendo game assets, disc bytes or extracted donor resources are committed to Matrix3.
+- Status: verified-static implementation only. User runtime donor-build PASS/FAIL is still required before Link asset conversion/integration begins.
