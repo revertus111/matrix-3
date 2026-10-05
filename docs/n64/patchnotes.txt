@@ -16,3 +16,11 @@
 - Old height/radius cutter is retained only as an explicit protocol-v1 debug fallback and is ignored when semantic metadata exists.
 - Adapter and auto-fit now share the same semantic FACE reference, eliminating current-pose/reference-pose fit disagreement under protocol v2.
 - Native build is reproducible: bridge Makefile pins libsm64 and applies tracked `libsm64-semantic-parts.patch` before rebuilding.
+
+2026-10-04 - Mario replacement-shell workbench V8
+- Added `Head shell closed`: hides every known semantic Mario head part so the revision-830 helmet becomes the entire visible head shell.
+- Added `Head shell + Mario face`: keeps EYES/MOUSTACHE plus a tunable front slice of FACE while removing cap/hair and rear/side mixed-FACE geometry.
+- Added live `Mario FACE front slice %` control and face-insert triangle diagnostics.
+- Replacement-shell profiles reset/re-resolve the active helmet auto-fit and bypass cavity-proxy inflation; shell baseline uses manual multiplier `1.0` on top of the adapter's outer-silhouette fit.
+- The first V8 proof intentionally keeps Mario's surviving face at native animated scale/location. Independent face scale/XYZ is deferred until runtime evidence proves it is needed.
+- V8 is Java/workbench-only; no native bridge rebuild is required when semantic protocol v2 is already running.
