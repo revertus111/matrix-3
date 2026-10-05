@@ -2,6 +2,17 @@
 
 ## Custom combat v3 - one consolidated acceptance session
 
+### Runtime evidence accepted 2026-10-04
+
+- [x] Equipped revision-830 sword visibly renders attached to Mario's hand in live Mario mode. `VERIFIED`.
+- [x] F triggers the custom native MARIO_COMBAT_1H_SLASH animation. `VERIFIED`.
+- [x] Core protocol-v3/socket/request path is active at runtime; Java cannot enter custom weapon combat without v3 + live hand socket + rendered weapon readiness.
+- [ ] Moving slash / native leg continuity is still pending unless separately confirmed.
+- [ ] Held-F no-replay, preview-only button behavior, freeze/unfreeze, unequip fallback and Ctrl+M/relog cleanup remain pending.
+- [ ] Remote-player isolation, nearby-NPC server combat/damage/XP and sustained stability remain pending.
+
+The first attempted acceptance run did **not** exercise v3: Windows failed to relink `dist/sm64_bridge.exe` with `Permission denied` because the executable was locked. The later successful custom slash supersedes that failed first run as runtime evidence for the core proof.
+
 1. [ ] From repository root: `git pull origin main`.
 2. [ ] In MSYS2 MinGW64, `cd native/sm64-bridge` then `make bootstrap` (rebuilds both library and sidecar).
 3. [ ] Eclipse Java 8 refresh/clean/build, then launch/login once.
