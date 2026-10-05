@@ -80,11 +80,11 @@ Do not treat a tuned value as final collision scale until Phase 3 establishes th
 
 - [x] Matrix held-key owner remains `Class108.aClass549_1426`; no second AWT keyboard listener was added.
 - [x] `Class549_Sub1.anIntArray8901` mappings used by the controller are `W=33`, `A=48`, `S=49`, `D=50`, `F=51`, `Shift=81`, `Space=83`. `verified-static`.
-- [x] WASD is normalized into libsm64 analog `stickX/stickY`; diagonals use `0.70710677` per axis so diagonal magnitude remains 1.0.
+- [x] WASD is normalized into libsm64 analog movement input; diagonals use `0.70710677` per axis so diagonal magnitude remains 1.0.
 - [x] Space -> SM64 A, F -> SM64 B, Shift -> SM64 Z.
-- [x] One immutable input snapshot is published to the fixed 30 Hz worker so stick/A/B/Z values cannot be mixed across a native step.
+- [x] One immutable input snapshot is published to the fixed 30 Hz worker so movement/A/B/Z values cannot be mixed across a native step.
 - [x] A/B/Z are fail-safe on Mario-mode entry: an action key already held while entering must be released before it can trigger native input.
-- [x] Existing binary sidecar packet already carried stick/A/B/Z, so this patch requires **no native bridge rebuild or protocol-version change**.
+- [x] Existing binary sidecar packet already carries camera-look/stick/A/B/Z, so steering changes require **no native bridge rebuild or protocol-version change**.
 
 ### Runtime evidence - 2026-10-04
 
@@ -260,28 +260,30 @@ Default Mario mesh scale remains `2.0`:
 - [x] Shared control vocabulary centralizes WASD movement, Space jump, F primary action, Shift modifier and camera-forward sampling. Future character drivers consume this state rather than installing another keyboard/controller path.
 - [x] `AlternateCharacterInputKeyboard` replaces the Mario-specific wrapper while preserving Matrix3's original keyboard listener/owner and the accepted WASD arbitration behavior.
 - [x] Matrix camera-forward X/Z is supplied to the character driver: Class411 detached/free views use actual position/look geometry; vanilla views normally use resolved viewport camera-position -> focus-position geometry with yaw retained only as fallback.
-- [x] Construction RTS now uses Construction's canonical 14-bit yaw source (`getRtsMinimapYawUnits()` -> restored `rtsYaw`) before detached-camera reconstruction, so alternate-character steering follows the same heading that renders/pans the RTS view across the full 360-degree orbit. Construction Free/other detached cameras retain the position/look fallback. `verified-static`.
-- [x] Existing native protocol already carries camera-look floats; **no `sm64_bridge.exe` rebuild is required**.
-- [x] User runtime evidence with the correctly owned Construction camera classified the first remaining steering failure as a full 180-degree basis reversal: W/S and A/D were both reversed together. `VERIFIED` 2026-10-04.
-- [x] `MarioJumpController` therefore keeps shared Matrix camera semantics unchanged and negates only `camLookX/camLookZ` at the Mario/libsm64 adapter boundary; stick X/Y remain untouched.
-- [x] After that correction, north-facing W/S/A/D became correct while south-facing W/S/A/D remained exactly reversed. This heading-dependent result is `VERIFIED` runtime evidence that the remaining problem is the RTS heading source rather than another Mario stick-axis sign.
-- [x] `Mario64Diagnostics` retains the read-only pure-W alignment probe as a verification aid; it no longer blocks the correction on a four-heading capture.
+- [x] Construction RTS uses Construction's canonical heading source before detached-camera reconstruction; Construction Free/other detached cameras retain the position/look fallback. `verified-static`.
+- [x] Existing native protocol already carries camera-look/stick floats; **no `sm64_bridge.exe` rebuild is required**.
+- [x] User runtime evidence first classified a full 180-degree steering reversal with W/S and A/D both reversed together. `VERIFIED` 2026-10-04.
+- [x] A Mario-only dynamic camera-look inversion made north-facing controls correct, but south-facing controls still reversed all four directions. `VERIFIED` 2026-10-04.
+- [x] The canonical RTS-yaw source still did not eliminate the south-facing reversal. `VERIFIED` by user; dynamic Matrix-camera -> libsm64-camera interpretation is therefore superseded for Mario steering.
+- [x] `MarioJumpController` now resolves screen-relative input into a Matrix world-space vector using the same basis as Construction: `right=(forwardZ,-forwardX)`, `world=moveX*right + moveY*forward`. `verified-static`.
+- [x] Mario now publishes a fixed neutral libsm64 camera `(0,+1)` and encodes the desired Matrix world vector directly as native stick `(-worldX,-worldZ)`. This matches libsm64's actual `cameraYaw`, stick sign, and `intendedYaw` equations, removing dynamic camera handedness from the native boundary. `verified-static`.
+- [x] `Mario64Diagnostics` retains the read-only pure-W alignment probe as a verification aid.
 - [x] `AlternateCharacterCombatBridge` does not calculate client damage. Mario's F/B rising edge sends the stock Matrix3 NPC attack packet (opcode 32) to the nearest loaded NPC within 12 tiles.
 - [x] Server-side `WorldPacketsDecoder` still validates the NPC and enters the existing `PlayerCombatNew(npc)` owner, preserving RuneScape combat stats/definitions, target/range/pathing rules, damage/XP and downstream NPC death/drop behavior.
 - [x] Mario currently advertises `MELEE` only through the character capability profile. Link can later advertise `MELEE` + `RANGED` without adding another controller/combat pipeline.
 - [x] `MarioVisualRenderer` has a 750 ms last-good-model grace path for transient native geometry/model-build gaps; cached fallback renders do not extend that deadline and mode/bridge loss remains immediate fail-open.
 
-### Corrected steering runtime acceptance
+### World-space steering runtime acceptance
 
 Use one client launch; no native rebuild:
 
 1. [ ] `git pull origin main`, Eclipse Java 8 clean/build, launch/login normally.
 2. [ ] Enter Mario mode with Construction RTS/Free camera active.
-3. [x] Facing north: W = forward/up-screen, S = backward/down-screen, A = left, D = right. `VERIFIED` by user after the Mario/libsm64 180-degree camera-basis correction.
-4. [ ] Facing south: W = forward/up-screen, S = backward/down-screen, A = left, D = right. This is the primary acceptance check for the canonical RTS-yaw source patch.
+3. [ ] Facing north: W = forward/up-screen, S = backward/down-screen, A = left, D = right.
+4. [ ] Facing south: W = forward/up-screen, S = backward/down-screen, A = left, D = right.
 5. [ ] Rotate east/west and confirm the same screen-relative W/S/A/D behavior.
-6. [ ] Hold W while continuously rotating the camera; Mario curves with the live view instead of preserving an old heading or flipping at south.
-7. [ ] Optional diagnostic sanity: `cameraForward=(x,z)` changes continuously with RTS yaw and pure-W `dot` trends toward positive alignment after Mario settles.
+6. [ ] Hold W while continuously rotating the camera through the full circle; Mario curves with the live view with no north/south flip.
+7. [ ] Optional diagnostic sanity: pure-W native velocity should align with the sampled Matrix forward after Mario settles.
 8. [ ] Existing visual smoothing/textures/XYZ movement remain intact.
 9. [ ] Let Mario sit idle for several seconds, then tap Space. Mario remains the visible replacement throughout the jump; the normal RuneScape body must not flash/reappear on the transition.
 10. [ ] Ctrl+M still restores the RuneScape body immediately; the 750 ms grace must never keep Mario visible after mode/bridge ownership ends.
@@ -308,4 +310,4 @@ From `docs/rs3/SMOKE_TEST.md`:
 
 ## Next gate
 
-Pull/build once and verify south-facing W/S/A/D first, then east/west and rotate-while-holding-W. If steering passes, return immediately to the saved idle-to-jump replacement regression and one nearby NPC F/punch -> stock RuneScape combat proof.
+Pull/build once and verify N/E/S/W plus rotate-while-holding-W. The new adapter no longer sends Matrix camera heading into libsm64; it sends the desired Matrix world movement direction directly. If steering passes, return immediately to the saved idle-to-jump replacement regression and one nearby NPC F/punch -> stock RuneScape combat proof.
