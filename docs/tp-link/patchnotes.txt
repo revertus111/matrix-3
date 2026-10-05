@@ -24,3 +24,11 @@
 - The builder now creates `orig/GZ2E01/` as a directory and places the donor image inside it with its original filename/extension, allowing decomp-toolkit to detect the CISO/RVZ/ISO container correctly.
 - Reruns automatically repair the malformed local workspace from the previous builder by deleting only the builder-created `orig/GZ2E01` link/copy before creating the correct directory layout; the user's source image under Matrix3/native is untouched.
 - Status: object-base fix is verified-static; donor build still needs one runtime rerun.
+
+2026-10-05 - TP donor bootstrap runtime VERIFIED
+- User reran `PREP + BUILD TP LINK` with `Legend of Zelda, The - Twilight Princess (USA).ciso`.
+- The complete pinned `GZ2E01` build finished successfully.
+- `CHECK config\GZ2E01\build.sha1` reported `758 files OK`.
+- The generated progress report reported all code and data `100.00% matched`; overall linking was `87.13%` (`2583 / 2608 files`).
+- Builder ended with `TP LINK DONOR BUILD SUCCESS` and confirmed the pinned source/workspace.
+- Bundle 1.1 donor bootstrap is now runtime VERIFIED. Next active work is Bundle 1.2: establish the exact local Kmdl/AlAnm extraction path and prove authentic TP Link model + BCK animation + right-item joint preservation.
