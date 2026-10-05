@@ -1,7 +1,7 @@
 2026-10-05 - OoT integration workstream initialized
 - Recorded liboot as a candidate native Link gameplay SDK and mapped the Matrix3 alternate-character seam.
 - Identified the supplied ROM as NTSC-U 1.2; upstream liboot documents this revision as identification-only, with PAL 1.1 as its gameplay-tested target.
-- Recorded native dependency license/provenance review as a Phase 0 gate. ROM bytes and extracted assets remain local-only.
+- Recorded native dependency license/provenance review as a Phase 0 gate. ROM bytes and ROM-extracted assets remain local-only.
 - User supplied the official zeldaret/oot source link; confirmed its ntsc-1.2 build target matches the supplied ROM revision.
 - Updated Phase 0 to adapt liboot's PAL-specific build settings and generated asset symbols for NTSC-U 1.2, then prove Link state and animated geometry against the local ROM before Matrix3 integration.
 
@@ -42,3 +42,15 @@
 - Root cause: `native/tools/build-oot.cmd` launched `msys2_shell.cmd -mingw64`, while the already-verified NTSC-U 1.2 probe/build path uses MSYS2 UCRT64.
 - Updated the one-click OoT builder to launch `-ucrt64` and report UCRT64-specific prerequisite failures, matching the proven toolchain instead of requiring a second MinGW64 CMake installation.
 - Status: builder fix is `verified-static`; rerun required to confirm native sidecar compilation.
+
+2026-10-05 - First Matrix Link render observed + adult Link 830 auto-fit staged
+- User runtime screenshot verified recognizable OoT Link geometry rendering inside the Matrix3 scene at the local player transform. The first proof was intentionally overlaid with the RuneScape player and showed Link substantially undersized.
+- Confirmed the persistent native sidecar already forces `OOT_AGE_ADULT`; this fit slice remains adult-Link only.
+- Added `LinkCharacterFit` as a dedicated presentation-fit profile instead of increasing one hardcoded renderer scale.
+- The fit reads the live Matrix local-player rendered minimum-Y bound through `Player.method8310()`; static tracing confirmed that value originates from `Model.method1382()` / AbstractModel minimum vertex Y.
+- Adult Link's native standing floor/top use a trimmed 1% vertical span measured relative to Link's native root. This avoids one-off extreme vertices dominating height while preserving native root-height motion for jumps/actions.
+- Uniform scale matches Link's standing native height to the live 830 player height, preserving OoT body proportions rather than stretching X/Y/Z independently.
+- Native floor alignment maps Link's calibrated standing floor to Matrix local Y=0. Link width/depth are recorded in the profile now as groundwork for later helmet/body/glove/boot/cape socket fitting.
+- `matrix3.oot.modelScale` remains an explicit forced-scale override; `matrix3.oot.fitMultiplier` provides optional global fine tuning without replacing the auto-fit default.
+- `LinkVisualRenderer` now rebuilds when the fit profile revision changes and clears the fit profile on Link-session exit/re-entry.
+- Status: first live Link rendering is runtime observed; the new adult auto-fit is `verified-static` and needs the next in-game visual acceptance for height and floor alignment.
