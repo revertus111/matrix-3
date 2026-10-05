@@ -1,0 +1,64 @@
+@echo off
+setlocal EnableExtensions
+
+title Matrix3 Native Builder - OoT
+set "MSYS2_SHELL=%MATRIX3_MSYS2_SHELL%"
+if not defined MSYS2_SHELL set "MSYS2_SHELL=C:\msys64\msys2_shell.cmd"
+set "BRIDGE_DIR=%~dp0..\oot-bridge"
+
+echo ================================================
+echo Matrix3 - OoT native build
+echo ================================================
+echo.
+
+if not exist "%MSYS2_SHELL%" (
+    echo ERROR: MSYS2 shell was not found at:
+    echo   %MSYS2_SHELL%
+    echo.
+    echo If MSYS2 is installed elsewhere, set MATRIX3_MSYS2_SHELL to msys2_shell.cmd.
+    goto :fail
+)
+
+if not exist "%BRIDGE_DIR%\Makefile" (
+    echo ERROR: OoT bridge Makefile was not found:
+    echo   %BRIDGE_DIR%\Makefile
+    goto :fail
+)
+
+echo Building from the correct OoT bridge folder:
+echo   %BRIDGE_DIR%
+echo.
+
+pushd "%BRIDGE_DIR%" >nul
+call "%MSYS2_SHELL%" -defterm -here -no-start -mingw64 -c "command -v cmake >/dev/null 2>&1 || { echo; echo 'ERROR: CMake is missing from MSYS2 MinGW64.'; echo 'OoT cannot build until CMake is installed.'; exit 127; }; make bootstrap"
+set "RC=%ERRORLEVEL%"
+popd >nul
+
+if "%RC%"=="0" goto :success
+
+echo.
+echo ================================================
+echo OOT BUILD FAILED  (exit %RC%)
+echo ================================================
+echo The log above is the only thing you need to send me.
+echo.
+pause
+exit /b %RC%
+
+:success
+echo.
+echo ================================================
+echo OOT BUILD SUCCESS
+echo ================================================
+echo.
+pause
+exit /b 0
+
+:fail
+echo.
+echo ================================================
+echo OOT BUILD COULD NOT START
+echo ================================================
+echo.
+pause
+exit /b 1
