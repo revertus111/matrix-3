@@ -1,0 +1,4 @@
+2026-10-05 - OoT integration workstream initialized
+- Recorded liboot as a candidate native Link gameplay SDK and mapped the Matrix3 alternate-character seam.
+- Identified the supplied ROM as NTSC-U 1.2; upstream liboot documents this revision as identification-only, with PAL 1.1 as its gameplay-tested target.
+- Recorded native dependency license/provenance review as a Phase 0 gate. ROM bytes and extracted assets remain local-only.
