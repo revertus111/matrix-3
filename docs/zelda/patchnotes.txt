@@ -54,3 +54,8 @@
 - `matrix3.oot.modelScale` remains an explicit forced-scale override; `matrix3.oot.fitMultiplier` provides optional global fine tuning without replacing the auto-fit default.
 - `LinkVisualRenderer` now rebuilds when the fit profile revision changes and clears the fit profile on Link-session exit/re-entry.
 - Status: first live Link rendering is runtime observed; the new adult auto-fit is `verified-static` and needs the next in-game visual acceptance for height and floor alignment.
+
+2026-10-05 - Fix adult Link auto-fit compile accessor
+- Eclipse reported `method8310(byte)` was called without its required decompiler byte argument in `LinkCharacterFit`.
+- Updated the live 830 height read to `player.method8310((byte) 0)`. Static inspection confirms the byte parameter is unused by the accessor, so this preserves the intended stored minimum-Y height reference without changing behavior.
+- Status: compile fix is `verified-static`; Eclipse rebuild/runtime acceptance still required.
