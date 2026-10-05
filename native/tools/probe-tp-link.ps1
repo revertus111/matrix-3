@@ -20,7 +20,6 @@ $demakeRoot = Join-Path $toolRoot 'demake-engine'
 $demakeRepo = 'https://github.com/snuri00/demake-engine.git'
 $demakePin = 'a134ff49cc74585c6b11f881293796e45c973c75'
 $venvDir = Join-Path $toolRoot 'venv'
-$venvPython = Join-Path $venvDir 'Scripts\python.exe'
 
 function Invoke-External {
     param(
@@ -110,6 +109,19 @@ function Find-Python312 {
     return $null
 }
 
+function Resolve-VenvPython {
+    foreach ($candidate in @(
+        (Join-Path $venvDir 'Scripts\python.exe'),
+        (Join-Path $venvDir 'bin\python.exe'),
+        (Join-Path $venvDir 'bin\python3.exe')
+    )) {
+        if (Test-Path $candidate) {
+            return $candidate
+        }
+    }
+    return $null
+}
+
 function Ensure-VisualToolchain {
     $git = Get-Command git.exe -ErrorAction SilentlyContinue
     if (-not $git) {
@@ -136,7 +148,8 @@ function Ensure-VisualToolchain {
         throw "Visual proof tool pin mismatch. Expected $demakePin, got $head"
     }
 
-    if (-not (Test-Path $venvPython)) {
+    $visualPython = Resolve-VenvPython
+    if (-not $visualPython) {
         $python312 = Find-Python312
         if (-not $python312) {
             throw 'Python 3.12+ is required for the visual TP Link proof. The donor build may use an older Python, but this pinned J3D converter requires 3.12+.'
@@ -144,18 +157,23 @@ function Ensure-VisualToolchain {
         Write-Host 'Creating isolated TP Link visual-proof Python environment...' -ForegroundColor Cyan
         $venvArgs = @($python312.Prefix) + @('-m', 'venv', $venvDir)
         Invoke-External -FilePath $python312.Exe -Arguments $venvArgs | Out-Host
+        $visualPython = Resolve-VenvPython
     }
 
-    & $venvPython -c 'import numpy; from PIL import Image' *> $null
+    if (-not $visualPython) {
+        throw "TP Link visual-proof venv was created but no Python executable was found under $venvDir (checked Scripts and bin layouts)."
+    }
+
+    & $visualPython -c 'import numpy; from PIL import Image' *> $null
     if ($LASTEXITCODE -ne 0) {
         Write-Host 'Installing isolated visual-proof dependencies (numpy + Pillow)...' -ForegroundColor Cyan
-        Invoke-External -FilePath $venvPython -Arguments @(
+        Invoke-External -FilePath $visualPython -Arguments @(
             '-m', 'pip', 'install', '--disable-pip-version-check',
             'numpy>=1.26,<3', 'Pillow>=10,<13'
         ) | Out-Host
     }
 
-    return @{ Root = $demakeRoot; Python = $venvPython }
+    return @{ Root = $demakeRoot; Python = $visualPython }
 }
 
 if (-not (Test-Path $workspace)) {
