@@ -33,5 +33,6 @@
 - Space feeds OoT A/action, F feeds OoT B/sword, and Shift feeds OoT Z. F/B intentionally does not call the Matrix NPC combat bridge yet; sword contact/hit-window integration remains Phase 3.
 - Added `LinkVisualRenderer` to convert liboot animated triangle positions + vertex colours into a Matrix `Model` through the established direct preview seam.
 - First proof deliberately leaves the normal RuneScape local-player model visible and does not attempt OoT texture/material fidelity. Player suppression and texture fidelity are deferred until the Link renderer is visibly runtime accepted.
+- Link render caches reset outside Link mode so a sidecar restart cannot reuse a stale geometry sequence on rapid re-entry.
 - Updated Zelda project/checklist with the exact first-live build, Ctrl+L controls, expected console proof, failure distinctions, and known intentional limitations.
 - Status: new Phase 1 integration is `verified-static`; native sidecar compile and Matrix in-game behavior are `UNKNOWN` until the user's next runtime session.
