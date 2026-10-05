@@ -47,3 +47,8 @@
 - Shortened the proven native slash overlay from 24 to 16 ticks (~0.53 seconds at 30 Hz) so it reads as an attack instead of a slow punch.
 - Reworked torso/right-arm keyframes with stronger wind-up, faster cross-body contact, and explicit forearm/wrist participation while preserving the existing additive locomotion overlay and right-hand socket.
 - No bridge/protocol, weapon-selection, damage, collision, or grip-transform ownership changed; runtime visual acceptance is pending.
+
+2026-10-05 - Mario 1H slash V3 arc correction
+- Runtime V2 still read as a custom punch despite the faster timing.
+- Rebased the pose around the actual limb geometry: the right arm chain extends along local +X, so V3 uses large local-Y shoulder/forearm sweeps for the cross-body hand arc, Z for lift/drop, and X mainly for blade roll.
+- Shortened the profile to 14 ticks (~0.47 seconds) while preserving the existing additive overlay, right-hand socket, protocol and combat routing.
