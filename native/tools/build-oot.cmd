@@ -27,10 +27,11 @@ if not exist "%BRIDGE_DIR%\Makefile" (
 
 echo Building from the correct OoT bridge folder:
 echo   %BRIDGE_DIR%
+echo Toolchain: MSYS2 UCRT64 ^(same environment as the verified NTSC-U 1.2 probe^)
 echo.
 
 pushd "%BRIDGE_DIR%" >nul
-call "%MSYS2_SHELL%" -defterm -here -no-start -mingw64 -c "command -v cmake >/dev/null 2>&1 || { echo; echo 'ERROR: CMake is missing from MSYS2 MinGW64.'; echo 'OoT cannot build until CMake is installed.'; exit 127; }; make bootstrap"
+call "%MSYS2_SHELL%" -defterm -here -no-start -ucrt64 -c "command -v cmake >/dev/null 2>&1 || { echo; echo 'ERROR: CMake is missing from MSYS2 UCRT64.'; echo 'The OoT bridge was verified with the UCRT64 toolchain; install/use CMake there.'; exit 127; }; make bootstrap"
 set "RC=%ERRORLEVEL%"
 popd >nul
 
