@@ -1,3 +1,10 @@
+2026-10-05 - OoT Link Z-targeting / manual melee contact bridge
+- Added Matrix-owned Shift/Z NPC lock with held-target tracking, target-relative liboot steering, and forward-target fallback when Z is not held.
+- F/B now arms one server intent only after the native OoT action/animation changes and reaches the configurable contact frame (`matrix3.oot.combatContactFrame`, default 2.0).
+- Reused stock NPC-examine packet 0 with reserved transformed run-flag value 2 for Link contact requests; normal examine values 0/1 and stock ATTACK_NPC_PACKET remain unchanged.
+- Server validates target state, controller permission, melee weapon type, familiar/door rules, and melee range, then runs one `PlayerCombatNew` cycle directly without installing repeating auto-combat.
+- Z acquisition/transport/server routing is verified-static. Exact sword-contact frame and in-game lock/strafe feel remain runtime HYPOTHESIS until tested.
+
 2026-10-05 - Default continuous free movement / optional RuneScape clipping
 - Restored local native X/Z as default for Mario and added equivalent continuous Link movement; free mode sends no WASD walk packets and applies no tile-boundary clamp.
 - Added one shared N64 header clipping checkbox, OFF by default; ON retains existing RuneScape tile clipping and its known tile restrictions.
