@@ -11,9 +11,13 @@
 #include "liboot_engine.h"
 
 #define EXPECTED_ROM_SIZE 33554432u
-#define BINARY_PROTOCOL_VERSION 1u
+#define BINARY_PROTOCOL_VERSION 2u
 #define BINARY_CMD_STEP 1u
 #define MAX_STREAM_TRIANGLES 4096u
+#define MAX_STREAM_TEXTURES OOT_ENGINE_MAX_TEXTURES
+
+static uint8_t g_texture_sent[MAX_STREAM_TEXTURES];
+static uint32_t g_texture_revision[MAX_STREAM_TEXTURES];
 
 static int read_rom(const char *path, uint8_t **out_data, size_t *out_size)
 {
@@ -142,6 +146,17 @@ static int write_float_array(const float *values, size_t count)
     return 1;
 }
 
+static int write_u16_array_as_u32(const uint16_t *values, size_t count)
+{
+    size_t i;
+    for (i = 0; i < count; ++i) {
+        if (!write_u32_le((uint32_t)values[i])) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static int send_handshake(void)
 {
     static const uint8_t magic[4] = { 'O', 'O', 'T', 'B' };
@@ -150,15 +165,111 @@ static int send_handshake(void)
         && fflush(stdout) == 0;
 }
 
-static int send_frame(uint32_t sequence, const OoTEngineFrame *frame)
+static int texture_is_referenced(const OoTEngineFrame *frame, uint32_t texture_index)
+{
+    uint32_t triangle;
+    if (frame == NULL || frame->geometry.triTexture == NULL) {
+        return 0;
+    }
+    for (triangle = 0u; triangle < frame->geometry.numTriangles; ++triangle) {
+        if ((uint32_t)frame->geometry.triTexture[triangle] == texture_index) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int send_texture_updates(OoTEngine *engine, const OoTEngineFrame *frame)
+{
+    uint32_t texture_count = 0u;
+    uint32_t update_count = 0u;
+    uint32_t index;
+    OoTResult result;
+
+    result = oot_engine_texture_count(engine, &texture_count);
+    if (result != OOT_ENGINE_RESULT_OK) {
+        fprintf(stderr, "[OoT Bridge] texture count failed: %s\n",
+                oot_engine_result_string(result));
+        return 0;
+    }
+    if (texture_count > MAX_STREAM_TEXTURES) {
+        fprintf(stderr, "[OoT Bridge] texture count exceeds protocol capacity: %u\n",
+                texture_count);
+        return 0;
+    }
+
+    for (index = 0u; index < texture_count; ++index) {
+        OoTEngineTexture texture;
+        if (!texture_is_referenced(frame, index)) {
+            continue;
+        }
+        memset(&texture, 0, sizeof(texture));
+        result = oot_engine_texture_get(engine, index, &texture);
+        if (result != OOT_ENGINE_RESULT_OK || texture.rgbaPixels == NULL) {
+            continue;
+        }
+        if (!g_texture_sent[index] || g_texture_revision[index] != texture.revision) {
+            update_count++;
+        }
+    }
+
+    if (!write_u32_le(update_count)) {
+        return 0;
+    }
+
+    for (index = 0u; index < texture_count; ++index) {
+        OoTEngineTexture texture;
+        size_t expected_size;
+        if (!texture_is_referenced(frame, index)) {
+            continue;
+        }
+        memset(&texture, 0, sizeof(texture));
+        result = oot_engine_texture_get(engine, index, &texture);
+        if (result != OOT_ENGINE_RESULT_OK || texture.rgbaPixels == NULL) {
+            continue;
+        }
+        if (g_texture_sent[index] && g_texture_revision[index] == texture.revision) {
+            continue;
+        }
+        expected_size = (size_t)texture.width * (size_t)texture.height * 4u;
+        if (texture.width == 0u || texture.height == 0u
+                || texture.rgbaSize != expected_size
+                || expected_size > 16u * 1024u * 1024u) {
+            fprintf(stderr, "[OoT Bridge] invalid texture %u payload %ux%u size=%zu\n",
+                    index, texture.width, texture.height, texture.rgbaSize);
+            return 0;
+        }
+        if (!write_u32_le(index)
+                || !write_u32_le((uint32_t)texture.width)
+                || !write_u32_le((uint32_t)texture.height)
+                || !write_u32_le((uint32_t)texture.wrapS)
+                || !write_u32_le((uint32_t)texture.wrapT)
+                || !write_u32_le(texture.revision)
+                || !write_u32_le((uint32_t)texture.rgbaSize)
+                || !write_bytes(texture.rgbaPixels, texture.rgbaSize)) {
+            return 0;
+        }
+        g_texture_sent[index] = 1u;
+        g_texture_revision[index] = texture.revision;
+    }
+    return 1;
+}
+
+static int send_frame(OoTEngine *engine, uint32_t sequence, const OoTEngineFrame *frame)
 {
     static const uint8_t magic[4] = { 'O', 'O', 'T', 'F' };
     uint32_t triangles;
     size_t vertex_floats;
+    size_t uv_floats;
     uint8_t flags[4];
 
-    if (frame == NULL || frame->geometry.position == NULL || frame->geometry.color == NULL) {
-        fprintf(stderr, "[OoT Bridge] frame geometry unavailable\n");
+    if (frame == NULL
+            || frame->geometry.position == NULL
+            || frame->geometry.normal == NULL
+            || frame->geometry.color == NULL
+            || frame->geometry.uv == NULL
+            || frame->geometry.triTexture == NULL) {
+        fprintf(stderr, "[OoT Bridge] material geometry unavailable\n");
         return 0;
     }
     triangles = frame->geometry.numTriangles;
@@ -167,6 +278,7 @@ static int send_frame(uint32_t sequence, const OoTEngineFrame *frame)
         return 0;
     }
     vertex_floats = (size_t)triangles * 9u;
+    uv_floats = (size_t)triangles * 6u;
     flags[0] = frame->skeletonAvailable ? 1u : 0u;
     flags[1] = frame->linkGeometryTruncated ? 1u : 0u;
     flags[2] = 0u;
@@ -185,7 +297,11 @@ static int send_frame(uint32_t sequence, const OoTEngineFrame *frame)
             || !write_bytes(flags, sizeof(flags))
             || !write_u32_le(triangles)
             || !write_float_array(frame->geometry.position, vertex_floats)
-            || !write_float_array(frame->geometry.color, vertex_floats)) {
+            || !write_float_array(frame->geometry.normal, vertex_floats)
+            || !write_float_array(frame->geometry.color, vertex_floats)
+            || !write_float_array(frame->geometry.uv, uv_floats)
+            || !write_u16_array_as_u32(frame->geometry.triTexture, triangles)
+            || !send_texture_updates(engine, frame)) {
         return 0;
     }
     return fflush(stdout) == 0;
@@ -270,10 +386,14 @@ int main(int argc, char **argv)
         goto done;
     }
 
+    memset(g_texture_sent, 0, sizeof(g_texture_sent));
+    memset(g_texture_revision, 0, sizeof(g_texture_revision));
+
     if (!send_handshake()) {
         goto done;
     }
-    fprintf(stderr, "[OoT Bridge] persistent NTSC-U 1.2 session READY (20 Hz, protocol v%u)\n",
+    fprintf(stderr,
+            "[OoT Bridge] persistent NTSC-U 1.2 session READY (20 Hz, protocol v%u + materials)\n",
             BINARY_PROTOCOL_VERSION);
 
     for (;;) {
@@ -305,7 +425,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "[OoT Bridge] Link geometry truncated\n");
             break;
         }
-        if (!send_frame(++sequence, frame)) {
+        if (!send_frame(engine, ++sequence, frame)) {
             break;
         }
     }
