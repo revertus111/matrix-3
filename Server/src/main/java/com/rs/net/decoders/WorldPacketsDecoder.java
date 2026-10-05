@@ -467,7 +467,6 @@ public final class WorldPacketsDecoder extends Decoder {
 				case 1461:
 					if(componentId == 1)
 						player.getActionbar().useAbility(new MagicAbilityShortcut(slot), p2);
-					//Magic.handleSpellOnEntity(player, interfaceSlot, p2);
 					break;
 				case 1449:
 					if(componentId == 1)
@@ -488,7 +487,6 @@ public final class WorldPacketsDecoder extends Decoder {
 			if (player.isLocked() || player.getEmotesManager().isDoingEmote())
 				return;
 
-
 			int interfaceHash = stream.readIntLE();
 			int interfaceSlot = stream.readUnsignedShort();
 			int interfaceSlot2 = stream.readUnsignedShort();
@@ -496,113 +494,96 @@ public final class WorldPacketsDecoder extends Decoder {
 			boolean forceRun = stream.readByte128() == 1;
 
 			int interfaceId = interfaceHash >> 16;
-					int componentId = interfaceHash - (interfaceId << 16);
+			int componentId = interfaceHash - (interfaceId << 16);
 
-					if (Settings.DEBUG)
-						System.out.println("interface on npc - player index:" + npcIndex+", inter "+interfaceId+", "+componentId+", "+interfaceSlot+", "+interfaceSlot2);
-
-
-					if (Utils.getInterfaceDefinitionsSize() <= interfaceId)
+			if(Settings.DEBUG)
+				Logger.log(WorldPacketsDecoder.class, "interface on npc - player index:" + npcIndex+", inter "+interfaceId+", "+componentId+", "+interfaceSlot+", "+interfaceSlot2);
+			if (Utils.getInterfaceDefinitionsSize() <= interfaceId)
+				return;
+			if (!player.getInterfaceManager().containsInterface(interfaceId))
+				return;
+			if (componentId == 65535)
+				componentId = -1;
+			if (componentId != -1 && Utils.getInterfaceDefinitionsComponentsSize(interfaceId) <= componentId)
+				return;
+			NPC npc = World.getNPCs().get(npcIndex);
+			if (npc == null || npc.isDead() || npc.hasFinished() || !player.getMapRegionsIds().contains(npc.getRegionId()))
+				return;
+			player.stopAll();
+			if (forceRun)
+				player.setRun(forceRun);
+			switch (interfaceId) {
+				case 1430:
+					if(componentId >= 55 && componentId <= 229) 
+						player.getActionbar().pushShortcutOnSomething((componentId - 55) / 13, npc);
+					break;
+				case Inventory.INVENTORY_INTERFACE:
+				case Inventory.INVENTORY_INTERFACE_2:
+					Item item = player.getInventory().getItem(interfaceSlot);
+					if (item == null || !player.getControlerManager().processItemOnNPC(npc, item))
 						return;
-					if (!player.getInterfaceManager().containsInterface(interfaceId))
-						return;
-					if (componentId == 65535)
-						componentId = -1;
-					if (componentId != -1 && Utils.getInterfaceDefinitionsComponentsSize(interfaceId) <= componentId)
-						return;
-					NPC npc = World.getNPCs().get(npcIndex);
-					if (npc == null || npc.isDead() || npc.hasFinished() || !player.getMapRegionsIds().contains(npc.getRegionId()))
-						return;
-					player.stopAll();
-					if (forceRun)
-						player.setRun(forceRun);
-					switch (interfaceId) {
-						case 1430:
-							if(componentId >= 55 && componentId <= 229) 
-								player.getActionbar().pushShortcutOnSomething((componentId - 55) / 13, npc);
-							break;
-						case Inventory.INVENTORY_INTERFACE:
-						case Inventory.INVENTORY_INTERFACE_2:
-							Item item = player.getInventory().getItem(interfaceSlot);
-							if (item == null || !player.getControlerManager().processItemOnNPC(npc, item))
-								return;
-							else if (npc instanceof Familiar) {
-								Familiar familiar = (Familiar) npc;
-								if (familiar != player.getFamiliar()) {
-									player.getPackets().sendGameMessage("This is not your familiar!");
-									return;
-								}
-							}
-							NPCHandler.handleItemOnNPC(player, npc, interfaceSlot, item);
-							break;
-						case 1165:
-							/* if (componentId == 3) {
-				if (!player.getControlerManager().canAttack(npc)) {
-				    player.getInterfaceManager().closeInventory();
-				    return;
-				} else if (player.getAttackedBy() == null) {
-				    player.getPackets().sendGameMessage("You need to have a target in order to deploy a dreadnip.");
-				    player.getInterfaceManager().closeInventory();
-				    return;
-				}
-				player.getInventory().deleteItem(22370, 1);
-				Dreadnip dread = new Dreadnip(player, Utils.getFreeTile(player, 2), -1, true);
-				dread.getCombat().setTarget(dread.getTarget().getAttackedBy());
-				}*/
-							break;
-						case 662:
-						case 747:
-							if (player.getFamiliar() == null)
-								return;
-							player.resetWalkSteps();
-							if ((interfaceId == 747 && componentId == 15) || (interfaceId == 662 && componentId == 65) || (interfaceId == 662 && componentId == 74) || interfaceId == 747 && componentId == 18 || interfaceId == 747 && componentId == 24) {
-								if ((interfaceId == 662 && componentId == 74 || interfaceId == 747 && componentId == 18)) {
-									if (player.getFamiliar().getSpecialAttack() != SpecialAttack.ENTITY)
-										return;
-								}
-								if (npc instanceof Familiar) {
-									Familiar familiar = (Familiar) npc;
-									if (familiar == player.getFamiliar()) {
-										player.getPackets().sendGameMessage("You can't attack your own familiar.");
-										return;
-									}
-									if (!player.getFamiliar().canAttack(familiar.getOwner())) {
-										player.getPackets().sendGameMessage("You can only attack players in a player-vs-player area.");
-										return;
-									}
-								}else if (!npc.getDefinitions().hasAttackOption()) {
-									player.getPackets().sendGameMessage("You can't attack this npc.");
-									return;
-								}
-								if (!player.getFamiliar().canAttack(npc)) {
-									player.getPackets().sendGameMessage("You can only use your familiar in a multi-zone area.");
-									return;
-								} else {
-									player.getFamiliar().setSpecial(interfaceId == 662 && componentId == 74 || interfaceId == 747 && componentId == 18);
-									player.getFamiliar().setTarget(npc);
-								}
-							}
-							break;
-						case 1461:
-							if(componentId == 1)
-								player.getActionbar().useAbility(new MagicAbilityShortcut(interfaceSlot), npc);
-							//	Magic.handleSpellOnEntity(player, interfaceSlot, npc);
-							break;
-						case 1449:
-							if(componentId == 1)
-								player.getActionbar().useAbility(player.getCombatDefinitions().onDefenceMenu() ? new DefenceAbilityShortcut(interfaceSlot) : new HealAbilityShortcut(interfaceSlot), npc);
-							break;
-						case 1452:
-							if(componentId == 1)
-								player.getActionbar().useAbility(new RangeAbilityShortcut(interfaceSlot), npc);
-							break;
-						case 1460:
-							if(componentId == 1)
-								player.getActionbar().useAbility(player.getCombatDefinitions().onStrengthMenu() ? new StrengthAbilityShortcut(interfaceSlot) : new MeleeAbilityShortcut(interfaceSlot), npc);
-							break;
+					else if (npc instanceof Familiar) {
+						Familiar familiar = (Familiar) npc;
+						if (familiar != player.getFamiliar()) {
+							player.getPackets().sendGameMessage("This is not your familiar!");
+							return;
+						}
 					}
+					NPCHandler.handleItemOnNPC(player, npc, interfaceSlot, item);
+					break;
+				case 1165:
+					break;
+				case 662:
+				case 747:
+					if (player.getFamiliar() == null)
+						return;
+					player.resetWalkSteps();
+					if ((interfaceId == 747 && componentId == 15) || (interfaceId == 662 && componentId == 65) || (interfaceId == 662 && componentId == 74) || interfaceId == 747 && componentId == 18 || interfaceId == 747 && componentId == 24) {
+						if ((interfaceId == 662 && componentId == 74 || interfaceId == 747 && componentId == 18)) {
+							if (player.getFamiliar().getSpecialAttack() != SpecialAttack.ENTITY)
+								return;
+						}
+						if (npc instanceof Familiar) {
+							Familiar familiar = (Familiar) npc;
+							if (familiar == player.getFamiliar()) {
+								player.getPackets().sendGameMessage("You can't attack your own familiar.");
+								return;
+							}
+							if (!player.getFamiliar().canAttack(familiar.getOwner())) {
+								player.getPackets().sendGameMessage("You can only attack players in a player-vs-player area.");
+								return;
+							}
+						}else if (!npc.getDefinitions().hasAttackOption()) {
+							player.getPackets().sendGameMessage("You can't attack this npc.");
+							return;
+						}
+						if (!player.getFamiliar().canAttack(npc)) {
+							player.getPackets().sendGameMessage("You can only use your familiar in a multi-zone area.");
+							return;
+						} else {
+							player.getFamiliar().setSpecial(interfaceId == 662 && componentId == 74 || interfaceId == 747 && componentId == 18);
+							player.getFamiliar().setTarget(npc);
+						}
+					}
+					break;
+				case 1461:
+					if(componentId == 1)
+						player.getActionbar().useAbility(new MagicAbilityShortcut(interfaceSlot), npc);
+					break;
+				case 1449:
+					if(componentId == 1)
+						player.getActionbar().useAbility(player.getCombatDefinitions().onDefenceMenu() ? new DefenceAbilityShortcut(interfaceSlot) : new HealAbilityShortcut(interfaceSlot), npc);
+					break;
+				case 1452:
+					if(componentId == 1)
+						player.getActionbar().useAbility(new RangeAbilityShortcut(interfaceSlot), npc);
+					break;
+				case 1460:
+					if(componentId == 1)
+						player.getActionbar().useAbility(player.getCombatDefinitions().onStrengthMenu() ? new StrengthAbilityShortcut(interfaceSlot) : new MeleeAbilityShortcut(interfaceSlot), npc);
+					break;
+			}
 		} else if (opcode == INTERFACE_ON_OBJECT) {
-
 			boolean forceRun = stream.readByte() == 1;
 			int interfaceHash = stream.readInt();
 			int slotId = stream.readShort128();
@@ -610,96 +591,90 @@ public final class WorldPacketsDecoder extends Decoder {
 			int objectId = stream.readIntV1();
 			int y = stream.readShortLE();
 			int itemId = stream.readShort();
-
 			final int interfaceId = interfaceHash >> 16;
-							int componentId = interfaceHash - (interfaceId << 16);
-
-							if(Settings.DEBUG)
-								Logger.log(WorldPacketsDecoder.class, "inter on object - "+interfaceId+", "+componentId+", "+x+", "+y+", "+objectId+", "+slotId+", "+itemId);
-
-							if (!player.hasStarted() || !player.clientHasLoadedMapRegion() || player.isDead())
+			int componentId = interfaceHash - (interfaceId << 16);
+			if(Settings.DEBUG)
+				Logger.log(WorldPacketsDecoder.class, "inter on object - "+interfaceId+", "+componentId+", "+x+", "+y+", "+objectId+", "+slotId+", "+itemId);
+			if (!player.hasStarted() || !player.clientHasLoadedMapRegion() || player.isDead())
+				return;
+			if (player.isLocked() || player.getEmotesManager().isDoingEmote())
+				return;
+			final WorldTile tile = new WorldTile(x, y, player.getPlane());
+			int regionId = tile.getRegionId();
+			if (!player.getMapRegionsIds().contains(regionId))
+				return;
+			WorldObject mapObject = World.getObjectWithId(tile, objectId);
+			if (mapObject == null || mapObject.getId() != objectId)
+				return;
+			final WorldObject object = mapObject;
+			if (player.isDead() || Utils.getInterfaceDefinitionsSize() <= interfaceId)
+				return;
+			if (player.isLocked())
+				return;
+			if (!player.getInterfaceManager().containsInterface(interfaceId))
+				return;
+			player.stopAll();
+			if (forceRun)
+				player.setRun(forceRun);
+			switch (interfaceId) {
+				case Inventory.INVENTORY_INTERFACE:
+				case Inventory.INVENTORY_INTERFACE_2:
+					ObjectHandler.handleItemOnObject(player, object, interfaceId, slotId, itemId);
+					break;
+				case 430:
+					switch (componentId) {
+						case 55:
+							if (player.getSkills().getLevel(Skills.MAGIC) < 66) {
+								player.getPackets().sendGameMessage("You need a level of 65 in order to cast Cure Plant.");
 								return;
-							if (player.isLocked() || player.getEmotesManager().isDoingEmote())
-								return;
-							final WorldTile tile = new WorldTile(x, y, player.getPlane());
-							int regionId = tile.getRegionId();
-							if (!player.getMapRegionsIds().contains(regionId))
-								return;
-							WorldObject mapObject = World.getObjectWithId(tile, objectId);
-							if (mapObject == null || mapObject.getId() != objectId)
-								return;
-							final WorldObject object = mapObject;
-							if (player.isDead() || Utils.getInterfaceDefinitionsSize() <= interfaceId)
-								return;
-							if (player.isLocked())
-								return;
-							if (!player.getInterfaceManager().containsInterface(interfaceId))
-								return;
-							player.stopAll();
-							if (forceRun)
-								player.setRun(forceRun);
-							switch (interfaceId) {
-								case Inventory.INVENTORY_INTERFACE: // inventory
-								case Inventory.INVENTORY_INTERFACE_2:
-									ObjectHandler.handleItemOnObject(player, object, interfaceId, slotId, itemId);
-									break;
-								case 430://lunars
-									switch (componentId) {
-										case 55:
-											if (player.getSkills().getLevel(Skills.MAGIC) < 66) {
-												player.getPackets().sendGameMessage("You need a level of 65 in order to cast Cure Plant.");
-												return;
-											}
-											if (!Magic.checkRunes(player, true, Magic.ASTRAL_RUNE, 1, Magic.EARTH_RUNE, 8))
-												return;
-											final FarmingSpot spot = player.getFarmingManager().getSpot(SpotInfo.getInfo(object.getId()));
-											if (spot == null || spot.isDead()) {
-												player.getPackets().sendGameMessage("This cannot be cured.");
-												return;
-											} else if (!spot.isDiseased()) {
-												player.getPackets().sendGameMessage("Your patch is not diseased.");
-												return;
-											}
-											player.lock(3);
-											WorldTasksManager.schedule(new WorldTask() {
-
-												@Override
-												public void run() {
-													spot.setDiseased(false);
-													spot.refresh();
-												}
-											}, 2);
-											player.getSkills().addXp(Skills.MAGIC, 60);
-											player.setNextGraphics(new Graphics(742, 0, 150));
-											player.setNextAnimation(new Animation(4409));
-											player.getPackets().sendGameMessage("You cast the spell and your patch is in perfect health.");
-											break;
-									}
-									break;
-								case 192: //regular spellbook
-									switch (componentId) {
-										case 60: // water charge
-										case 64: // earth charge
-										case 71: // fire charge
-										case 74: // air charge
-											for (int index = 0; index < 3; index++) {
-												if (EnchantingOrbsDialogue.COMPONENTS[index] == componentId) {
-													if (!Magic.checkRunes(player, false, EnchantingOrbsDialogue.REQUIRED_RUNES[index]))
-														break;
-													else if (!Magic.checkSpellLevel(player, EnchantingOrbsDialogue.LEVELS[index]))
-														break;
-													else {
-														if (object.getId() == EnchantingOrbsDialogue.OBJECTS[index]) {
-															player.faceObject(object);
-															player.getDialogueManager().startDialogue("EnchantingOrbsDialogue", index);
-														}
-													}
-												}
-											}
-											break;
-									}
-									break;
 							}
+							if (!Magic.checkRunes(player, true, Magic.ASTRAL_RUNE, 1, Magic.EARTH_RUNE, 8))
+								return;
+							final FarmingSpot spot = player.getFarmingManager().getSpot(SpotInfo.getInfo(object.getId()));
+							if (spot == null || spot.isDead()) {
+								player.getPackets().sendGameMessage("This cannot be cured.");
+								return;
+							} else if (!spot.isDiseased()) {
+								player.getPackets().sendGameMessage("Your patch is not diseased.");
+								return;
+							}
+							player.lock(3);
+							WorldTasksManager.schedule(new WorldTask() {
+								@Override
+								public void run() {
+									spot.setDiseased(false);
+									spot.refresh();
+								}
+							}, 2);
+							player.getSkills().addXp(Skills.MAGIC, 60);
+							player.setNextGraphics(new Graphics(742, 0, 150));
+							player.setNextAnimation(new Animation(4409));
+							player.getPackets().sendGameMessage("You cast the spell and your patch is in perfect health.");
+							break;
+					}
+					break;
+				case 192:
+					switch (componentId) {
+						case 60:
+						case 64:
+						case 71:
+						case 74:
+							for (int index = 0; index < 3; index++) {
+								if (EnchantingOrbsDialogue.COMPONENTS[index] == componentId) {
+									if (!Magic.checkRunes(player, false, EnchantingOrbsDialogue.REQUIRED_RUNES[index]))
+										break;
+									else if (!Magic.checkSpellLevel(player, EnchantingOrbsDialogue.LEVELS[index]))
+										break;
+									else if (object.getId() == EnchantingOrbsDialogue.OBJECTS[index]) {
+										player.faceObject(object);
+										player.getDialogueManager().startDialogue("EnchantingOrbsDialogue", index);
+									}
+								}
+							}
+							break;
+					}
+					break;
+			}
 		} else if (opcode == PLAYER_OPTION_1_PACKET) {
 			if (!player.hasStarted() || !player.clientHasLoadedMapRegion() || player.isDead())
 				return;
@@ -709,7 +684,6 @@ public final class WorldPacketsDecoder extends Decoder {
 			if (forceRun)
 				player.setRun(forceRun);
 			player.stopAll();
-
 			if (p2 == null || p2 == player || p2.isDead() || p2.hasFinished() || !player.getMapRegionsIds().contains(p2.getRegionId()))
 				return;
 			if (player.isLocked() || player.getEmotesManager().isDoingEmote() || !player.getControlerManager().canPlayerOption1(p2))
@@ -722,8 +696,6 @@ public final class WorldPacketsDecoder extends Decoder {
 				player.getPackets().sendGameMessage("You can only attack players in a player-vs-player area.");
 				return;
 			}
-
-
 			player.getActionManager().setAction(new PlayerCombatNew(p2));
 		} else if (opcode == PLAYER_OPTION_2_PACKET) {
 			if (!player.hasStarted() || !player.clientHasLoadedMapRegion() || player.isDead())
@@ -824,8 +796,7 @@ public final class WorldPacketsDecoder extends Decoder {
 				player.setRun(forceRun);
 			player.stopAll();
 			player.getPlayerExamineManager().openExamineDetails(p2);
-			
-		} else if (opcode == PLAYER_OPTION_9_PACKET) {//TODO no longer used
+		} else if (opcode == PLAYER_OPTION_9_PACKET) {
 			boolean forceRun = stream.readUnsignedByte128() == 1;
 			int playerIndex = stream.readUnsignedShort128();
 			Player p2 = World.getPlayers().get(playerIndex);
@@ -852,7 +823,7 @@ public final class WorldPacketsDecoder extends Decoder {
 				return;
 			if (!player.getControlerManager().canAttack(npc))
 				return;
-			if (forceRun) //you scrwed up cutscenes
+			if (forceRun)
 				player.setRun(forceRun);
 			player.stopAll();
 			if (npc instanceof Familiar) {
@@ -941,45 +912,31 @@ public final class WorldPacketsDecoder extends Decoder {
 			player.setRouteEvent(new RouteEvent(item, new Runnable() {
 				@Override
 				public void run() {
-					final FloorItem item = World.getRegion(regionId).getGroundItem(id, tile, player);
-					if (item == null)
-						return;
-					for (Fire fire : Fire.values()) {
-						if (item.getId() == fire.getLogId()) {
-							player.getActionManager().setAction(new Firemaking(fire, true));
-							return;
-						}
-					}
+					final FloorItem item = World.getRegion(regionId()).getGroundItem(id, tile, player);
 				}
 			}));
 		}
 	}
 
 	public void processPackets(final int opcode, InputStream stream) {
-		if (opcode != NIS_VAR_PACKET) { //dont want interface t oget messed up <...<
+		if (opcode != NIS_VAR_PACKET) {
 			long ctime = System.nanoTime();
 			if ((ctime - pthrotletimer[opcode]) > (1000000 * 600)) {
 				pthrotlecounter[opcode] = 0;
 				pthrotletimer[opcode] = ctime;
 			}
-
 			if (++pthrotlecounter[opcode] > 10) {
-				pthrotletimer[opcode] = ctime; // reset timer to completly mitigate ddos
+				pthrotletimer[opcode] = ctime;
 				return;
 			}
 		}
-		//System.out.println("packet: "+packetId +", "+ Thread.currentThread().getName());
 		if (opcode == PING_PACKET) {
 			player.getPackets().sendPing();
-		}else if(opcode == 26) { //testing
-			int shorta = stream.readShort();
-			boolean b =  stream.readUnsignedByte() == 1;
-			String s = stream.readString();
-			System.out.println("p26: "+shorta+", "+b+", "+s);
+		}else if(opcode == 26) {
+			LinkCombatPacketBridge.handle(player, stream);
 		}else if (opcode == CUTSCENE_DONE_PACKET) {
 			@SuppressWarnings("unused")
 			boolean done = stream.readUnsignedByte() == 1;
-			//if not done means skipped
 			player.loadMapRegions();
 		}else if (opcode == NIS_VAR_PACKET) {
 			@SuppressWarnings("unused")
@@ -988,21 +945,18 @@ public final class WorldPacketsDecoder extends Decoder {
 			for(int i = 0; i < count; i++) {
 				Integer id = stream.readUnsignedShort();
 				Integer value = stream.readInt();
-				//	System.out.println("nisvar: "+id+", "+value);
-				if(value == 0) 
+				if(value == 0)
 					player.getILayoutVars().remove(id);
 				else
 					player.getILayoutVars().put(id, value);
 			}
-			//	System.out.println(player.getILayoutVars().size()+", "+player.getILayoutVars());
-			if(player.getILayoutVars().size() > 1000) 
+			if(player.getILayoutVars().size() > 1000)
 				player.resetILayoutVars();
 			player.getPackets().sendResetNISVars();
 		}else if (opcode == MUSIC_PACKET) {
-			int archiveId = stream.readInt(); //started playing, request send again
-			//player.getMusicsManager().resetMusicDelay(player.getMusicsManager().getMusicId(archiveId));
+			int archiveId = stream.readInt();
 			player.getMusicsManager().resetMusicDelay(player.getMusicsManager().getMusicId(archiveId));
-		}else if (opcode == REQUEST_PLAY_MUSIC_PACKET) { //request play such as after turn off and on
+		}else if (opcode == REQUEST_PLAY_MUSIC_PACKET) {
 			int archiveId = stream.readInt();
 			player.getMusicsManager().resetMusicDelay(player.getMusicsManager().getMusicId(archiveId));
 		} else if (opcode == WORLD_LIST_UPDATE) {
@@ -1011,22 +965,17 @@ public final class WorldPacketsDecoder extends Decoder {
 			int checksum = stream.readInt();
 			LoginClientChannelManager.sendReliablePacket(LoginChannelsPacketEncoder.encodePlayerWorldListStatusRequest(player.getUsername(), checksum).getBuffer());
 		} else if (opcode == MOUVE_MOUSE_PACKET || opcode == MOUSE_MOVEMENT_DELAY) {
-			// USELESS PACKET
 		} else if (opcode == KEY_TYPED_PACKET) {
-			// USELESS PACKET
 		} else if (opcode == RECEIVE_PACKET_COUNT_PACKET) {
-			//count
 			stream.readInt();
 		} else if (opcode == INTERFACE_ON_INTERFACE) {
 			InventoryOptionsHandler.handleInterfaceOnInterface(player, stream);
 		} else if (opcode == CLOSE_INTERFACE_PACKET) {
 			player.stopAll();
 		} else if (opcode == MOVE_CAMERA_PACKET) {
-			// not using it atm
 			stream.readShort();
 			stream.readShortLE128();
 		} else if (opcode == IN_OUT_SCREEN_PACKET) {
-			// not using this check because not 100% efficient
 			@SuppressWarnings("unused")
 			boolean inScreen = stream.readByte() == 1;
 		} else if (opcode == SCREEN_PACKET) {
@@ -1035,59 +984,50 @@ public final class WorldPacketsDecoder extends Decoder {
 			player.setScreenHeight(stream.readUnsignedShort());
 			@SuppressWarnings("unused")
 			boolean switchScreenMode = stream.readUnsignedByte() == 1;
-			if (!player.hasStarted() || player.hasFinished() || displayMode == player.getDisplayMode()/* || !player.getInterfaceManager().containsInterface(742)*/)
+			if (!player.hasStarted() || player.hasFinished() || displayMode == player.getDisplayMode())
 				return;
 			player.setDisplayMode(displayMode);
-			/*player.getInterfaceManager().removeAll();
-			player.getInterfaceManager().sendInterfaces();
-			player.getInterfaceManager().sendCentralInterface(742);*/
 		} else if (opcode == CLICK_PACKET) {
 			int mouseHash = stream.readShort128();
 			int mouseButton = mouseHash >> 15;
-							int time = mouseHash - (mouseButton << 15); // time
-							int positionHash = stream.readInt();
-							int y = positionHash >> 16; // y;
-							int x = positionHash - (y << 16); // x
-							@SuppressWarnings("unused")
-							boolean clicked;
-							// mass click or stupid autoclicker, lets stop lagg
-							if (time <= 1 || x < 0 || x > player.getScreenWidth() || y < 0 || y > player.getScreenHeight()) {
-								// player.getSession().getChannel().close();
-								clicked = false;
-								return;
-							}
-							clicked = true;
-		} else if (opcode == CLICK_PACKET_2) { //TODO
-
+			int time = mouseHash - (mouseButton << 15);
+			int positionHash = stream.readInt();
+			int y = positionHash >> 16;
+			int x = positionHash - (y << 16);
+			@SuppressWarnings("unused")
+			boolean clicked;
+			if (time <= 1 || x < 0 || x > player.getScreenWidth() || y < 0 || y > player.getScreenHeight()) {
+				clicked = false;
+				return;
+			}
+			clicked = true;
+		} else if (opcode == CLICK_PACKET_2) {
 		} else if (opcode == DIALOGUE_CONTINUE_PACKET) {
 			int junk = stream.readShortLE128();
 			int interfaceHash = stream.readIntV2();
 			int interfaceId = interfaceHash >> 16;
-							int buttonId = (interfaceHash & 0xFF);
-							if (Utils.getInterfaceDefinitionsSize() <= interfaceId) {
-								// hack, or server error or client error
-								// player.getSession().getChannel().close();
-								return;
-							}
-							if (Settings.DEBUG)
-								Logger.log(this, "Dialogue: " + interfaceId + ", " + buttonId + ", " + junk);
-							if (!player.isRunning() || !player.getInterfaceManager().containsInterface(interfaceId))
-								return;
-							int componentId = interfaceHash - (interfaceId << 16);
-							player.getDialogueManager().continueDialogue(interfaceId, componentId);
+			int buttonId = (interfaceHash & 0xFF);
+			if (Utils.getInterfaceDefinitionsSize() <= interfaceId)
+				return;
+			if (Settings.DEBUG)
+				Logger.log(this, "Dialogue: " + interfaceId + ", " + buttonId + ", " + junk);
+			if (!player.isRunning() || !player.getInterfaceManager().containsInterface(interfaceId))
+				return;
+			int componentId = interfaceHash - (interfaceId << 16);
+			player.getDialogueManager().continueDialogue(interfaceId, componentId);
 		} else if (opcode == WORLD_MAP_CLICK) {
 			int coordinateHash = stream.readIntV2();
 			int x = coordinateHash >> 14;
-							int y = coordinateHash & 0x3fff;
-							int plane = coordinateHash >> 28;
-							Integer hash = (Integer) player.getTemporaryAttributtes().get("worldHash");
-							if (hash == null || coordinateHash != hash)
-								player.getTemporaryAttributtes().put("worldHash", coordinateHash);
-							else {
-								player.getTemporaryAttributtes().remove("worldHash");
-								player.getHintIconsManager().addHintIcon(x, y, plane, 20, 0, 2, -1, true);
-								player.getVarsManager().sendVar(2807, coordinateHash);
-							}
+			int y = coordinateHash & 0x3fff;
+			int plane = coordinateHash >> 28;
+			Integer hash = (Integer) player.getTemporaryAttributtes().get("worldHash");
+			if (hash == null || coordinateHash != hash)
+				player.getTemporaryAttributtes().put("worldHash", coordinateHash);
+			else {
+				player.getTemporaryAttributtes().remove("worldHash");
+				player.getHintIconsManager().addHintIcon(x, y, plane, 20, 0, 2, -1, true);
+				player.getVarsManager().sendVar(2807, coordinateHash);
+			}
 		} else if (opcode == ACTION_BUTTON1_PACKET || opcode == ACTION_BUTTON2_PACKET || opcode == ACTION_BUTTON4_PACKET || opcode == ACTION_BUTTON5_PACKET || opcode == ACTION_BUTTON6_PACKET || opcode == ACTION_BUTTON7_PACKET || opcode == ACTION_BUTTON8_PACKET || opcode == ACTION_BUTTON3_PACKET || opcode == ACTION_BUTTON9_PACKET || opcode == ACTION_BUTTON10_PACKET) {
 			ButtonHandler.handleButtons(player, stream, opcode);
 		} else if (opcode == ENTER_NAME_PACKET) {
@@ -1110,7 +1050,7 @@ public final class WorldPacketsDecoder extends Decoder {
 			else if (player.getTemporaryAttributtes().remove(Key.DUNGEON_INVITE) != null)
 				player.getDungManager().invite(value);
 			else if (player.getTemporaryAttributtes().remove(Key.CLAN_WARS_VIEW) != null)
-				ClanWars.enter(player, value);
+				ClanWars.enter(player, value, true);
 			else if (player.getTemporaryAttributtes().remove("enterhouse") != null)
 				House.enterHouse(player, value);
 			else{
@@ -1145,7 +1085,6 @@ public final class WorldPacketsDecoder extends Decoder {
 					return;
 				LoginClientChannelManager.sendReliablePacket(LoginChannelsPacketEncoder.encodeAccountVarUpdate(player.getUsername(), LoginProtocol.VAR_TYPE_AUTH, authuser + "@AUTHSPLIT@" + authpassword).getBuffer());
 				player.getTemporaryAttributtes().remove("forum_authuser");
-				//player.getPackets().sendGameMessage("Feature disabled due to rework.");
 			} else if (player.getTemporaryAttributtes().remove("change_troll_name") == Boolean.TRUE) {
 				value = Utils.formatPlayerNameForDisplay(value);
 				if (value.length() < 3 || value.length() > 14) {
@@ -1156,9 +1095,8 @@ public final class WorldPacketsDecoder extends Decoder {
 					player.getPetManager().setTrollBabyName(null);
 				} else {
 					player.getPetManager().setTrollBabyName(value);
-					if (player.getPet() != null && player.getPet().getId() == Pets.TROLL_BABY.getBabyNpcId()) {
+					if (player.getPet() != null && player.getPet().getId() == Pets.TROLL_BABY.getBabyNpcId())
 						player.getPet().setName(value);
-					}
 				}
 			} else if (player.getTemporaryAttributtes().remove("yellcolor") == Boolean.TRUE) {
 				if (value.length() != 6) {
@@ -1175,7 +1113,6 @@ public final class WorldPacketsDecoder extends Decoder {
 					return;
 				}
 				LoginClientChannelManager.sendReliablePacket(LoginChannelsPacketEncoder.encodeAccountVarUpdate(player.getUsername(), LoginProtocol.VAR_TYPE_DISPLAY_NAME, Utils.formatPlayerNameForDisplay(value)).getBuffer());
-				//player.getPackets().sendGameMessage("Feature disabled due to rework.");
 			} else if (player.getTemporaryAttributtes().remove(Key.CLAN_MOTTO) == Boolean.TRUE)
 				ClansManager.setClanMottoInterface(player, value);
 		} else if (opcode == ENTER_INTEGER_PACKET) {
@@ -1220,7 +1157,8 @@ public final class WorldPacketsDecoder extends Decoder {
 				player.closeInterfaces();
 				player.getActionManager().setAction(new Smithing(index, value, dungeoneering));
 			} else if (player.getInterfaceManager().containsInterface(AccessorySmithing.ACCESSORY_INTERFACE) && player.getTemporaryAttributtes().get(Key.JEWLERY_SMITH_COMP) != null) {
-				AccessorySmithing.handleButtonClick(player, (int) player.getTemporaryAttributtes().get(Key.JEWLERY_SMITH_COMP), value);
+				Integer component = (Integer) player.getTemporaryAttributtes().get(Key.JEWLERY_SMITH_COMP);
+				AccessorySmithing.handleButtonClick(player, component, value);
 			} else if (player.getInterfaceManager().containsInterface(Summoning.POUCHES_INTERFACE) && player.getTemporaryAttributtes().get(Key.INFUSE_X) != null) {
 				boolean dungeoneering = (boolean) player.getTemporaryAttributtes().remove(Key.INFUSE_X);
 				int item = (int) player.getTemporaryAttributtes().remove(Key.INFUSE_ITEM);
@@ -1375,14 +1313,12 @@ public final class WorldPacketsDecoder extends Decoder {
 			int fromInterfaceHash = stream.readInt();
 			int toSlot = stream.readUnsignedShortLE128();
 			int fromSlot = stream.readUnsignedShort();
-
 			int toInterfaceId = toInterfaceHash >> 16;
 			int toComponentId = toInterfaceHash - (toInterfaceId << 16);
 			int fromInterfaceId = fromInterfaceHash >> 16;
 			int fromComponentId = fromInterfaceHash - (fromInterfaceId << 16);
 			if (Settings.DEBUG)
 				System.out.println("Switch item " + fromInterfaceId + ", " + toInterfaceId+", "+fromSlot + ", " + toSlot+", "+fromComponentId+", "+toComponentId);
-
 			if (Utils.getInterfaceDefinitionsSize() <= fromInterfaceId || Utils.getInterfaceDefinitionsSize() <= toInterfaceId)
 				return;
 			if (!player.getInterfaceManager().containsInterface(fromInterfaceId) || !player.getInterfaceManager().containsInterface(toInterfaceId))
@@ -1408,7 +1344,6 @@ public final class WorldPacketsDecoder extends Decoder {
 			} else if (((fromInterfaceId == 1462 && fromComponentId == 14) || (fromInterfaceId == 1464 && fromComponentId == 15)) && (toInterfaceId == Inventory.INVENTORY_INTERFACE || toInterfaceId == Inventory.INVENTORY_INTERFACE_2) ) {
 				if (fromSlot >= player.getEquipment().getItems().getSize() || player.getInterfaceManager().containsInventoryInter())
 					return;
-
 				Item item = player.getEquipment().getItem(fromSlot);
 				if(item == null)
 					return;
@@ -1417,12 +1352,10 @@ public final class WorldPacketsDecoder extends Decoder {
 					return;
 				player.getEquipment().handleEquipment(defs.getEquipSlot(), item.getId(), WorldPacketsDecoder.ACTION_BUTTON1_PACKET);
 			} else if (toInterfaceId == 1430 && (toComponentId >= 55 && toComponentId <= 229)
-					|| (toInterfaceId == 1436 && (toComponentId >= 25 && toComponentId <= 194))) {  //ability bar
-				//switch shortcut
+					|| (toInterfaceId == 1436 && (toComponentId >= 25 && toComponentId <= 194))) {
 				if (fromInterfaceId == 1430 && (fromComponentId >= 55 && fromComponentId <= 229)
 						|| (fromInterfaceId == 1436 && (fromComponentId >= 25 && fromComponentId <= 194)))
 					player.getActionbar().switchShortcut((fromComponentId - (fromInterfaceId == 1430 ? 55 : 25)) / 13, (toComponentId - (toInterfaceId == 1430 ? 55 : 25)) / 13);
-				//item shortcut inv
 				else if(fromInterfaceId == Inventory.INVENTORY_INTERFACE || fromInterfaceId == Inventory.INVENTORY_INTERFACE_2) {
 					if (fromSlot >= player.getInventory().getItemsContainerSize())
 						return;
@@ -1430,7 +1363,6 @@ public final class WorldPacketsDecoder extends Decoder {
 					if(item == null || item.getId() != fromSlotId2)
 						return;
 					player.getActionbar().setShortcut((toComponentId - (toInterfaceId == 1430 ? 55 : 25)) / 13, new ItemShortcut(item.getId()));
-					//item shortcut equip
 				} else if((fromInterfaceId == 1464 && fromComponentId == 15)|| (fromInterfaceId == 1464 && fromComponentId == 14)) {
 					if (fromSlot >= player.getEquipment().getItems().getSize())
 						return;
@@ -1438,26 +1370,22 @@ public final class WorldPacketsDecoder extends Decoder {
 					if(item == null || item.getId() != fromSlotId2)
 						return;
 					player.getActionbar().setShortcut((toComponentId - (toInterfaceId == 1430 ? 55 : 25)) / 13, new ItemShortcut(item.getId()));
-					//spell shortcut
-					//Switch item 1464, 1430, 3, 65535, 15, 142
 				} else if (fromInterfaceId == 1461 && fromComponentId == 1) {
-					if (Magic.getSpellData(fromSlot) == null) //fake spell
+					if (Magic.getSpellData(fromSlot) == null)
 						return;
 					player.getActionbar().setShortcut((toComponentId - (toInterfaceId == 1430 ? 55 : 25)) / 13, new MagicAbilityShortcut(fromSlot));
-
 				} else if (fromInterfaceId == 1449 && fromComponentId == 1) {
 					boolean usingDefenceAbilities = player.getCombatDefinitions().onDefenceMenu();
-					if (ActionBar.getAbilityData(usingDefenceAbilities ? ActionBar.DEFENCE_ABILITY_SHORTCUT : ActionBar.HEAL_ABILITY_SHORTCUT, fromSlot) == null) //fake spell
+					if (ActionBar.getAbilityData(usingDefenceAbilities ? ActionBar.DEFENCE_ABILITY_SHORTCUT : ActionBar.HEAL_ABILITY_SHORTCUT, fromSlot) == null)
 						return;
 					player.getActionbar().setShortcut((toComponentId - (toInterfaceId == 1430 ? 55 : 25)) / 13, usingDefenceAbilities ? new DefenceAbilityShortcut(fromSlot) : new HealAbilityShortcut(fromSlot));
 				} else if (fromInterfaceId == 1452 && fromComponentId == 1) {
-					if (ActionBar.getAbilityData(ActionBar.RANGED_ABILITY_SHORTCUT, fromSlot) == null) //fake spell
+					if (ActionBar.getAbilityData(ActionBar.RANGED_ABILITY_SHORTCUT, fromSlot) == null)
 						return;
 					player.getActionbar().setShortcut((toComponentId - (toInterfaceId == 1430 ? 55 : 25)) / 13, new RangeAbilityShortcut(fromSlot));
-					//prayer shortcut
 				} else if (fromInterfaceId == 1460 && fromComponentId == 1) {
 					boolean usingStrAbilities = player.getCombatDefinitions().onStrengthMenu();
-					if (ActionBar.getAbilityData(usingStrAbilities ? ActionBar.STRENGTH_ABILITY_SHORTCUT : ActionBar.MELEE_ABILITY_SHORTCUT, fromSlot) == null) //fake spell 
+					if (ActionBar.getAbilityData(usingStrAbilities ? ActionBar.STRENGTH_ABILITY_SHORTCUT : ActionBar.MELEE_ABILITY_SHORTCUT, fromSlot) == null)
 						return;
 					player.getActionbar().setShortcut((toComponentId - (toInterfaceId == 1430 ? 55 : 25)) / 13, usingStrAbilities ? new StrengthAbilityShortcut(fromSlot) : new MeleeAbilityShortcut(fromSlot));
 				} else if (fromInterfaceId == 1458 && fromComponentId == 31) {
@@ -1466,9 +1394,8 @@ public final class WorldPacketsDecoder extends Decoder {
 					player.getActionbar().setShortcut((toComponentId - (toInterfaceId == 1430 ? 55 : 25)) / 13, new PrayerShortcut(fromSlot, player.getPrayer().isAncientCurses()));
 				}
 			} else if (fromInterfaceId == 1430 && (fromComponentId >= 55 && fromComponentId <= 229)
-					|| (fromInterfaceId == 1436 && (fromComponentId >= 25 && fromComponentId <= 194))) { //ability bar drag
-				//inventory droping drag
-				if((toInterfaceId == InterfaceManager.RESIZABLE_WINDOW_ID && toComponentId == 18)) 
+					|| (fromInterfaceId == 1436 && (fromComponentId >= 25 && fromComponentId <= 194))) {
+				if((toInterfaceId == InterfaceManager.RESIZABLE_WINDOW_ID && toComponentId == 18))
 					player.getActionbar().clearShortcut((fromComponentId - (fromInterfaceId == 1430 ? 55 : 25)) / 13);
 			} else if ((fromInterfaceId == Inventory.INVENTORY_INTERFACE || fromInterfaceId == Inventory.INVENTORY_INTERFACE_2) && (toInterfaceId == InterfaceManager.RESIZABLE_WINDOW_ID && toComponentId == 18)) {
 				if (fromSlot >= player.getInventory().getItemsContainerSize())
@@ -1490,20 +1417,13 @@ public final class WorldPacketsDecoder extends Decoder {
 					Shop shop = (Shop) player.getTemporaryAttributtes().get("shop_instance");
 					if (shop == null)
 						return;
-					// shop.buyItem(player, fromSlot, 1);
 				}
 			} else if ((fromInterfaceId == 34 || fromInterfaceId == 1417) && (toInterfaceId == 34 || toInterfaceId == 1417))
 				player.getNotes().switchNotes(fromSlot, toSlot);
 		} else if (opcode == DONE_LOADING_REGION_PACKET) {
-			/*
-			 * if(!player.clientHasLoadedMapRegion()) { //load objects and items
-			 * here player.setClientHasLoadedMapRegion(); }
-			 * //player.refreshSpawnedObjects(); //player.refreshSpawnedItems();
-			 */
 			if(!player.isRunAfterLoad())
 				player.runAfterLoad();
 			if (!player.clientHasLoadedMapRegionFinished()) {
-				// load objects and items here
 				player.setClientHasLoadedMapRegion();
 				player.refreshSpawnedObjects();
 				player.refreshSpawnedItems();
@@ -1512,7 +1432,6 @@ public final class WorldPacketsDecoder extends Decoder {
 			if(!player.isRunAfterLoad())
 				player.runAfterLoad();
 			if (!player.clientHasLoadedMapRegionFinished()) {
-				// load objects and items here
 				player.setClientHasLoadedMapRegion();
 				player.refreshSpawnedObjects();
 				player.refreshSpawnedItems();
@@ -1587,39 +1506,23 @@ public final class WorldPacketsDecoder extends Decoder {
 			if (!player.hasStarted())
 				return;
 			String target = stream.readString();
-			int qcFileId = stream.readUnsignedShort();
-			long[] data = null;
-			QuickChatOptionDefinition option = QuickChatOptionDefinition.loadOption(qcFileId);
-			if (option.dynamicDataTypes != null) {
-				data = new long[option.dynamicDataTypes.length];
-				for (int i = 0; i < option.dynamicDataTypes.length; i++) {
-					if (option.getType(i).clientToServerBytes > 0) {
-						data[i] = stream.readDynamic(option.getType(i).clientToServerBytes);
-					}
-
-				}
-			}
-			player.getFriendsIgnores().sendPrivateMessage(target, option, data);
+			String message = Huffman.decodeString(150, stream);
+			player.getFriendsIgnores().sendPrivateMessage(target, message);
 		} else if (opcode == PUBLIC_QUICK_CHAT_PACKET) {
 			if (!player.hasStarted())
 				return;
 			if (player.getLastPublicMessage() > Utils.currentTimeMillis())
 				return;
 			player.setLastPublicMessage(Utils.currentTimeMillis() + 300);
-
-			int quickChatType = stream.readUnsignedByte(); //quickchat does not use chattype as it's only temporary!!!
-
+			int quickChatType = stream.readUnsignedByte();
 			int qcFileId = stream.readUnsignedShort();
-
 			long[] data = null;
 			QuickChatOptionDefinition option = QuickChatOptionDefinition.loadOption(qcFileId);
 			if (option.dynamicDataTypes != null) {
 				data = new long[option.dynamicDataTypes.length];
 				for (int i = 0; i < option.dynamicDataTypes.length; i++) {
-					if (option.getType(i).clientToServerBytes > 0) {
+					if (option.getType(i).clientToServerBytes > 0)
 						data[i] = stream.readDynamic(option.getType(i).clientToServerBytes);
-					}
-
 				}
 			}
 			if (quickChatType == 0)
@@ -1647,8 +1550,6 @@ public final class WorldPacketsDecoder extends Decoder {
 			if (message == null || message.replaceAll(" ", "").equals(""))
 				return;
 			if (message.startsWith("::") || message.startsWith(";;")) {
-				// if command exists and processed wont send message as public
-				// message
 				Commands.processCommand(player, message.replace("::", "").replace(";;", ""), false, false);
 				return;
 			}
@@ -1658,26 +1559,18 @@ public final class WorldPacketsDecoder extends Decoder {
 			}
 			int effects = (colorEffect << 8) | (moveEffect & 0xff);
 			if ((effects & 0x8000) != 0)
-				return; //someone trying to crash server using qc as chat effect in normal chat
+				return;
 			if (chatType == 1) {
-				if (player.getCurrentFriendsChat() != null) {
-					if(message.equals("[Attempting to kick/ban user from this Friends Chat.]")) 
-						return;
+				if (player.getCurrentFriendsChat() != null)
 					player.getCurrentFriendsChat().sendMessage(player, message);
-				}
 			} else if (chatType == 2)
 				player.sendClanChannelMessage(new ChatMessage(message));
 			else if (chatType == 3)
 				player.sendGuestClanChannelMessage(new ChatMessage(message));
 			else {
-				//Think i also fixed the large view scene thing, but just incase, spoof message
 				if (player.getControlerManager().getControler() instanceof DungeonController) {
-					for (Player party : player.getDungManager().getParty().getTeam()) {
-						/*if (player.getLocalPlayerUpdate().getLocalPlayers()[party.getIndex()] == null || party.getLocalPlayerUpdate().getLocalPlayers()[player.getIndex()] == null) {
-							party.getPackets().sendGameMessage(player.getDisplayName() + ":<col=7fa9ff> " + message);
-						}*/
+					for (Player party : player.getDungManager().getParty().getTeam())
 						party.getPackets().sendPublicMessage(player, new PublicChatMessage(message, effects));
-					}
 				} else
 					player.sendPublicChatMessage(new PublicChatMessage(message, effects));
 			}
