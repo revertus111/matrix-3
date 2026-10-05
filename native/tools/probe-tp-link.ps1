@@ -4,13 +4,23 @@ $tpTarget = 'GZ2E01'
 $workspace = Join-Path $env:LOCALAPPDATA 'Matrix3\TPDecomp'
 $proofDir = Join-Path $env:LOCALAPPDATA 'Matrix3\TPLinkProof'
 $rawDir = Join-Path $proofDir 'raw'
+$selectedDir = Join-Path $proofDir 'selected'
+$visualDir = Join-Path $proofDir 'visual'
 $kmdlDir = Join-Path $rawDir 'Kmdl'
 $alanmDir = Join-Path $rawDir 'AlAnm'
 $dtk = Join-Path $workspace 'build\tools\dtk.exe'
 $probeScript = Join-Path $PSScriptRoot 'tp-link-probe.py'
+$visualScript = Join-Path $PSScriptRoot 'tp-link-visual-proof.py'
 $discDir = Join-Path $workspace "orig\$tpTarget"
 $supportedDiscExtensions = @('.iso', '.gcm', '.rvz', '.wia', '.wbfs', '.ciso', '.nfs', '.gcz', '.tgc')
 $msys2Python = 'C:\msys64\ucrt64\bin\python.exe'
+
+$toolRoot = Join-Path $env:LOCALAPPDATA 'Matrix3\TPLinkTools'
+$demakeRoot = Join-Path $toolRoot 'demake-engine'
+$demakeRepo = 'https://github.com/snuri00/demake-engine.git'
+$demakePin = 'a134ff49cc74585c6b11f881293796e45c973c75'
+$venvDir = Join-Path $toolRoot 'venv'
+$venvPython = Join-Path $venvDir 'Scripts\python.exe'
 
 function Invoke-External {
     param(
@@ -41,10 +51,18 @@ function Invoke-External {
 }
 
 function Test-PythonSpec {
-    param([Parameter(Mandatory = $true)][hashtable]$Spec)
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$Spec,
+        [switch]$Require312
+    )
 
     try {
-        & $Spec.Exe @($Spec.Prefix) --version *> $null
+        if ($Require312) {
+            & $Spec.Exe @($Spec.Prefix) -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 12) else 1)' *> $null
+        }
+        else {
+            & $Spec.Exe @($Spec.Prefix) --version *> $null
+        }
         return ($LASTEXITCODE -eq 0)
     }
     catch {
@@ -52,31 +70,92 @@ function Test-PythonSpec {
     }
 }
 
-function Find-Python {
+function Get-PythonCandidates {
+    $result = @()
+
     $py = Get-Command py.exe -ErrorAction SilentlyContinue
     if ($py) {
-        $spec = @{ Exe = $py.Source; Prefix = @('-3') }
-        if (Test-PythonSpec -Spec $spec) {
-            return $spec
-        }
+        $result += @{ Exe = $py.Source; Prefix = @('-3.13') }
+        $result += @{ Exe = $py.Source; Prefix = @('-3.12') }
+        $result += @{ Exe = $py.Source; Prefix = @('-3') }
     }
 
     $python = Get-Command python.exe -ErrorAction SilentlyContinue
     if ($python -and $python.Source -notmatch '\\WindowsApps\\python\.exe$') {
-        $spec = @{ Exe = $python.Source; Prefix = @() }
-        if (Test-PythonSpec -Spec $spec) {
-            return $spec
-        }
+        $result += @{ Exe = $python.Source; Prefix = @() }
     }
 
     if (Test-Path $msys2Python) {
-        $spec = @{ Exe = $msys2Python; Prefix = @() }
+        $result += @{ Exe = $msys2Python; Prefix = @() }
+    }
+
+    return $result
+}
+
+function Find-Python {
+    foreach ($spec in (Get-PythonCandidates)) {
         if (Test-PythonSpec -Spec $spec) {
             return $spec
         }
     }
-
     return $null
+}
+
+function Find-Python312 {
+    foreach ($spec in (Get-PythonCandidates)) {
+        if (Test-PythonSpec -Spec $spec -Require312) {
+            return $spec
+        }
+    }
+    return $null
+}
+
+function Ensure-VisualToolchain {
+    $git = Get-Command git.exe -ErrorAction SilentlyContinue
+    if (-not $git) {
+        throw 'Git for Windows is required for the pinned TP Link visual proof tool.'
+    }
+
+    if (-not (Test-Path $toolRoot)) {
+        New-Item -ItemType Directory -Path $toolRoot -Force | Out-Null
+    }
+
+    if (-not (Test-Path (Join-Path $demakeRoot '.git'))) {
+        if (Test-Path $demakeRoot) {
+            Remove-Item -LiteralPath $demakeRoot -Recurse -Force
+        }
+        Write-Host 'Cloning pinned local-only J3D visual proof tool...' -ForegroundColor Cyan
+        Invoke-External -FilePath $git.Source -Arguments @('clone', $demakeRepo, $demakeRoot) | Out-Host
+    }
+
+    Write-Host 'Pinning J3D visual proof tool...' -ForegroundColor Cyan
+    Invoke-External -FilePath $git.Source -Arguments @('-C', $demakeRoot, 'fetch', 'origin') | Out-Host
+    Invoke-External -FilePath $git.Source -Arguments @('-C', $demakeRoot, 'checkout', '--detach', $demakePin) | Out-Host
+    $head = (& $git.Source -C $demakeRoot rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or $head -ne $demakePin) {
+        throw "Visual proof tool pin mismatch. Expected $demakePin, got $head"
+    }
+
+    if (-not (Test-Path $venvPython)) {
+        $python312 = Find-Python312
+        if (-not $python312) {
+            throw 'Python 3.12+ is required for the visual TP Link proof. The donor build may use an older Python, but this pinned J3D converter requires 3.12+.'
+        }
+        Write-Host 'Creating isolated TP Link visual-proof Python environment...' -ForegroundColor Cyan
+        $venvArgs = @($python312.Prefix) + @('-m', 'venv', $venvDir)
+        Invoke-External -FilePath $python312.Exe -Arguments $venvArgs | Out-Host
+    }
+
+    & $venvPython -c 'import numpy; from PIL import Image' *> $null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host 'Installing isolated visual-proof dependencies (numpy + Pillow)...' -ForegroundColor Cyan
+        Invoke-External -FilePath $venvPython -Arguments @(
+            '-m', 'pip', 'install', '--disable-pip-version-check',
+            'numpy>=1.26,<3', 'Pillow>=10,<13'
+        ) | Out-Host
+    }
+
+    return @{ Root = $demakeRoot; Python = $venvPython }
 }
 
 if (-not (Test-Path $workspace)) {
@@ -92,7 +171,11 @@ if (-not (Test-Path $dtk)) {
 }
 
 if (-not (Test-Path $probeScript)) {
-    throw "TP Link probe script is missing: $probeScript"
+    throw "TP Link asset probe script is missing: $probeScript"
+}
+
+if (-not (Test-Path $visualScript)) {
+    throw "TP Link visual probe script is missing: $visualScript"
 }
 
 if (-not (Test-Path $discDir)) {
@@ -123,14 +206,21 @@ $kmdlSource = "${relativeDisc}:files/res/Object/Kmdl.arc:"
 $alanmSource = "${relativeDisc}:files/res/Object/AlAnm.arc:"
 
 Write-Host '================================================' -ForegroundColor DarkGray
-Write-Host 'Matrix3 - Twilight Princess Link asset proof' -ForegroundColor Cyan
+Write-Host 'Matrix3 - Twilight Princess Link visual proof' -ForegroundColor Cyan
 Write-Host '================================================' -ForegroundColor DarkGray
 Write-Host "Donor: $($disc.FullName)"
 Write-Host "Proof output: $proofDir"
 Write-Host ''
 
-if (Test-Path $rawDir) {
-    Remove-Item -LiteralPath $rawDir -Recurse -Force
+foreach ($path in @($rawDir, $selectedDir, $visualDir)) {
+    if (Test-Path $path) {
+        Remove-Item -LiteralPath $path -Recurse -Force
+    }
+}
+foreach ($path in @((Join-Path $proofDir 'manifest.json'), (Join-Path $proofDir 'summary.txt'))) {
+    if (Test-Path $path) {
+        Remove-Item -LiteralPath $path -Force
+    }
 }
 New-Item -ItemType Directory -Path $kmdlDir -Force | Out-Null
 New-Item -ItemType Directory -Path $alanmDir -Force | Out-Null
@@ -143,7 +233,7 @@ Write-Host 'Extracting Link AlAnm animation archive only...' -ForegroundColor Cy
 Invoke-External -FilePath $dtk -Arguments @('vfs', 'cp', $alanmSource, $alanmDir) -WorkingDirectory $workspace
 
 Write-Host ''
-Write-Host 'Validating authentic TP Link J3D model, animation clips and weapon socket...' -ForegroundColor Cyan
+Write-Host 'Validating authentic TP Link model, idle/walk/sword clips and weapon socket...' -ForegroundColor Cyan
 $probeArgs = @($python.Prefix) + @(
     $probeScript,
     '--kmdl', $kmdlDir,
@@ -153,19 +243,43 @@ $probeArgs = @($python.Prefix) + @(
 Invoke-External -FilePath $python.Exe -Arguments $probeArgs
 
 $summary = Join-Path $proofDir 'summary.txt'
-if (-not (Test-Path $summary)) {
-    throw "Asset probe returned successfully but did not create $summary"
+$manifest = Join-Path $proofDir 'manifest.json'
+if (-not (Test-Path $summary) -or -not (Test-Path $manifest)) {
+    throw 'Asset probe returned successfully but did not create summary.txt + manifest.json.'
+}
+
+Write-Host ''
+Write-Host 'Building visible TP Link animation + 0xF socket proof...' -ForegroundColor Cyan
+$visualTools = Ensure-VisualToolchain
+Invoke-External -FilePath $visualTools.Python -Arguments @(
+    $visualScript,
+    '--demake-root', $visualTools.Root,
+    '--manifest', $manifest,
+    '--out', $proofDir
+)
+
+$visualSummary = Join-Path $visualDir 'visual-summary.txt'
+$visualGif = Join-Path $visualDir 'tp-link-proof.gif'
+if (-not (Test-Path $visualSummary) -or -not (Test-Path $visualGif)) {
+    throw 'Visual proof returned successfully but did not create the expected summary/GIF.'
 }
 
 Write-Host ''
 Get-Content -LiteralPath $summary | ForEach-Object { Write-Host $_ }
 Write-Host ''
-Write-Host 'TP Link asset proof complete.' -ForegroundColor Green
-Write-Host 'No Nintendo assets were copied into the Matrix3 Git repository.' -ForegroundColor DarkGray
+Get-Content -LiteralPath $visualSummary | ForEach-Object { Write-Host $_ }
+Write-Host ''
+Write-Host 'TP Link visible asset/animation/socket proof complete.' -ForegroundColor Green
+Write-Host 'No Nintendo assets or third-party converter source were copied into the Matrix3 Git repository.' -ForegroundColor DarkGray
 
 try {
-    Start-Process explorer.exe -ArgumentList @($proofDir) | Out-Null
+    Start-Process -FilePath $visualGif | Out-Null
 }
 catch {
-    Write-Host "Could not auto-open Explorer. Proof folder: $proofDir" -ForegroundColor Yellow
+    try {
+        Start-Process explorer.exe -ArgumentList @($visualDir) | Out-Null
+    }
+    catch {
+        Write-Host "Could not auto-open the proof. Open: $visualGif" -ForegroundColor Yellow
+    }
 }
