@@ -120,7 +120,7 @@ index ba7fc1d..71d5770 100644
  }
  
  void gfx_adapter_bind_output_buffers( struct SM64MarioGeometryBuffers *outBuffers )
-@@ -213,5 +275,51 @@ void gfx_adapter_bind_output_buffers( struct SM64MarioGeometryBuffers *outBuffer
+@@ -213,5 +275,49 @@ void gfx_adapter_bind_output_buffers( struct SM64MarioGeometryBuffers *outBuffer
      s_colorPtr = s_outBuffers->color;
      s_normalPtr = s_outBuffers->normal;
      s_uvPtr = s_outBuffers->uv;
@@ -135,9 +135,11 @@ index ba7fc1d..71d5770 100644
 +}
 +
 +/* verified-static: pinned Mario geo animated-part order is root=0, pelvis=1,
-+ * torso=2, head=3, left chain=4..7, right chain=8..11, legs=12..19.
-+ * Switch nodes visit exactly one hand. Named DL checks fail closed if the pin
-+ * changes. Offsets affect local evaluated channels, never persistent AnimInfo.
++ * torso=2, head=3, left shoulder/arm/forearm/hand=4..7,
++ * right shoulder/arm/forearm/hand=8..11, legs=12..19.
++ * Slot 0 deliberately owns the right SHOULDER pivot so the entire downstream
++ * arm chain swings from the body instead of only twisting local limb meshes.
++ * Offsets affect local evaluated channels, never persistent AnimInfo.
 + */
 +void gfx_adapter_combat_rotation(int joint, struct GraphNodeAnimatedPart *node, Vec3s rotation)
 +{
@@ -145,9 +147,7 @@ index ba7fc1d..71d5770 100644
 +    void *dl = node->displayList;
 +    struct SM64MarioCombatPose *pose = s_outBuffers->combatPose;
 +    if (pose == NULL) return;
-+    if (joint == 2 && (dl == mario_torso || dl == mario_medium_poly_torso
-+            || dl == mario_low_poly_torso || dl == mario_metal_torso_shared_dl
-+            || dl == mario_metal_medium_poly_torso || dl == mario_metal_low_poly_torso))
++    if (joint == 8)
 +        slot = 0;
 +    if (joint == 9 && (dl == mario_right_arm || dl == mario_medium_poly_right_arm
 +            || dl == mario_low_poly_right_arm || dl == mario_right_arm_shared_dl
@@ -209,7 +209,7 @@ index 1f6c5e4..0c6a820 100644
 +/* Matrix3 pose-only extension. No Mario action/animation state is overwritten. */
 +struct SM64MarioCombatPose
 +{
-+    int16_t rotation[4][3]; /* torso, right upper arm, forearm, hand; angle offsets */
++    int16_t rotation[4][3]; /* right shoulder, upper arm, forearm, hand offsets */
 +    float rightHand[16];   /* Mat4 memory order: basis columns then translation */
 +    uint8_t rightHandAvailable;
 +};
