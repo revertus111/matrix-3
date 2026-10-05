@@ -63,12 +63,13 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 
 ### VERIFIED
 
-- None yet for TP inside Matrix3. Runtime/build acceptance is still pending.
+- The first TP bootstrap runtime attempt reached the TP builder and failed before donor setup because Windows resolved `python.exe` to the Microsoft Store/App Execution Alias stub while Ninja was missing. The stub exited with code `9009`.
 
 ### verified-static
 
 - zeldaret/tp states that GameCube release code is completely matching, while not every translation unit is linked yet.
 - zeldaret/tp is a decompilation, not a PC port; it requires the user's own game image and supports `GZ2E01` as GameCube North America.
+- zeldaret/tp documents ISO/GCM, RVZ, WIA, WBFS, CISO, NFS, GCZ and TGC donor formats. `.nkit.iso` is not in the documented input set.
 - Normal human Link is driven by `daAlink_c`; source is split into focused action files including `d_a_alink_link.inc` (general human actions), `d_a_alink_cut.inc` (sword), `d_a_alink_guard.inc` (shield) and `d_a_alink_bow.inc` (bow/arrow).
 - Standard green-tunic Link uses resource archive name `Kmdl`. `changeLink(...)` loads `al.bmd`, `al_head.bmd`, `al_hands.bmd` and `al_face.bmd` for the human presentation path.
 - `assets/GZ2E01/res/Object/Kmdl.h` defines the main human skeleton with explicit joints. Important attachment joints are:
@@ -83,6 +84,7 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 - Link's main body animation resources are J3D BCK animation resources cataloged through `AlAnm.h`.
 - Link animation metadata supports distinct under/upper animation IDs plus left/right hand indices and face animation metadata (`daAlink_AnmData`), confirming a layered animation system rather than a single flat clip stream.
 - `d_a_alink_cut.inc` owns sword-action handling and configures real sword attack collision objects; those collision/damage rules are donor reference only and must not replace Matrix3 gameplay authority.
+- Bootstrap recovery now rejects the Windows Store Python alias, can provision UCRT64 Python + Ninja through the existing Matrix3 MSYS2 toolchain, and auto-detects a single TP donor image placed directly in Matrix3 `native`.
 
 ## Unknown / research needed
 
@@ -101,10 +103,9 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 
 ## Dependencies
 
-- User-owned Twilight Princess GameCube North America image (`GZ2E01`).
+- User-owned Twilight Princess GameCube North America image (`GZ2E01`) in one of the donor formats documented by zeldaret/tp. Current `.nkit.iso` file must be replaced with a supported image.
 - Git for Windows.
-- Python 3.
-- Ninja; the one-click bootstrap attempts a documented user-local pip install when Ninja is missing.
+- Python 3 and Ninja. The one-click bootstrap now reuses valid native/MSYS2 tools or provisions UCRT64 Python + Ninja through the existing Matrix3 MSYS2 installation when missing.
 - zeldaret/tp pinned source above.
 - Existing Matrix3 Native Builder UI.
 
@@ -118,8 +119,8 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 
 **Entry conditions:**
 
-- User has a local `GZ2E01` disc image.
-- SAP AAA granted for TP Link workstream startup.
+- User has a supported local `GZ2E01` disc image.
+- SAP AAA granted for TP Link workstream startup/recovery.
 
 **Exit conditions:**
 
@@ -139,7 +140,9 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 - [x] Map the first combat/locomotion animation families. `DONE` verified-static.
 - [x] Add `PREP + BUILD TP LINK` to Matrix3 Native Builder. `DONE` static.
 - [x] Add local-source bootstrap that selects the user's disc image, validates raw ISO/GCM ID, clones the pinned decomp outside Matrix3, prepares `orig/GZ2E01`, configures and builds. `DONE` static.
-- [ ] Run the one-click bootstrap on the user's PC and record PASS/FAIL. `NEEDS TEST`.
+- [x] Capture first runtime bootstrap failure: Windows Store Python alias / missing Ninja. `DONE` VERIFIED evidence.
+- [x] Patch dependency resolution, MSYS2 UCRT64 fallback/provisioning, native-folder image auto-detection and explicit NKit-v1 rejection. `DONE` verified-static.
+- [ ] Replace the current `.nkit.iso` donor with a supported `GZ2E01` image and rerun the one-click bootstrap. `NEEDS TEST`.
 
 **Runtime tests:**
 
@@ -196,17 +199,18 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 - Phase status: NEEDS TEST
 - Bundle: 1.1 - One-click donor bootstrap
 - Bundle status: NEEDS TEST
-- Approval state: SAP AAA approved by user on 2026-10-05
-- Current checklist item: run `PREP + BUILD TP LINK` once on the user's PC
-- Current objective: prove the pinned `GZ2E01` donor checkout/build without manual disc extraction or uploading the ISO to ChatGPT
+- Approval state: SAP AAA approved by user on 2026-10-05 for bootstrap recovery
+- Current checklist item: replace the `.nkit.iso` donor with a supported `GZ2E01` image in Matrix3 `native`, then rerun `PREP + BUILD TP LINK`
+- Current objective: prove the pinned `GZ2E01` donor checkout/build without manual disc extraction, manual dependency setup or uploading the ISO to ChatGPT
 
 ## Testing
 
 ### Quick/high-value checks
 
-1. Root `Native Builder.bat` opens with Mario, OoT and TP Link buttons.
-2. First TP click prompts for a supported disc image, accepts the user's `GZ2E01`, and ends `TP LINK DONOR BUILD SUCCESS`.
-3. Second TP click reuses the prepared local image/workspace without another picker.
+1. Place one supported `GZ2E01` image in Matrix3 `native`.
+2. Root `Native Builder.bat` opens with Mario, OoT and TP Link buttons.
+3. `PREP + BUILD TP LINK` auto-detects the image, resolves/provisions real Python + Ninja, and ends `TP LINK DONOR BUILD SUCCESS`.
+4. A second TP click reuses the prepared local image/workspace without another picker.
 
 ### Deeper checks
 
@@ -218,6 +222,7 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 
 ### BLOCKED
 
+- Current donor file is `native/Legend of Zelda, The - Twilight Princess (USA).nkit.iso`. The TP decomp does not document NKit v1 as a supported input, so Bundle 1.1 cannot pass until a supported `GZ2E01` image replaces it.
 - TP Link visual integration cannot be considered started until the donor build and real asset path are verified on the user's PC.
 
 ## Resume Here
@@ -225,7 +230,8 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 **Last completed:**
 
 - Static donor-source audit mapped TP human Link model resources, explicit skeleton/weapon joints, layered animation metadata and combat animation families.
-- One-click TP donor bootstrap is staged in Matrix3 Native Builder.
+- First one-click bootstrap runtime failure was captured exactly: Windows Store Python alias returned `9009` while Ninja was absent.
+- Bootstrap recovery is staged: valid Python detection, existing MSYS2 UCRT64 Python/Ninja provisioning, Matrix3/native image auto-detection and early `.nkit.iso` rejection.
 
 **Current phase:**
 
@@ -237,11 +243,11 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 
 **Next checklist item:**
 
-- User runs `Native Builder.bat` -> `PREP + BUILD TP LINK` and sends only the build window if it fails.
+- Replace the current `.nkit.iso` with one supported `GZ2E01` image in Matrix3 `native`, pull current main, then run `Native Builder.bat` -> `PREP + BUILD TP LINK`.
 
 **Current state / next action:**
 
-- Validate the donor bootstrap once. On PASS, immediately move to the smallest real `al.bmd` + BCK + right-item-joint proof.
+- The Python/Ninja launcher bug is patched. The only known pre-build blocker is the current NKit-v1 donor format. On a supported-image PASS, immediately move to the smallest real `al.bmd` + BCK + right-item-joint proof.
 
 **Files/systems already inspected:**
 
@@ -262,14 +268,15 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 - Core `Kmdl` human resource names.
 - Existence of the TP sword animation family in `daAlink_ANM`.
 - zeldaret/tp's status as a matching decomp rather than a ready PC library.
+- The first Python-alias failure cause.
 
 **Pending runtime verification:**
 
-- One-click donor clone/configure/build.
+- One-click donor clone/configure/build with a supported non-NKit `GZ2E01` image.
 
 **Blockers:**
 
-- No Matrix3 TP asset/runtime proof until the local donor bootstrap succeeds.
+- Current local donor is `.nkit.iso`, which is intentionally rejected before bootstrap work begins.
 
 **Important remaining uncertainty:**
 
@@ -277,4 +284,4 @@ This avoids polluting Matrix3 with the large external source checkout or user-ow
 
 ## Next recommended work
 
-Run the one-click TP donor bootstrap. On PASS, immediately continue with Bundle 1.2 and build the smallest possible `al.bmd` + authentic BCK + right-item-joint proof; do not manually extract the entire disc.
+Replace the NKit-v1 donor with a supported `GZ2E01` image and rerun the one-click bootstrap. On PASS, immediately continue with Bundle 1.2 and build the smallest possible `al.bmd` + authentic BCK + right-item-joint proof; do not manually extract the entire disc.
