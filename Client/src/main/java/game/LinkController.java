@@ -75,11 +75,17 @@ public final class LinkController {
         boolean buttonB = !attackReleaseRequired && controls.primaryAction;
         boolean buttonZ = !targetReleaseRequired && controls.modifierAction;
 
+        /*
+         * verified-static: liboot 25208734 uses host yaw atan2(camX, camZ)
+         * plus Lib_GetControlStickData -> Math_Atan2S(relY, -relX).
+         * Neutral camera and stick (-worldX, +worldZ) therefore target the
+         * shared Matrix world vector without a second camera transform.
+         */
         OotBridgeSession.setInput(
-                controls.cameraForward.x,
-                controls.cameraForward.z,
-                controls.moveX,
-                controls.moveY,
+                0.0F,
+                1.0F,
+                -controls.worldMoveX,
+                controls.worldMoveZ,
                 buttonA,
                 buttonB,
                 buttonZ);
@@ -96,14 +102,8 @@ public final class LinkController {
             return;
         }
 
-        float forwardX = controls.cameraForward.x;
-        float forwardZ = controls.cameraForward.z;
-        float rightX = forwardZ;
-        float rightZ = -forwardX;
-        float worldMoveX = controls.moveX * rightX + controls.moveY * forwardX;
-        float worldMoveZ = controls.moveX * rightZ + controls.moveY * forwardZ;
-        int dx = directionStep(worldMoveX);
-        int dz = directionStep(worldMoveZ);
+        int dx = directionStep(controls.worldMoveX);
+        int dz = directionStep(controls.worldMoveZ);
 
         if (dx == 0 && dz == 0) {
             lastWalkTargetX = Integer.MIN_VALUE;

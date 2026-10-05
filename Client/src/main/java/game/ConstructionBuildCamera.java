@@ -295,6 +295,34 @@ public final class ConstructionBuildCamera {
     }
 
     /**
+     * Ground-plane direction from the same live Class411 position/look owners
+     * used by RTS panning. Alternate characters consume this basis directly.
+     * Returns null while this camera does not own a usable view.
+     */
+    static float[] getMovementForward() {
+        if (!active || Class24.aClass411_Sub1_158 == null) {
+            return null;
+        }
+        try {
+            Class423_Sub2 positionController =
+                    (Class423_Sub2) Class24.aClass411_Sub1_158.method4990((byte) -37);
+            Class658_Sub2 lookController =
+                    (Class658_Sub2) Class24.aClass411_Sub1_158.method4991(-589573040);
+            Class240 position = positionController.method5159((byte) -54);
+            Class240 forwardPoint = lookController.method7736(0);
+            float x = forwardPoint.aFloat2653 - position.aFloat2653;
+            float z = forwardPoint.aFloat2657 - position.aFloat2657;
+            float length = (float) Math.sqrt(x * x + z * z);
+            if (Float.isNaN(length) || Float.isInfinite(length) || length < 0.001F) {
+                return null;
+            }
+            return new float[] { x / length, z / length };
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    /**
      * Called by the Construction palette's world-wheel listener. RTS consumes the
      * wheel for camera zoom; Free Build leaves it available for piece rotation.
      */

@@ -399,26 +399,12 @@ public final class MarioJumpController {
         boolean buttonZ = !crouchReleaseRequired && controls.modifierAction;
 
         /*
-         * Construction's accepted RTS movement maps local screen input with:
-         *   right = (forwardZ, -forwardX)
-         *   world = localX * right + localY * forward
-         *
-         * verified-static against libsm64:
-         *   cameraYaw = atan2s(camLookZ, camLookX)
-         *   controller.stickX = -64 * input.stickX
-         *   controller.stickY =  64 * input.stickY
-         *   intendedYaw = atan2s(-stickY, stickX) + cameraYaw
-         *
-         * With neutral camLook=(0,+1), publishing stick=(-worldX,-worldZ)
-         * makes libsm64's intendedYaw point at the exact Matrix world vector.
-         * This removes all camera sign/handedness interpretation from libsm64.
+         * Shared controller already resolved screen input into Matrix world X/Z.
+         * The existing neutral-camera libsm64 adapter encodes (-X, -Z).
+         * Keep source-game physics native; do not rotate by camera or actor again.
          */
-        float forwardX = controls.cameraForward.x;
-        float forwardZ = controls.cameraForward.z;
-        float rightX = forwardZ;
-        float rightZ = -forwardX;
-        float worldMoveX = controls.moveX * rightX + controls.moveY * forwardX;
-        float worldMoveZ = controls.moveX * rightZ + controls.moveY * forwardZ;
+        float worldMoveX = controls.worldMoveX;
+        float worldMoveZ = controls.worldMoveZ;
         requestedWorldMoveX = worldMoveX;
         requestedWorldMoveZ = worldMoveZ;
 

@@ -76,3 +76,10 @@
 2026-10-05 - Mario V4 combat-test repair
 - Fixed the ROM-free slash test after V4 intentionally zeroed shoulder X; the old frame-12 X-axis assertion falsely failed a successful build.
 - Test now verifies neutral torso, real right-limb/shoulder motion, bounded timing/weight, endpoint reset and request lifecycle without hard-coding the retired V3 axis mix.
+
+2026-10-05 - Universal N64 screen-relative steering
+- Shared ControlState resolves normalized WASD into worldMoveX/worldMoveZ once for every character driver.
+- Construction exposes its live RTS/Free position/look movement basis; removed alternate-controller minimap-yaw reconstruction.
+- Mario uses shared world intent with neutral libsm64 stick (-X,-Z); Link uses it for vanilla walking and neutral liboot stick (-X,+Z), correcting native horizontal handedness.
+- Preserved keyboard ownership, native actions/physics, collision handoff and bridge protocols; no native rebuild required.
+- Added ROM-free production-method full-orbit regression test: 63,540 assertions pass, Java 8 API/language target. Full client build and in-game acceptance remain pending.

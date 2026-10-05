@@ -1,5 +1,27 @@
 # N64 Client Console Runtime Test List
 
+## Shared screen-relative WASD - Mario and Link (2026-10-05)
+
+Status: implemented / verified-static; runtime acceptance pending. This steering patch does not fix the separately tracked tile-handoff hitching.
+
+Automated check: `python3 tests/n64/test_shared_movement.py` with a JDK available (`JAVA`/`JAVAC` overrides supported). Compiles the complete shared controller and extracts the actual Construction/native-input methods into dependency stubs. 63,540 assertions pass for 361 headings and all 16 key combinations. This does not exercise the complete client, native simulation, rendered camera or server.
+
+One runtime session; repeat for both Mario and Link:
+1. [ ] `git pull origin main`; Eclipse Java 8 refresh/clean/build, then launch/login. No native rebuild for this patch.
+2. [ ] In RTS camera, face north/east/south/west and an intermediate heading. W/S/A/D must request up/down/left/right on screen regardless of the character's initial facing. Link still uses eight-direction Matrix tile walking.
+3. [ ] Hold W and rotate the camera through a full circle in both directions. Direction follows the view without a south-facing reversal; allow native turn/acceleration behavior.
+4. [ ] Test W+D, W+A, S+D, S+A, then W+S and A+D. Diagonal input has unit magnitude; opposing keys cancel their axis.
+5. [ ] Repeat cardinal directions in Construction Free and ordinary RuneScape camera. Rotate while moving; verify both travel and native facing/animation agree.
+6. [ ] WASD does not also pan the camera while a character owns it. Exit to RuneScape and confirm ordinary camera WASD returns; switch Mario/Link and repeat.
+7. [ ] Check Space/F/Shift actions, collision blocking and release/re-entry. Record native lock-on/action-specific steering separately; this patch preserves source-game action rules.
+
+### Contract for future character drivers
+Use `ControlState.worldMoveX/worldMoveZ` for movement intent. Do not rotate by character facing or reapply Matrix camera yaw. Only the native boundary converts world axes to that engine's input convention.
+- Mario: neutral camera (0,+1), stick (-worldX,-worldZ), existing verified-static libsm64 input contract.
+- Link: neutral camera (0,+1), stick (-worldX,+worldZ). Pinned liboot 25208734 `src/liboot.c` scales stick by +67; `z_player.c` adds camera yaw to the control-stick angle; `z_lib.c` computes `Math_Atan2S(relY,-relX)`; `sys_math_atan.c` uses arguments (x,y), unlike C atan2(y,x). verified-static; source-game lock-on can still alter native camera yaw.
+- Camera basis: Construction live position -> look point, matching its RTS pan path; other existing Matrix camera fallbacks retained.
+
+
 ## Temporary vanilla RS3 collision handoff
 
 Runtime finding 2026-10-05: vanilla RS3 collision itself is `VERIFIED`, but the first continuous hybrid pass is runtime-rejected because every accepted tile visibly hitched when the collision baseline recentered. The current gate is the zero-snap pending-authority handoff.

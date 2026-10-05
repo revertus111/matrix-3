@@ -1,5 +1,19 @@
 # Mario 64 in Matrix3 / Revision 830
 
+## Active steering checkpoint - 2026-10-05
+
+User AAA approved one universal screen-relative WASD controller for Mario, Link and future N64 drivers.
+
+- IMPLEMENTED / NEEDS RUNTIME TEST: `AlternateCharacterController.ControlState` now resolves `worldMoveX/worldMoveZ` once from normalized screen input and the active camera ground-plane basis.
+- Construction exposes the same live Class411 position/look basis used by RTS pan; the controller no longer reconstructs RTS movement from minimap yaw.
+- Mario consumes the shared world vector through its existing neutral-camera libsm64 encoding (-X,-Z).
+- Link consumes that same vector for stock Matrix walking and neutral-camera liboot encoding (-X,+Z). Native sign contract traced at pinned liboot 25208734 (`Lib_GetControlStickData` / `Math_Atan2S`); verified-static.
+- ROM-free production-method test: 63,540 assertions pass over all 16 key combinations and 361 headings, including opposite-key cancellation, diagonal normalization, native adapters, calibration suppression and camera fallback. Shared controller compiled with Java 8 API/language target using JDK 17. This is not a full client build or runtime acceptance.
+- No sidecar protocol/rebuild, collision-authority, tile-handoff, combat or native physics changes.
+- Resume here: run the shared steering section of `docs/n64/TESTLIST.md` for BOTH characters, including held-W/full camera rotation. Keep tile-handoff hitching and prior unrelated carryovers separate.
+- This checkpoint supersedes the older minimap-yaw/Mario-local screen-to-world implementation descriptions below; their historical runtime evidence remains preserved.
+
+
 
 ## Active priority override - 2026-10-04 custom combat proof
 

@@ -43,6 +43,8 @@ public final class AlternateCharacterController {
     static final class ControlState {
         final float moveX;
         final float moveY;
+        final float worldMoveX;
+        final float worldMoveZ;
         final boolean jump;
         final boolean primaryAction;
         final boolean modifierAction;
@@ -57,6 +59,10 @@ public final class AlternateCharacterController {
             this.primaryAction = primaryAction;
             this.modifierAction = modifierAction;
             this.cameraForward = cameraForward;
+            // Single screen-to-world owner for every imported character.
+            // W is forward/up-screen; D is right, independent of actor facing.
+            this.worldMoveX = moveX * cameraForward.z + moveY * cameraForward.x;
+            this.worldMoveZ = -moveX * cameraForward.x + moveY * cameraForward.z;
         }
     }
 
@@ -182,40 +188,18 @@ public final class AlternateCharacterController {
     }
 
     /**
-     * Returns the rendered Matrix camera forward direction on the X/Z ground
-     * plane. Construction RTS owns a canonical continuous yaw that already drives
-     * its rendered orbit/minimap; use that heading directly so alternate-character
-     * steering cannot disagree with the view at the 180-degree boundary.
-     * Construction Free and other detached/free cameras fall back to their actual
-     * Class411 position/look geometry. Vanilla follow/orbit cameras use the
-     * already-resolved camera world position written by Class246.method3359(...)
-     * and the exact X/Z focus point supplied to that solver.
+     * Resolve the ground-plane basis from the camera that owns the view.
+     * Construction exposes the same live position/look basis used by RTS pan;
+     * never reconstruct this direction from minimap/display yaw.
      */
     static PlanarDirection getCameraForward() {
-        /*
-         * VERIFIED runtime symptom: north can be correct while south is exactly
-         * reversed when steering is reconstructed from the detached look owner.
-         * Construction's accepted minimap yaw is derived from the same
-         * rtsYawRadians that applyRtsOrientation(...) uses, so it is the canonical
-         * RTS heading source. getRtsMinimapYawUnits() stores -rtsYaw in Matrix's
-         * 14-bit turn domain; negate it back here before deriving X/Z forward.
-         */
-        try {
-            if (ConstructionBuildCamera.isRequested()
-                    && ConstructionBuildCamera.isRtsMode()) {
-                int rtsYawUnits = ConstructionBuildCamera.getRtsMinimapYawUnits();
-                if (rtsYawUnits >= 0) {
-                    double radians = -rtsYawUnits * (Math.PI * 2.0 / 16384.0);
-                    PlanarDirection rts = normalize(
-                            (float) Math.sin(radians),
-                            (float) Math.cos(radians));
-                    if (rts != null) {
-                        return rts;
-                    }
-                }
+        float[] constructionForward = ConstructionBuildCamera.getMovementForward();
+        if (constructionForward != null) {
+            PlanarDirection direction = normalize(
+                    constructionForward[0], constructionForward[1]);
+            if (direction != null) {
+                return direction;
             }
-        } catch (RuntimeException ignored) {
-            // Fall through to the detached-camera path below.
         }
 
         Class411_Sub1 detached = null;
