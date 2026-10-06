@@ -1,0 +1,6 @@
+2026-10-06 - Simplified Matrix3 repository workflow
+- Replaced the oversized root AGENTS.md process with a compact fast-path rule set.
+- Specialized `agents/*.md` files are now explicit opt-in only and are never auto-routed by task domain.
+- Established work now defaults to current chat/checkpoint authority, exact-file reads, one narrow lookup per genuine unknown, and immediate patching after AAA.
+- Preserved main-branch, Eclipse/Java 8, AAA, evidence, minimal-change, patchnote/testlist, and runtime-verification rules.
+- Existing `agents/` files remain dormant reference material; they were not deleted.
