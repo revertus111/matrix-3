@@ -48,7 +48,7 @@ Bridge protocol 3 retains all v2 semantic fields. After A/B/Z, STEP adds mode u8
 
 `MarioWeaponCombat` uses the existing equipped appearance, slot 3 and `ItemDefinitions.method7531` worn-model/customization path. V1 automatically selects conservative sword/longsword/scimitar names; this is a temporary proof policy, NOT a verified cache combat-family mapping. The explicit developer override permits other equipped weapons for preview. No item-ID list or invented sword mesh is used.
 
-F suppresses native B only when v3/socket/weapon rendering are ready. Mario's rising attack edge now enters the shared `AlternateCharacterCombatBridge` manual-melee path used by imported characters; it no longer starts stock RuneScape repeating click-to-attack. This native slash proof still does NOT synchronize Mario server damage to an exact blade-contact frame or add a parallel damage formula. Play slash remains presentation-only. No supported weapon or an old bridge retains native B behavior.
+F suppresses native B only when v3/socket/weapon rendering are ready. Mario's rising F edge starts the native slash request, but it no longer sends Matrix damage on the key edge. The shared `AlternateCharacterCombatBridge` arms against the pre-swing native frame, waits for `combatAnimation` to transition active, then sends at most one shared manual-melee intent when normalized native `combatTime` reaches `0.45` — the existing V4 cross-body strike keyframe from `combat_overlay.h`. RuneScape `PlayerCombatNew` still owns legal target/range, equipped-weapon delay, accuracy, damage, XP, death and drops. The exact visual blade/NPC contact at `0.45` remains runtime acceptance, but the timing source itself is verified-static from the native curve. Play slash remains presentation-only and cannot send damage by itself.
 
 Matrix transform is `S * handBasis * calibrationRotation * S`, where `S=diag(1,-1,1)`. Native translation is rebased against the SAME frame's native Mario position and uses the existing Mario mesh scale. `Class261.method3572` takes columns; `method3582` establishes the actual point multiplication. Two Y mirrors preserve weapon handedness. Rendering occurs immediately after Mario's successful body render using that exact immutable GeometryFrame; freeze preserves the socket too.
 
@@ -71,6 +71,7 @@ Grip origin from worn-model bounds (85% down Y), initial length and artistic sla
 - Source follow-up 2026-10-05: custom weapon combat suppresses native B while active, so V3's bad motion is attributable to the custom additive pose rather than stock punch input. `verified-static`.
 - V4 zeroes torso offsets and reduces the attack to shoulder/forearm/wrist motion only. Runtime visual acceptance is pending.
 - Shared imported-character combat targeting/packet/server ownership is `verified-static`; runtime Mario/Link NPC damage/XP acceptance remains pending.
+- Mario native-contact gating at V4 `combatTime >= 0.45` is `verified-static`; exact visible blade/NPC alignment remains pending.
 - Moving-slash leg continuity, held-F no-replay, freeze/unfreeze, unequip fallback, Ctrl+M/relog cleanup, remote-player isolation and sustained stability remain pending unless separately runtime-confirmed.
 
 ## Optional repeatable checks
