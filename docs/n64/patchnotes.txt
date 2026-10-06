@@ -1,3 +1,10 @@
+2026-10-06 - Mario repeated manual-attack rearm
+- Fixed the runtime report where Mario could land the first manual hit and then subsequent F presses appeared dead.
+- Physical F edges are now buffered one-deep while the existing native slash/recovery is still active; the buffered press becomes a new native slash request only after `combatAnimation` returns idle.
+- The shared contact gate is armed from that actual native slash start, not from a keypress that the native overlay could consume during recovery. This prevents a recovery-time press from poisoning the next contact lifecycle.
+- Holding F still does not repeat. One press can produce at most one queued/native swing; repeated release/press cycles can re-arm indefinitely, while RuneScape weapon delay still decides whether each contact may produce a server hit.
+- Java-only Mario adapter fix; shared targeting/server combat ownership and native protocol are unchanged. Runtime repeated-press acceptance pending.
+
 2026-10-06 - Walking fix runtime acceptance
 - User confirmed walking is fixed following shared normal-camera reader patch 428e33c4. Marked the reported walking defect VERIFIED and updated the checkpoint/test evidence; detailed clipping/action/combat/lifecycle coverage remains separate. Documentation-only update.
 
