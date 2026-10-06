@@ -116,51 +116,70 @@ Bundle 1.2 is `VERIFIED`. The failure classifications below remain useful only f
 
 ## Bundle 2.1 - Matrix3 TP Link presentation
 
-Status: `PARTIAL VERIFIED / SCALE CALIBRATION NEEDS TEST`
+Status: `PARTIAL VERIFIED / PROPORTION + MOTION ACCEPTANCE`
 
-This is presentation only. It does **not** add TP movement, TP combat, RuneScape weapon replacement, or a native TP sidecar.
+This is still presentation only. It does **not** add authoritative TP movement, damage, NPC combat, RuneScape weapon replacement, or a native TP sidecar.
 
-### Runtime evidence - first in-client render
-
-The first Matrix3 run is a real partial PASS:
+### Runtime evidence so far
 
 - `Ctrl+Shift+L` entered `TP_LINK`.
 - The client loaded `C:\Users\rever\AppData\Local\Matrix3\TPLinkProof\visual\tp-link-proof.dmk`.
 - Runtime parsed `19821` vertices, `35` joints, `30` idle frames and `24` walk frames.
 - Matrix rendering reported `19821` vertices / `6607` triangles / `35` joints with named `idle` and `walk` animations.
-- The supplied screenshot visibly shows TP Link rendered inside the live revision-830 world.
-- The architecture/toolchain path therefore passes: local DMK load -> Java skinning -> Matrix model conversion -> scene render.
-- Default `scale=1.0` is a visual FAIL: Link is dramatically undersized/action-figure sized relative to the world.
-- Default scale has been changed to `5.0` for the next calibration run. This value is not yet runtime accepted.
-- Idle/walk transition, facing/yaw, Shift-release hotkey regression, and clean restoration to RuneScape presentation still need explicit runtime acceptance.
+- The first screenshot proved the architecture path but showed `scale=1.0` was dramatically undersized.
+- The next screenshots at world scale `5.0` were explicitly accepted by the user as correct overall height.
+- Those same screenshots showed Link is slightly too thick for the intended RuneScape equipment envelope.
+- World scale `5.0` is therefore retained. Proportion calibration now happens in TP model space before yaw, starting at `width=0.92`, `height=1.00`, `depth=0.95`.
 
-### Consolidated calibration/remainder test
+### Consolidated workbench / remainder test
 
 1. Pull current `main` once.
 2. Confirm `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.dmk` still exists. Do not regenerate it.
 3. Eclipse: clean/build the **Client** with Java 8, then launch normally and log in.
-4. Press `Ctrl+Shift+L` once.
-5. Expected console sequence includes:
+4. Open Client Console -> `N64`.
+5. Confirm the established Mario workspace is still present and a top-level `TP Link` tab now exists.
+6. Open `TP Link -> Presentation`.
+   - expected World scale: `5.0`;
+   - expected Body width: `0.92`;
+   - expected Body height: `1.00`;
+   - expected Body depth: `0.95`;
+   - keep world scale `5.0` unless new evidence contradicts the already-accepted height;
+   - tune Width/Depth live until Link looks appropriately narrow for future RuneScape equipment.
+7. Press `Ctrl+Shift+L` once.
+8. Expected console sequence includes:
    - `[Alternate Character] Controller mode: TP_LINK`
-   - `[TP Visual] Loaded local TP Link DMK: ...`
-   - `[TP Visual] GZ2E01 Link -> Matrix Model ACTIVE ... scale=5.0 yawOffset=0.0 ...`
-6. Compare Link against nearby normal humanoids:
-   - if roughly human-sized, mark scale close/pass;
-   - if still clearly small or now too large, send a screenshot and do not alter any other renderer architecture.
-7. Stand still for a few seconds. Expected: authentic TP idle visibly loops.
-8. Move using normal RuneScape movement. Expected: authentic TP locomotion visibly takes over while position changes, then returns to idle after stopping.
-9. Check at least two movement directions. Report if Link faces correctly, backward, sideways, or otherwise needs yaw calibration.
-10. Hotkey regression: after TP mode activates, release **Shift first** while still briefly holding `Ctrl+L`. Expected: mode stays `TP_LINK`; it must not jump to OoT `LINK`.
-11. Fully release the chord, then press `Ctrl+Shift+L` again. Expected: controller mode returns to `RUNESCAPE` and the normal local-player presentation returns.
-12. Remote players/NPCs and normal RuneScape camera/world/input should remain unaffected.
+   - `[TP Visual] Loaded local TP Link DMK: ... swordFrames=...`
+   - `[TP Visual] GZ2E01 Link -> Matrix Model ACTIVE ... scale=5.0 bodyScale=0.92/1.0/0.95 yawOffset=0.0 ...`
+9. Stand still for a few seconds. Expected: authentic TP idle visibly loops.
+10. Move using normal RuneScape movement. Expected: authentic TP locomotion visibly takes over while position changes, then returns to idle after stopping.
+11. In `TP Link -> Animation`, verify Preview=`AUTO`, then try forced `IDLE` and `WALK`; return to `AUTO` afterward.
+12. In `TP Link -> Combat`, click `Preview authentic sword BCK`.
+   - expected: the authentic DMK sword clip plays visually;
+   - this does **not** deal damage or change RuneScape combat state;
+   - click `Return to AUTO` afterward.
+13. Check at least two movement directions. Report if Link faces correctly, backward, sideways, or otherwise needs yaw calibration. If needed, change only the Yaw correction control first.
+14. Hotkey regression: after TP mode activates, release **Shift first** while still briefly holding `Ctrl+L`. Expected: mode stays `TP_LINK`; it must not jump to OoT `LINK`.
+15. Fully release the chord, then press `Ctrl+Shift+L` again. Expected: controller mode returns to `RUNESCAPE` and the normal local-player presentation returns.
+16. Open `TP Link -> Materials`.
+   - `Use DMK UV/palette color sampling` ON is the current face-colour texture fallback;
+   - toggling it OFF should visibly switch to vertex-colour-only output without crashing;
+   - there is intentionally no fake smoothing toggle yet because the DMK mesh is triangle-expanded and proper smoothing requires normals or a seam-aware weld.
+17. Open `TP Link -> Diagnostics` and press `Reload local DMK` once.
+   - expected: one reload log, then TP Link resumes rendering;
+   - fail-open suppression must keep/restore the RuneScape body if the local DMK cannot be reloaded.
+18. Remote players/NPCs and normal RuneScape camera/world/input should remain unaffected.
 
 ### Fail-open/static boundary
 
 - `VERIFIED`: local generated DMK loads and renders as a Matrix model in the live client.
+- `VERIFIED`: world scale `5.0` is accepted for overall TP Link height.
+- `verified-static`: model-local X/Y/Z proportion fitting occurs before player yaw, preventing width/depth from becoming world-axis dependent.
+- `verified-static`: initial RuneScape-fit body envelope is `0.92 / 1.00 / 0.95`; final width/depth still need user visual acceptance.
 - `verified-static`: local-player suppression is shared through the existing `Player.method10696(...)` gate and only returns true after `TpLinkVisualRenderer` records a successful fresh Matrix render.
 - `verified-static`: missing/invalid DMK, failed skin/model conversion, missing player transform, or render exceptions leave the RuneScape local player visible.
 - `verified-static`: the renderer consumes only the local generated DMK and does not commit or ship Nintendo assets.
-- Full Bundle 2.1 `VERIFIED` still requires scale, idle/walk, facing, hotkey-release and restoration acceptance.
+- `verified-static`: the workbench reads the existing `sword` ANIM chunk only for visual preview; no combat authority is transferred.
+- Full Bundle 2.1 `VERIFIED` still requires body-proportion, idle/walk, sword-preview, facing, hotkey-release and restoration acceptance.
 
 ## Regression sanity
 
@@ -168,10 +187,12 @@ The first Matrix3 run is a real partial PASS:
 - OoT button still launches the OoT builder.
 - `PREP + BUILD TP LINK` still launches donor prep/build.
 - `PROBE TP LINK` launches only the local visual proof.
+- N64 -> Mario 64 existing Runtime / Custom combat / Equipment Workbench behavior is unchanged.
+- N64 -> TP Link appears as a sibling top-level game workspace.
 - `Ctrl+L` remains the OoT Link controller toggle after the chord is fully released.
 - `Ctrl+Shift+L` is TP Link presentation only.
 - Closing Native Builder still works normally.
 
 ## Current acceptance boundary
 
-Bundle 1.1 is runtime VERIFIED. Bundle 1.2 is VERIFIED from the explicitly accepted corrected GZ2E01 left-side model/animation/socket proof. Bundle 2.1 has a runtime-verified in-client render path; the current gate is the `5.0` scale calibration plus idle/walk/facing/hotkey/restoration acceptance.
+Bundle 1.1 is runtime VERIFIED. Bundle 1.2 is VERIFIED from the explicitly accepted corrected GZ2E01 left-side model/animation/socket proof. Bundle 2.1 has a runtime-verified in-client render path and accepted world-height scale; the current gate is TP body proportion plus idle/walk/sword-preview/facing/hotkey/restoration/workbench acceptance.
