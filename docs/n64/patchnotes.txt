@@ -1,3 +1,10 @@
+2026-10-05 - Shared native-contact melee lifecycle
+- Mario no longer sends a Matrix melee request on the F key edge. Its existing protocol-v3 slash now arms the same `AlternateCharacterCombatBridge.updateNativeMeleeContact(...)` lifecycle used by Link.
+- Mario contact is sourced from the existing V4 native slash curve: `combatAnimation` must transition active and normalized `combatTime` must reach the source-defined cross-body strike keyframe `0.45` before one shared manual-melee intent is sent.
+- Link keeps its liboot action/animation/frame evidence and configurable contact frame, but target resolution, one-shot arming, packet routing and server authority remain the same shared owner.
+- Existing RuneScape `PlayerCombatNew` weapon delay still owns valid hit cadence; pressing F faster may animate but must not produce valid server hits faster than the equipped weapon permits.
+- Exact Mario blade/NPC visual-contact alignment and Link frame timing remain runtime acceptance items. Java-only client change; no bridge protocol/native rebuild introduced.
+
 2026-10-05 - One shared horizontal movement owner
 - AlternateCharacterController now owns one per-client-cycle control sample, native-axis encoding and one horizontal movement state for every character. Mario/Link drivers no longer contain stick signs, independent free movers or tile-walk routing.
 - Moved Mario's optional tile-authority handoff into the shared movement helper and made Link use the same free/clipped path, pending approvals, boundary lead, correction, toggle and restoration rules.
