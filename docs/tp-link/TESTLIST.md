@@ -55,19 +55,20 @@ This is the first actually-visible TP Link acceptance gate. Do not manually extr
 
 1. Pull current `main` once.
 2. Double-click root `Native Builder.bat`.
-3. Confirm the new `PROBE TP LINK` button is visible.
+3. Confirm the `PROBE TP LINK` button is visible.
 4. Click `PROBE TP LINK`.
 5. Expected extraction behavior:
    - reuses the already-verified donor workspace at `%LOCALAPPDATA%\Matrix3\TPDecomp`;
    - uses decomp-toolkit VFS to extract only the `Kmdl` and `AlAnm` Link resource archives into `%LOCALAPPDATA%\Matrix3\TPLinkProof`;
    - does not copy Nintendo assets into the Matrix3 repository.
 6. Expected static asset proof:
-   - finds `al.bmd`, `al_head.bmd`, `al_hands.bmd`, `al_face.bmd` and the Kmdl `al_swb.bmd` sword resource;
+   - finds `al.bmd`, `al_head.bmd`, `al_hands.bmd`, `al_face.bmd` and the Kmdl `al_swb.bmd` wooden-sword resource;
    - selects a real WAIT-family idle BCK;
    - selects a real WALK/DASH-family locomotion BCK;
    - selects a real CUT-family sword BCK;
-   - validates body right hand `0xE` and right weapon/item joint `0xF`;
-   - rejects any selected BCK that does not contain joint `0xF`.
+   - validates human Link's left hand/item pair `0x9 handL` / `0xA weaponL` and right hand/item pair `0xE handR` / `0xF weaponR`;
+   - identifies `0x9/0xA` as the active sword-side pair for the GZ2E01 GameCube Link proof;
+   - rejects selected BCKs that do not contain the complete human item-joint range through `0xF`.
 7. Expected first-run visual-tool behavior:
    - reuses the already-verified Matrix3 MSYS2/UCRT64 interpreter at `C:\msys64\ucrt64\bin\python.exe`;
    - if NumPy/Pillow imports are missing, `C:\msys64\usr\bin\pacman.exe` installs only the prebuilt UCRT64 packages `mingw-w64-ucrt-x86_64-python-numpy` and `mingw-w64-ucrt-x86_64-python-pillow`;
@@ -88,16 +89,17 @@ This is the first actually-visible TP Link acceptance gate. Do not manually extr
     - the idle segment animates rather than remaining bind-pose/static;
     - the walk/run segment visibly animates as locomotion;
     - the sword segment visibly plays a real TP sword cut;
-    - the cyan `0xE handR` marker follows Link's animated right hand;
-    - the red `0xF weaponR` marker follows the animated right-item/weapon joint;
-    - `al_swb.bmd` is visibly present and remains rigidly attached to the red `0xF` joint through the animation, proving the same seam can host a replacement RuneScape weapon later.
+    - the cyan `0x9 handL` marker follows GameCube Link's animated left hand;
+    - the red `0xA weaponL` marker follows the animated left item/weapon joint;
+    - `al_swb.bmd` is visibly present and remains rigidly attached to red `0xA` through the sword animation, proving the active GameCube sword seam that a replacement RuneScape weapon can use later.
 
 ### Bundle 1.2 runtime evidence
 
 - The MSYS2/UCRT64 dependency bootstrap is runtime VERIFIED: pacman installed prebuilt NumPy/Pillow and the renderer ran to completion.
-- Authentic donor extraction remains runtime VERIFIED: `al.bmd` has 35 joints, `0xE = handR`, `0xF = weaponR`, and real `waitb.bck`, `dasha.bck`, `cutl.bck` clips were selected.
+- Authentic donor extraction remains runtime VERIFIED: `al.bmd` has 35 joints and real `waitb.bck`, `dasha.bck`, `cutl.bck` clips were selected.
 - The first successfully generated GIF was **not accepted visually**. It rendered animated Link but did not render a sword model, the only socket indicator was the red `0xF` debug cross, and the launcher incorrectly labeled successful artifact generation as `PASS`.
-- The proof was tightened so `al_swb.bmd` is attached directly to `0xF`, both `0xE` and `0xF` are shown simultaneously, and successful generation now remains `NEEDS VISUAL ACCEPTANCE` until the GIF is inspected.
+- The second generated proof did include the authentic `al_swb.bmd` model and both `0xE handR` / `0xF weaponR` markers. User-provided GIFs showed the dark wooden sword rigidly following that right-side test socket while the opposite arm performed the prominent sword-cut motion. This proved the diagnostic had selected the wrong item side, not that the donor/toolchain failed.
+- Pinned TP source confirms human Link assigns left hand/item joints `9/10` and right hand/item joints `14/15`. Because this donor target is GZ2E01 GameCube Link, the corrected active sword proof now uses left `0x9 handL` / `0xA weaponL`; right `0xE/0xF` remains the alternate right-hand/item socket.
 
 ### Acceptance boundary
 
@@ -109,7 +111,7 @@ FAIL should be classified before patching:
 - **decoder failure:** BMD/BCK parser/converter rejects authentic TP data;
 - **geometry/material failure:** Link animates but parts/texture/mesh are too broken to validate the character;
 - **animation failure:** mesh renders but BCK pose/playback is wrong;
-- **socket failure:** `0xE` tracks the hand but the red `0xF` / attached `al_swb.bmd` does not remain on the intended item socket.
+- **socket failure:** `0x9` tracks the left hand but red `0xA` / attached `al_swb.bmd` does not remain on the intended active sword socket.
 
 Do not call Matrix3 in-client rendering verified from this test. Bundle 1.2 is a local donor-model/animation/socket proof only.
 
@@ -123,4 +125,4 @@ Do not call Matrix3 in-client rendering verified from this test. Bundle 1.2 is a
 
 ## Current acceptance boundary
 
-Bundle 1.1 is runtime VERIFIED. Bundle 1.2 has runtime-verified extraction and visual-tool execution, but the corrected visual/socket proof still requires user acceptance. Movement, combat, equipment and Matrix3 in-client TP Link rendering remain later gates.
+Bundle 1.1 is runtime VERIFIED. Bundle 1.2 has runtime-verified extraction and visual-tool execution, but the corrected left-side sword/socket proof still requires user acceptance. Movement, combat, equipment and Matrix3 in-client TP Link rendering remain later gates.
