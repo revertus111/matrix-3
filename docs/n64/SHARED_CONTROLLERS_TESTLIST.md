@@ -1,6 +1,6 @@
 # Shared Alternate-Character Controller Runtime Test List
 
-Date: 2026-10-05
+Date: 2026-10-06
 Status: `verified-static`; Eclipse Java 8 build + gameplay acceptance pending.
 
 Purpose: prove Mario and Link use the same Matrix-owned input/horizontal movement/combat architecture after removing per-driver movement paths and Link's duplicate combat controller. Focused movement automation passes; native gameplay acceptance remains pending.
@@ -15,17 +15,19 @@ Purpose: prove Mario and Link use the same Matrix-owned input/horizontal movemen
 
 1. [ ] Ctrl+M near an attackable NPC with a supported melee sword equipped and the existing Mario protocol-v3 custom weapon path active. Press F once. Mario's native slash must begin first; **no Matrix hit may be requested on the F key edge**.
 2. [ ] During the same Mario swing, exactly one shared manual-melee request may fire when native `combatTime` reaches the V4 cross-body strike keyframe `0.45`. Console should report `[Alt Character Combat] MARIO contact ...` once. Actual blade/contact visual timing remains runtime acceptance.
-3. [ ] Hold F in Mario mode. The native request latch plus shared attack lifecycle must produce at most one Matrix contact for the armed swing and must never start RuneScape repeating auto-combat.
-4. [ ] Stand outside legal melee range and press F. Mario may play the native swing, but he must **not** walk, slide, scoot, diagonal-correct, route or follow toward the NPC. No hit should occur.
-5. [ ] Start a normal RuneScape click-to-attack loop before switching/attacking as Mario, then make one manual Mario swing. The manual request must stop that stale `PlayerCombatNew` repeating action. After the one contact attempt, the NPC must not keep receiving attacks until F is pressed again.
-6. [ ] Ctrl+L near the same NPC. Press F once while facing it. Link native sword animation must begin first; one shared manual-melee request may fire only after its configured native contact gate is reached. Console should report `[Alt Character Combat] LINK contact ...` once.
-7. [ ] Repeat the out-of-range test with Link. Link may animate, but Matrix must not add walk steps or follow toward the target and no hit may occur.
-8. [ ] Hold F in Link mode. One armed native swing may produce at most one shared combat intent; no repeating RuneScape auto-combat.
-9. [ ] For both characters, equip a ranged/magic weapon and attempt the melee action. The shared server authority must reject manual melee. Re-equip melee and confirm authority resumes.
-10. [ ] Verify both characters use normal RuneScape accuracy/damage/weapon-delay/XP/NPC death/drop behavior after a valid one-shot contact.
-11. [ ] Rapidly press F faster than the equipped RuneScape weapon's attack delay. Native animations may still be requested, but the server must not generate valid hits faster than existing RuneScape combat delay permits.
-12. [ ] After one successful hit, release F and stand still for several weapon cycles. There must be **zero additional attacks**. A second attack requires a second F keypress and a second native contact.
-13. [ ] Exit imported-character mode and verify stock RuneScape click-to-attack remains unchanged.
+3. [ ] Release F after the first swing, wait for the native slash to return idle, then press F again. A fresh native slash and fresh shared contact must occur. Repeat for at least five presses; combat must not become permanently disarmed after the first hit.
+4. [ ] During one Mario slash/recovery, release and press F once before `combatAnimation` returns idle. That physical press may be buffered one-deep, but it must start **exactly one** fresh native slash once the previous slash becomes idle. It must not be eaten permanently and must not produce two attacks.
+5. [ ] Hold F in Mario mode. The physical edge detector plus one-deep recovery buffer must produce at most one native request/contact; held F must never auto-repeat.
+6. [ ] Stand outside legal melee range and press F. Mario may play the native swing, but he must **not** walk, slide, scoot, diagonal-correct, route or follow toward the NPC. No hit should occur.
+7. [ ] Start a normal RuneScape click-to-attack loop before switching/attacking as Mario, then make one manual Mario swing. The manual request must stop that stale `PlayerCombatNew` repeating action. After the one contact attempt, the NPC must not keep receiving attacks until F is pressed again.
+8. [ ] Ctrl+L near the same NPC. Press F once while facing it. Link native sword animation must begin first; one shared manual-melee request may fire only after its configured native contact gate is reached. Console should report `[Alt Character Combat] LINK contact ...` once.
+9. [ ] Repeat the out-of-range test with Link. Link may animate, but Matrix must not add walk steps or follow toward the target and no hit may occur.
+10. [ ] Hold F in Link mode. One armed native swing may produce at most one shared combat intent; no repeating RuneScape auto-combat.
+11. [ ] For both characters, equip a ranged/magic weapon and attempt the melee action. The shared server authority must reject manual melee. Re-equip melee and confirm authority resumes.
+12. [ ] Verify both characters use normal RuneScape accuracy/damage/weapon-delay/XP/NPC death/drop behavior after a valid one-shot contact.
+13. [ ] Rapidly press F faster than the equipped RuneScape weapon's attack delay. Native animations may still be requested, but the server must not generate valid hits faster than existing RuneScape combat delay permits. After the delay expires, a later fresh F press must work again.
+14. [ ] After one successful hit, release F and stand still for several weapon cycles. There must be **zero additional attacks**. A second attack requires a second F keypress and a second native contact.
+15. [ ] Exit imported-character mode and verify stock RuneScape click-to-attack remains unchanged.
 
 ## Shared targeting / Link lock adapter
 
@@ -52,4 +54,4 @@ Purpose: prove Mario and Link use the same Matrix-owned input/horizontal movemen
 
 ## Acceptance rule
 
-Do not mark this cleanup `VERIFIED` until both Mario and Link have passed the same-session combat checks above. Both characters must demonstrate `one keypress -> native attack -> contact gate -> at most one server combat cycle`. Any click-to-follow movement, scoot/route correction, or attack after the keypress's one contact attempt is a failure. Link contact-frame timing and Mario's exact visual blade-contact alignment may remain `HYPOTHESIS` until visually accepted.
+Do not mark this cleanup `VERIFIED` until both Mario and Link have passed the same-session combat checks above. Both characters must demonstrate `one keypress -> one native attack -> contact gate -> at most one server combat cycle`, and Mario must re-arm indefinitely across repeated press/release cycles. Any click-to-follow movement, scoot/route correction, attack after the keypress's one contact attempt, or permanent disarm after the first hit is a failure. Link contact-frame timing and Mario's exact visual blade-contact alignment may remain `HYPOTHESIS` until visually accepted.
