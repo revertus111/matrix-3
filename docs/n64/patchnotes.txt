@@ -1,3 +1,11 @@
+2026-10-05 - Strict one-keypress / zero-follow imported melee
+- Removed `PlayerCombatNew.start()` from the shared imported-character server bridge. That stock entry immediately called `process()`, which could `calcFollow`, add walk steps or apply diagonal correction and caused the reported Mario target-scoot before attacking.
+- Manual Mario/Link contact now prevalidates legal melee range and invokes exactly one `PlayerCombatNew.processWithDelay()` cycle without installing the action into `ActionManager`.
+- If the target is out of range at the native contact frame, the swing produces no hit and no movement toward the target.
+- Any existing repeating `PlayerCombatNew` action is stopped before the manual contact cycle so stale RuneScape auto-combat cannot continue after the imported-character swing.
+- Contract is now explicit: one F keypress arms at most one native swing/contact attempt; holding F cannot repeat; a second attack requires another F press. Existing RuneScape weapon delay still gates successful hit cadence.
+- Shared server path and docs updated; Eclipse Java 8 + runtime acceptance pending. No native rebuild/protocol change.
+
 2026-10-05 - Shared native-contact melee lifecycle
 - Mario no longer sends a Matrix melee request on the F key edge. Its existing protocol-v3 slash now arms the same `AlternateCharacterCombatBridge.updateNativeMeleeContact(...)` lifecycle used by Link.
 - Mario contact is sourced from the existing V4 native slash curve: `combatAnimation` must transition active and normalized `combatTime` must reach the source-defined cross-body strike keyframe `0.45` before one shared manual-melee intent is sent.
@@ -68,7 +76,6 @@
 - Replacement-shell profiles reset/re-resolve the active helmet auto-fit and bypass cavity-proxy inflation; shell baseline uses manual multiplier `1.0` on top of the adapter's outer-silhouette fit.
 - The first V8 proof intentionally keeps Mario's surviving face at native animated scale/location. Independent face scale/XYZ is deferred until runtime evidence proves it is needed.
 - V8 is Java/workbench-only; no native bridge rebuild is required when semantic protocol v2 is already running.
-
 
 2026-10-04 - Native Mario 1H slash / right-hand socket proof
 - Added additive torso/right-arm keyframes at native pose evaluation; base locomotion/action state remains native.
