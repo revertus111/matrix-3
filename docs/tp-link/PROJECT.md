@@ -11,7 +11,7 @@ This table is the authoritative user-facing status table for this workstream acr
 | Main-goal area | Status |
 | --- | --- |
 | TP source/decomp bootstrap | ✅ VERIFIED |
-| TP local model + native animation/socket proof | ⚠️ Generated; corrected left-side visual acceptance still pending |
+| TP local model + native animation/socket proof | ✅ VERIFIED |
 | Matrix3 TP Link presentation | ⚠️ Bundle 2.1 PARTIAL VERIFIED - in-client render works; scale calibration + motion acceptance pending |
 | Matrix3 movement/controller integration | ❌ Not started for TP |
 | Zelda action combat + RuneScape gameplay authority | ❌ Not started for TP |
@@ -82,6 +82,7 @@ The generated local presentation asset consumed by Bundle 2.1 is:
 - The donor progress report reported all code/data `100.00% matched`; overall linking was `87.13%` (`2583 / 2608 files`).
 - Authentic donor extraction is runtime proven: `al.bmd` parsed with 35 joints and real `waitb.bck`, `dasha.bck`, and `cutl.bck` clips were selected.
 - The MSYS2/UCRT64 visual dependency path has run to completion and generated the local proof artifacts.
+- Bundle 1.2 corrected GZ2E01 left-side visual proof was explicitly accepted by the user: authentic TP Link rendered with authentic idle/walk/sword BCK animation, the 35-joint skeleton was preserved, cyan `0x9 handL` and red `0xA weaponL` followed the intended GameCube left sword side, and `al_swb.bmd` remained attached to `0xA weaponL` through the sword animation.
 - Bundle 2.1 first in-client run loaded `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.dmk` successfully and rendered TP Link through Matrix3. Runtime log reported `19821` vertices, `6607` triangles, `35` joints, `idleFrames=30`, `walkFrames=24`, named `idle`/`walk` animations, and `GZ2E01 Link -> Matrix Model ACTIVE`.
 - The supplied runtime screenshot visibly shows TP Link in the revision-830 world at the local-player presentation position. This verifies the local DMK parser, skinning/model-conversion path, scene hook, and basic world placement are operational.
 
@@ -106,10 +107,6 @@ The generated local presentation asset consumed by Bundle 2.1 is:
 - Runtime evidence at default scale `1.0` showed TP Link was dramatically undersized relative to normal revision-830 humanoids. The narrow corrective patch changes the default `matrix3.tp.modelScale` fallback to `5.0`; this calibration is verified-static until rerun.
 
 ## Evidence still pending
-
-### NEEDS VISUAL ACCEPTANCE
-
-- Bundle 1.2 corrected local proof: confirm the cyan `0x9 handL` marker, red `0xA weaponL` marker, and attached `al_swb.bmd` visibly follow the intended GameCube sword side through the authentic sword cut.
 
 ### NEEDS RUNTIME TEST
 
@@ -141,7 +138,7 @@ The generated local presentation asset consumed by Bundle 2.1 is:
 
 **Purpose:** establish a repeatable local `GZ2E01` donor build and prove one real TP Link model/animation/socket path before broad gameplay integration.
 
-**Status:** IN PROGRESS - Bundle 1.2 corrected visual acceptance remains carryover
+**Status:** DONE / VERIFIED
 
 #### Bundle 1.1 - One-click donor bootstrap
 
@@ -155,7 +152,7 @@ The generated local presentation asset consumed by Bundle 2.1 is:
 
 #### Bundle 1.2 - Link asset extraction + animation/socket proof
 
-**Status:** GENERATED / NEEDS VISUAL ACCEPTANCE
+**Status:** DONE / VERIFIED
 
 - [x] Deterministic local `Kmdl` / `AlAnm` extraction through decomp-toolkit VFS.
 - [x] Select `al.bmd`, head/hands/face attachments and authentic WAIT / WALK-DASH / CUT BCK clips.
@@ -163,7 +160,7 @@ The generated local presentation asset consumed by Bundle 2.1 is:
 - [x] Correct active GameCube sword proof to left `0x9 handL` / `0xA weaponL`.
 - [x] Attach authentic `al_swb.bmd` to `0xA weaponL` in the proof.
 - [x] Generate idle/walk/sword GIFs, manifest/summary, and local f32 `tp-link-proof.dmk`.
-- [ ] User visual acceptance of the corrected left-side sword/socket proof.
+- [x] User visually accepted the corrected left-side sword/socket proof.
 
 ### Phase 2 - Matrix3 TP Link presentation
 
@@ -215,7 +212,7 @@ The generated local presentation asset consumed by Bundle 2.1 is:
 - Active bundle: 2.1 - Local DMK -> Matrix player presentation
 - Bundle status: PARTIAL VERIFIED / SCALE CALIBRATION NEEDS TEST
 - Approval state: SAP AAA approved by user on 2026-10-05 for this coherent presentation bundle
-- Carryover: Bundle 1.2 corrected left-side local visual acceptance is still pending and must not be mislabeled VERIFIED
+- Bundle 1.2 status: corrected GZ2E01 left-side model/animation/socket proof is VERIFIED; there is no remaining visual-acceptance carryover gate
 - Runtime evidence: first in-client TP render succeeded at scale `1.0`; Link was visibly far too small
 - Current objective: rerun once at default scale `5.0`, then accept/reject scale, idle/locomotion, facing and replacement behavior in the same session
 
@@ -243,14 +240,14 @@ The authoritative steps are in `docs/tp-link/TESTLIST.md`.
 
 ### Carryover
 
-- Bundle 1.2 corrected left-side sword/socket visual proof still needs explicit user acceptance. This is separate from Bundle 2.1 Matrix rendering.
+- None from Bundle 1.2. The corrected left-side sword/socket visual proof is accepted and VERIFIED.
 
 ## Resume Here
 
 **Last completed:**
 
 - Bundle 1.1 donor bootstrap is runtime VERIFIED.
-- Bundle 1.2 extraction/tool execution and local artifact generation are runtime VERIFIED; corrected left `0x9/0xA` visual acceptance remains pending.
+- Bundle 1.2 extraction/tool execution, local artifact generation, authentic idle/walk/sword animation proof, and corrected left `0x9 handL` / `0xA weaponL` sword/socket proof are VERIFIED by explicit user visual acceptance.
 - Bundle 2.1 local DMK loading and actual TP Link rendering inside Matrix3 are runtime VERIFIED from the first in-client run.
 - First runtime log: `vertices=19821`, `triangles=6607`, `joints=35`, `idleFrames=30`, `walkFrames=24`, `scale=1.0`, `yawOffset=0.0`.
 - First screenshot showed the TP model was dramatically undersized; default presentation scale is now `5.0` for the next calibration run.
