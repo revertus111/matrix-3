@@ -84,12 +84,18 @@ Mario and Link do **not** have separate combat systems.
 
 - Both resolve NPCs through `AlternateCharacterCombatBridge`.
 - Both send the same manual-melee intent.
-- Both reach the same server validation and one-shot `PlayerCombatNew` path.
+- Both reach the same `AlternateCharacterCombatPacketBridge` server authority.
 - RuneScape equipment/stats remain authoritative for weapon type, speed/cooldown, accuracy, damage, XP, NPC HP/death and drops.
-- Native engines own only presentation/action state and may provide the moment an attack should be considered at contact.
-- Stock RuneScape repeating click-to-attack is not the imported-character action-combat owner.
+- Native engines own presentation/action state and provide the contact moment into the shared combat owner.
+- Stock RuneScape repeating click-to-attack is **not** the imported-character action-combat owner.
+- One physical F keypress may arm at most one native swing/contact attempt. Holding F must not repeat attacks.
+- One native contact may execute at most one server combat cycle. A second attack requires a second keypress and a second native contact.
+- Manual imported-character combat must never call `PlayerCombatNew.start()` because its stock `process()` path may follow, add walk steps or apply diagonal route correction.
+- The shared server bridge prevalidates range, then invokes only one `PlayerCombatNew.processWithDelay()` cycle without installing that object into `ActionManager`.
+- If the target is out of legal melee range at contact, the swing produces no hit and no movement toward the target.
+- Any existing repeating `PlayerCombatNew` action is stopped before a manual imported-character contact so stale RuneScape auto-combat cannot continue behind Mario/Link.
 
-Link currently supplies liboot action/animation/frame data to the shared native-contact gate. Mario's established native slash adapter emits a discrete attack edge into that same shared combat owner. Native contact timing can differ by adapter; targeting, combat intent and server authority do not.
+Link supplies liboot action/animation/frame data to the shared native-contact gate. Mario supplies libsm64 protocol-v3 slash state and its native normalized contact time to that same shared gate. Native timing differs by adapter; targeting, one-keypress lifecycle, zero-follow policy, combat intent and server authority do not.
 
 ## Movement contract
 
@@ -116,7 +122,7 @@ Do **not** add `SonicCombatController`, `BanjoCombatController`, another NPC tar
 ## Verification status - 2026-10-05
 
 - Shared input/camera/native encoding and single horizontal free/clipped owner: `verified-static`; focused production checks pass, rendered native gameplay acceptance pending.
-- Shared Mario/Link combat target + packet ownership refactor: `verified-static`; Eclipse/client/server runtime acceptance pending.
+- Shared Mario/Link combat target + packet ownership: `verified-static`; strict one-keypress/one-contact/zero-follow server path implemented, Eclipse/client/server runtime acceptance pending.
 - Link exact sword-contact frame: `HYPOTHESIS` until runtime accepted.
 - Mario native slash visual profile remains tracked in `docs/n64/CUSTOM_COMBAT.md` and does not own server combat.
 
