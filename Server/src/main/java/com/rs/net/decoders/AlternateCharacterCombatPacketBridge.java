@@ -4,11 +4,13 @@ import com.rs.game.World;
 import com.rs.game.item.Item;
 import com.rs.game.npc.NPC;
 import com.rs.game.npc.familiar.Familiar;
+import com.rs.game.npc.others.CombatDummy;
 import com.rs.game.npc.others.DoorSupport;
 import com.rs.game.player.Equipment;
 import com.rs.game.player.Player;
 import com.rs.game.player.actions.PlayerCombatNew;
 import com.rs.game.player.content.Combat;
+import com.rs.utils.Utils;
 
 /**
  * Single server authority for imported-character manual melee requests.
@@ -20,6 +22,9 @@ import com.rs.game.player.content.Combat;
  */
 public final class AlternateCharacterCombatPacketBridge {
 
+    private static final int DEV_SPAWN_DUMMY_INDEX = 65534;
+    private static final int DEV_CLEAR_DUMMIES_INDEX = 65535;
+
     private AlternateCharacterCombatPacketBridge() {
     }
 
@@ -30,13 +35,24 @@ public final class AlternateCharacterCombatPacketBridge {
             return;
         }
 
+        if (npcIndex == DEV_SPAWN_DUMMY_INDEX) {
+            CombatDummy.spawnNear(player);
+            return;
+        }
+        if (npcIndex == DEV_CLEAR_DUMMIES_INDEX) {
+            CombatDummy.removeAll(player);
+            return;
+        }
+
         NPC npc = World.getNPCs().get(npcIndex);
         if (npc == null || npc.isDead() || npc.hasFinished()
                 || !player.getMapRegionsIds().contains(npc.getRegionId())
                 || !npc.getDefinitions().hasAttackOption()) {
+            System.out.println("[Alt Character Combat] REJECT invalid target npc=" + npcIndex);
             return;
         }
         if (!player.getControlerManager().canAttack(npc)) {
+            System.out.println("[Alt Character Combat] REJECT controller npc=" + npcIndex);
             return;
         }
 
@@ -44,6 +60,7 @@ public final class AlternateCharacterCombatPacketBridge {
         if (mainHand != null
                 && player.getCombatDefinitions().getType(Equipment.SLOT_WEAPON)
                         != Combat.MELEE_TYPE) {
+            System.out.println("[Alt Character Combat] REJECT non-melee weapon npc=" + npcIndex);
             return;
         }
 
@@ -81,10 +98,13 @@ public final class AlternateCharacterCombatPacketBridge {
          * the swing simply produces no combat cycle.
          */
         if (!PlayerCombatNew.isWithinDistance(player, npc)) {
+            System.out.println("[Alt Character Combat] REJECT range npc=" + npcIndex);
             return;
         }
 
         PlayerCombatNew oneShot = new PlayerCombatNew(npc);
+        int mainDelayBefore = (int) (player.getCombatDefinitions().getMainHandDelay()
+                - Utils.currentWorldCycle());
 
         /*
          * Exactly one direct combat cycle for exactly one native contact event.
@@ -92,6 +112,14 @@ public final class AlternateCharacterCombatPacketBridge {
          * keepCombating check, accuracy, damage, XP, NPC death and drops, but the
          * action is never installed in ActionManager and therefore cannot repeat.
          */
-        oneShot.processWithDelay(player);
+        int result = oneShot.processWithDelay(player);
+        int mainDelayAfter = (int) (player.getCombatDefinitions().getMainHandDelay()
+                - Utils.currentWorldCycle());
+        String outcome = result > 0 ? "EXECUTED" : result == 0 ? "BLOCKED_OR_COOLDOWN" : "REJECTED";
+        System.out.println("[Alt Character Combat] " + outcome
+                + " npc=" + npcIndex
+                + " result=" + result
+                + " mainDelayBefore=" + mainDelayBefore
+                + " mainDelayAfter=" + mainDelayAfter);
     }
 }
