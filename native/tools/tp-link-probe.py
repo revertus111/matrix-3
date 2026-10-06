@@ -5,6 +5,12 @@ import struct
 from pathlib import Path
 
 
+LEFT_HAND_JOINT = 0x09
+LEFT_WEAPON_JOINT = 0x0A
+RIGHT_HAND_JOINT = 0x0E
+RIGHT_WEAPON_JOINT = 0x0F
+
+
 def be_u16(data, off):
     if off < 0 or off + 2 > len(data):
         raise ValueError(f"read u16 out of range at 0x{off:X}")
@@ -167,10 +173,23 @@ def copy_named(src, dest_dir, out_name=None):
 
 
 def assert_reaches_weapon(label, info):
-    if info["joint_count"] <= 0x0F:
+    if info["joint_count"] <= RIGHT_WEAPON_JOINT:
         raise RuntimeError(
-            f"{label} BCK has only {info['joint_count']} joints; it does not reach joint 0xF"
+            f"{label} BCK has only {info['joint_count']} joints; it does not reach joint 0x{RIGHT_WEAPON_JOINT:X}"
         )
+
+
+def require_joint(model, index, expected):
+    if model["joint_count"] <= index:
+        raise RuntimeError(
+            f"al.bmd has only {model['joint_count']} joints; expected joint 0x{index:X}"
+        )
+    name = model["joint_names"][index]
+    if expected not in normalize_name(name):
+        raise RuntimeError(
+            f"joint 0x{index:X} is {name!r}, expected a {expected!r} joint"
+        )
+    return name
 
 
 def main():
@@ -195,17 +214,10 @@ def main():
         copy_named(path, selected)
 
     model = model_info["al.bmd"]
-    if model["joint_count"] <= 0x0F:
-        raise RuntimeError(
-            f"al.bmd has only {model['joint_count']} joints; expected right weapon joint 0xF"
-        )
-
-    joint_0e = model["joint_names"][0x0E]
-    joint_0f = model["joint_names"][0x0F]
-    if "handr" not in normalize_name(joint_0e):
-        raise RuntimeError(f"joint 0xE is {joint_0e!r}, expected a right-hand joint")
-    if "weaponr" not in normalize_name(joint_0f):
-        raise RuntimeError(f"joint 0xF is {joint_0f!r}, expected a right-weapon/item joint")
+    left_hand = require_joint(model, LEFT_HAND_JOINT, "handl")
+    left_weapon = require_joint(model, LEFT_WEAPON_JOINT, "weaponl")
+    right_hand = require_joint(model, RIGHT_HAND_JOINT, "handr")
+    right_weapon = require_joint(model, RIGHT_WEAPON_JOINT, "weaponr")
 
     bcks = find_bck_candidates(alanm)
     if not bcks:
@@ -237,10 +249,15 @@ def main():
         "model": model,
         "model_parts": model_info,
         "socket_contract": {
-            "right_hand_index": 0x0E,
-            "right_hand_name": joint_0e,
-            "right_weapon_index": 0x0F,
-            "right_weapon_name": joint_0f,
+            "active_sword_side": "left",
+            "active_sword_hand_index": LEFT_HAND_JOINT,
+            "active_sword_hand_name": left_hand,
+            "active_sword_weapon_index": LEFT_WEAPON_JOINT,
+            "active_sword_weapon_name": left_weapon,
+            "right_hand_index": RIGHT_HAND_JOINT,
+            "right_hand_name": right_hand,
+            "right_weapon_index": RIGHT_WEAPON_JOINT,
+            "right_weapon_name": right_weapon,
         },
         "animations": {
             "idle": idle,
@@ -267,8 +284,10 @@ def main():
         "",
         f"Body model: {model_files['al.bmd']}",
         f"Joints: {model['joint_count']}",
-        f"Right hand 0xE: {joint_0e}",
-        f"Right weapon 0xF: {joint_0f}",
+        f"Left hand 0x{LEFT_HAND_JOINT:X}: {left_hand}",
+        f"Left weapon 0x{LEFT_WEAPON_JOINT:X}: {left_weapon} (active GZ2E01 sword socket)",
+        f"Right hand 0x{RIGHT_HAND_JOINT:X}: {right_hand}",
+        f"Right weapon 0x{RIGHT_WEAPON_JOINT:X}: {right_weapon}",
         f"Idle clip: {idle_path.name} ({idle['duration_frames']} frames, {idle['joint_count']} joints)",
         f"Walk/run clip: {walk_path.name} ({walk['duration_frames']} frames, {walk['joint_count']} joints)",
         f"Sword clip: {sword_path.name} ({sword['duration_frames']} frames, {sword['joint_count']} joints)",
@@ -277,7 +296,8 @@ def main():
         f"Selected proof files: {selected}",
         f"Manifest: {manifest_path}",
         "",
-        "This proves authentic TP Link model/skeleton + real idle/locomotion/sword BCK assets + weapon socket identity.",
+        "This proves authentic TP Link model/skeleton + real idle/locomotion/sword BCK assets + both item socket identities.",
+        "For GZ2E01 GameCube Link, the visible sword proof uses the left hand/item pair 0x9/0xA.",
         "The visual probe is the next gate; Matrix3 in-client rendering is still not proven.",
     ]
     (out / "summary.txt").write_text("\n".join(summary) + "\n", encoding="utf-8")
@@ -285,8 +305,10 @@ def main():
     print("TP LINK ASSET PROOF PASS")
     print(f"Body: {model_files['al.bmd']}")
     print(f"Joints: {model['joint_count']}")
-    print(f"Right hand 0xE: {joint_0e}")
-    print(f"Right weapon 0xF: {joint_0f}")
+    print(f"Left hand 0x{LEFT_HAND_JOINT:X}: {left_hand}")
+    print(f"Left weapon 0x{LEFT_WEAPON_JOINT:X}: {left_weapon} - active GC sword socket")
+    print(f"Right hand 0x{RIGHT_HAND_JOINT:X}: {right_hand}")
+    print(f"Right weapon 0x{RIGHT_WEAPON_JOINT:X}: {right_weapon}")
     print(f"Idle: {idle_path.name} - {idle['duration_frames']} frames")
     print(f"Walk/run: {walk_path.name} - {walk['duration_frames']} frames")
     print(f"Sword: {sword_path.name} - {sword['duration_frames']} frames")
