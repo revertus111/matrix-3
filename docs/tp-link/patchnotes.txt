@@ -124,3 +124,11 @@
 - Verified-static against the existing DMK writer: the local proof intentionally writes f32 `ANIM` chunks named `idle`, `walk`, and `sword`; Bundle 2.1 consumes only idle/walk and leaves combat/equipment out of scope.
 - Added one consolidated in-client acceptance test to `docs/tp-link/TESTLIST.md`.
 - Status: `IMPLEMENTED / NEEDS TEST`. Bundle 1.2 corrected left-side local visual acceptance remains a separate carryover gate.
+
+2026-10-06 - First TP Link Matrix runtime render + scale calibration
+- User runtime test successfully entered `TP_LINK`, loaded the local `tp-link-proof.dmk`, and rendered TP Link inside the live revision-830 world.
+- Runtime evidence: `19821` vertices, `6607` triangles, `35` joints, `idleFrames=30`, `walkFrames=24`, named `idle` / `walk` clips, `scale=1.0`, `yawOffset=0.0`.
+- This runtime-verifies the local DMK reader, Java skinning path, Matrix `Class159`/`Model` conversion, direct scene hook, and basic local-player world placement.
+- The screenshot showed a clear calibration failure rather than an architecture failure: TP Link was dramatically undersized/action-figure sized at scale `1.0`.
+- Narrow corrective patch changes the default `matrix3.tp.modelScale` fallback from `1.0` to `5.0`; the system-property override remains available for follow-up tuning.
+- Updated PROJECT/TESTLIST to classify Bundle 2.1 as `PARTIAL VERIFIED / SCALE CALIBRATION NEEDS TEST`. Idle/walk visual switching, yaw/facing, hotkey release-order, and normal-player restoration still require runtime acceptance.
