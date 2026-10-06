@@ -38,19 +38,7 @@ final class TpLinkVisualRenderer {
     private static final int MAX_FILE_BYTES = 64 * 1024 * 1024;
 
     private static final long FRESH_RENDER_NS = 500000000L;
-    private static final long MOVEMENT_HOLD_NS = 180000000L;
     private static final long LOAD_RETRY_NS = 2000000000L;
-    private static final float MOVEMENT_EPSILON_SQ = 0.0625F;
-
-    /*
-     * Runtime evidence from the first Matrix render showed the donor-space model
-     * at 1.0 was action-figure sized against normal revision-830 humanoids.
-     * 5.0 is the first evidence-based envelope calibration; the system property
-     * remains available for narrow follow-up tuning without changing ownership.
-     */
-    private static final float MODEL_SCALE = resolvePositiveFloat("matrix3.tp.modelScale", 5.0F);
-    private static final float YAW_OFFSET_DEGREES = resolveFiniteFloat(
-            "matrix3.tp.yawOffsetDegrees", 0.0F);
 
     private static final Class261 TRANSFORM = new Class261();
     private static final Class90 RENDER_BOUNDS = new Class90();
@@ -59,11 +47,13 @@ final class TpLinkVisualRenderer {
     private static Path assetPath;
     private static long lastAssetLoadAttemptNanos = Long.MIN_VALUE;
     private static String lastAssetFailure;
+    private static long seenReloadRevision = Long.MIN_VALUE;
 
     private static Class106 cachedRenderer;
     private static Animation cachedAnimation;
     private static int cachedFrame = -1;
     private static Model cachedModel;
+    private static long cachedConfigRevision = Long.MIN_VALUE;
 
     private static Animation activeAnimation;
     private static long activeAnimationStartNanos;
@@ -107,6 +97,7 @@ final class TpLinkVisualRenderer {
             return;
         }
 
+        applyReloadRequest();
         DmkAsset currentAsset = ensureAsset();
         if (currentAsset == null) {
             clearReplacementReadiness();
@@ -122,7 +113,7 @@ final class TpLinkVisualRenderer {
         Class240 position = playerTransform.aClass240_2647;
         long now = System.nanoTime();
         boolean moving = updateMovementState(position, now);
-        Animation wanted = moving ? currentAsset.walk : currentAsset.idle;
+        Animation wanted = selectAnimation(currentAsset, moving);
         if (wanted == null) {
             clearReplacementReadiness();
             return;
@@ -135,9 +126,11 @@ final class TpLinkVisualRenderer {
             cachedFrame = -1;
         }
         int frame = animationFrame(wanted, now - activeAnimationStartNanos);
+        long configRevision = TpLinkWorkbench.getConfigRevision();
 
         if (cachedRenderer != renderer || cachedAnimation != wanted
-                || cachedFrame != frame || cachedModel == null) {
+                || cachedFrame != frame || cachedModel == null
+                || cachedConfigRevision != configRevision) {
             Model rebuilt = buildModel(renderer, currentAsset, wanted, frame);
             if (rebuilt == null) {
                 clearReplacementReadiness();
@@ -147,25 +140,31 @@ final class TpLinkVisualRenderer {
             cachedAnimation = wanted;
             cachedFrame = frame;
             cachedModel = rebuilt;
+            cachedConfigRevision = configRevision;
         }
 
-        float[] rotation = playerRotation(playerTransform.aClass230_2648, YAW_OFFSET_DEGREES);
+        float yawOffset = TpLinkWorkbench.getYawOffsetDegrees();
+        float[] rotation = playerRotation(playerTransform.aClass230_2648, yawOffset);
         if (rotation == null) {
             clearReplacementReadiness();
             return;
         }
 
+        float worldScale = TpLinkWorkbench.getWorldScale();
         TRANSFORM.method3572(
                 rotation[0], rotation[1], rotation[2],
                 rotation[3], rotation[4], rotation[5],
                 rotation[6], rotation[7], rotation[8]);
-        TRANSFORM.method3578(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
+        // Keep world scaling uniform. Width/height/depth are already applied in
+        // TP model space inside buildModel so proportions do not change with yaw.
+        TRANSFORM.method3578(worldScale, worldScale, worldScale);
         TRANSFORM.method3580(position.aFloat2653, position.aFloat2656, position.aFloat2657);
 
         try {
             cachedModel.method1375(TRANSFORM, RENDER_BOUNDS, 0);
             replacementReady = true;
             lastFreshRenderSuccessNanos = now;
+            TpLinkWorkbench.reportFrame(wanted.name, frame, moving, true);
             if (!activeLogged) {
                 activeLogged = true;
                 System.out.println("[TP Visual] GZ2E01 Link -> Matrix Model ACTIVE"
@@ -174,8 +173,12 @@ final class TpLinkVisualRenderer {
                         + " joints=" + currentAsset.jointCount
                         + " idle=" + currentAsset.idle.name
                         + " walk=" + currentAsset.walk.name
-                        + " scale=" + MODEL_SCALE
-                        + " yawOffset=" + YAW_OFFSET_DEGREES
+                        + " sword=" + (currentAsset.sword == null ? "missing" : currentAsset.sword.name)
+                        + " scale=" + worldScale
+                        + " bodyScale=" + TpLinkWorkbench.getModelWidth()
+                        + "/" + TpLinkWorkbench.getModelHeight()
+                        + "/" + TpLinkWorkbench.getModelDepth()
+                        + " yawOffset=" + yawOffset
                         + " source=" + currentAsset.source);
             }
         } catch (RuntimeException ex) {
@@ -196,6 +199,33 @@ final class TpLinkVisualRenderer {
         }
         long age = System.nanoTime() - last;
         return age >= 0L && age <= FRESH_RENDER_NS;
+    }
+
+    private static void applyReloadRequest() {
+        long revision = TpLinkWorkbench.getReloadRevision();
+        if (seenReloadRevision == Long.MIN_VALUE) {
+            seenReloadRevision = revision;
+            return;
+        }
+        if (revision == seenReloadRevision) {
+            return;
+        }
+        seenReloadRevision = revision;
+        asset = null;
+        assetPath = null;
+        lastAssetLoadAttemptNanos = Long.MIN_VALUE;
+        lastAssetFailure = null;
+        cachedRenderer = null;
+        cachedAnimation = null;
+        cachedFrame = -1;
+        cachedModel = null;
+        cachedConfigRevision = Long.MIN_VALUE;
+        activeAnimation = null;
+        activeAnimationStartNanos = 0L;
+        activeLogged = false;
+        TpLinkWorkbench.reportAssetUnloaded();
+        clearReplacementReadiness();
+        System.out.println("[TP Visual] Reloading local TP Link DMK by workbench request");
     }
 
     private static DmkAsset ensureAsset() {
@@ -223,11 +253,21 @@ final class TpLinkVisualRenderer {
             }
             asset = DmkAsset.read(path);
             lastAssetFailure = null;
+            TpLinkWorkbench.reportAsset(
+                    path.toString(),
+                    asset.vertexCount,
+                    asset.vertexCount / 3,
+                    asset.jointCount,
+                    asset.idle.frameCount,
+                    asset.walk.frameCount,
+                    asset.sword == null ? 0 : asset.sword.frameCount,
+                    asset.texture != null);
             System.out.println("[TP Visual] Loaded local TP Link DMK: " + path
                     + " vertices=" + asset.vertexCount
                     + " joints=" + asset.jointCount
                     + " idleFrames=" + asset.idle.frameCount
-                    + " walkFrames=" + asset.walk.frameCount);
+                    + " walkFrames=" + asset.walk.frameCount
+                    + " swordFrames=" + (asset.sword == null ? 0 : asset.sword.frameCount));
             return asset;
         } catch (IOException | RuntimeException ex) {
             logAssetFailure(ex.getClass().getSimpleName() + ": " + ex.getMessage());
@@ -255,8 +295,9 @@ final class TpLinkVisualRenderer {
         if (haveLastPosition) {
             float dx = x - lastPlayerX;
             float dz = z - lastPlayerZ;
-            if (dx * dx + dz * dz > MOVEMENT_EPSILON_SQ) {
-                movingUntilNanos = now + MOVEMENT_HOLD_NS;
+            float threshold = TpLinkWorkbench.getMovementThreshold();
+            if (dx * dx + dz * dz > threshold * threshold) {
+                movingUntilNanos = now + TpLinkWorkbench.getMovementHoldMillis() * 1000000L;
             }
         }
         lastPlayerX = x;
@@ -265,12 +306,27 @@ final class TpLinkVisualRenderer {
         return movingUntilNanos != Long.MIN_VALUE && now <= movingUntilNanos;
     }
 
+    private static Animation selectAnimation(DmkAsset data, boolean moving) {
+        TpLinkWorkbench.PreviewAnimation preview = TpLinkWorkbench.getPreviewAnimation();
+        if (preview == TpLinkWorkbench.PreviewAnimation.IDLE) {
+            return data.idle;
+        }
+        if (preview == TpLinkWorkbench.PreviewAnimation.WALK) {
+            return data.walk;
+        }
+        if (preview == TpLinkWorkbench.PreviewAnimation.SWORD) {
+            return data.sword != null ? data.sword : data.idle;
+        }
+        return moving ? data.walk : data.idle;
+    }
+
     private static int animationFrame(Animation animation, long elapsedNanos) {
         if (animation.frameCount <= 1 || animation.fps <= 0.0F) {
             return 0;
         }
         double seconds = Math.max(0L, elapsedNanos) / 1000000000.0;
-        long frame = (long) Math.floor(seconds * animation.fps);
+        double fps = animation.fps * TpLinkWorkbench.getAnimationSpeed();
+        long frame = (long) Math.floor(seconds * fps);
         return (int) (frame % animation.frameCount);
     }
 
@@ -285,6 +341,13 @@ final class TpLinkVisualRenderer {
         if (skinMatrices == null) {
             return null;
         }
+
+        final float widthScale = TpLinkWorkbench.getModelWidth();
+        final float heightScale = TpLinkWorkbench.getModelHeight();
+        final float depthScale = TpLinkWorkbench.getModelDepth();
+        final float localOffsetX = TpLinkWorkbench.getOffsetX();
+        final float localOffsetY = TpLinkWorkbench.getOffsetY();
+        final float localOffsetZ = TpLinkWorkbench.getOffsetZ();
 
         int vertices = data.vertexCount;
         int triangles = vertices / 3;
@@ -349,10 +412,17 @@ final class TpLinkVisualRenderer {
                 skinnedZ = (z0 * weight0 + z1 * weight1) * inv;
             }
 
-            raw.anIntArray1782[vertex] = Math.round(skinnedX);
+            // Non-uniform body fitting belongs here in donor/model space. Applying
+            // it to Class261 after player yaw would make width/depth world-axis
+            // dependent and Link would change apparent thickness while turning.
+            float fittedX = skinnedX * widthScale + localOffsetX;
+            float fittedY = skinnedY * heightScale + localOffsetY;
+            float fittedZ = skinnedZ * depthScale + localOffsetZ;
+
+            raw.anIntArray1782[vertex] = Math.round(fittedX);
             // TP/J3D is +Y up; Matrix model-space altitude is -Y.
-            raw.anIntArray1777[vertex] = Math.round(-skinnedY);
-            raw.anIntArray1797[vertex] = Math.round(skinnedZ);
+            raw.anIntArray1777[vertex] = Math.round(-fittedY);
+            raw.anIntArray1797[vertex] = Math.round(fittedZ);
             vertexRgb[vertex] = sampleVertexColor(data, vertex);
         }
 
@@ -416,7 +486,7 @@ final class TpLinkVisualRenderer {
         int baseR = data.rgba[c] & 0xff;
         int baseG = data.rgba[c + 1] & 0xff;
         int baseB = data.rgba[c + 2] & 0xff;
-        if (data.texture == null) {
+        if (!TpLinkWorkbench.isTextureColorSamplingEnabled() || data.texture == null) {
             return clamp(baseR * 2, 0, 255) << 16
                     | clamp(baseG * 2, 0, 255) << 8
                     | clamp(baseB * 2, 0, 255);
@@ -504,6 +574,7 @@ final class TpLinkVisualRenderer {
         cachedAnimation = null;
         cachedFrame = -1;
         cachedModel = null;
+        cachedConfigRevision = Long.MIN_VALUE;
         activeAnimation = null;
         activeAnimationStartNanos = 0L;
         lastRenderedCycle = Integer.MIN_VALUE;
@@ -511,6 +582,7 @@ final class TpLinkVisualRenderer {
         haveLastPosition = false;
         movingUntilNanos = Long.MIN_VALUE;
         clearReplacementReadiness();
+        TpLinkWorkbench.reportInactive();
     }
 
     private static void clearReplacementReadiness() {
@@ -519,6 +591,7 @@ final class TpLinkVisualRenderer {
     }
 
     private static void logAssetFailure(String message) {
+        TpLinkWorkbench.reportFailure(message);
         if (!message.equals(lastAssetFailure)) {
             lastAssetFailure = message;
             System.err.println("[TP Visual] " + message
@@ -527,33 +600,8 @@ final class TpLinkVisualRenderer {
     }
 
     private static void logFailure(String message) {
+        TpLinkWorkbench.reportFailure(message);
         System.err.println("[TP Visual] " + message);
-    }
-
-    private static float resolvePositiveFloat(String key, float fallback) {
-        float value = resolveFiniteFloat(key, fallback);
-        if (value > 0.0F) {
-            return value;
-        }
-        System.out.println("[TP Visual] Invalid " + key + "=" + value + "; using " + fallback);
-        return fallback;
-    }
-
-    private static float resolveFiniteFloat(String key, float fallback) {
-        String configured = System.getProperty(key);
-        if (configured == null || configured.trim().isEmpty()) {
-            return fallback;
-        }
-        try {
-            float value = Float.parseFloat(configured.trim());
-            if (!Float.isNaN(value) && !Float.isInfinite(value)) {
-                return value;
-            }
-        } catch (NumberFormatException ignored) {
-        }
-        System.out.println("[TP Visual] Invalid " + key + "='" + configured
-                + "'; using " + fallback);
-        return fallback;
     }
 
     private static short rgbToRsHsl(int r, int g, int b) {
@@ -610,6 +658,7 @@ final class TpLinkVisualRenderer {
         byte[] influences;
         Animation idle;
         Animation walk;
+        Animation sword;
 
         DmkAsset(Path source) {
             this.source = source;
@@ -795,6 +844,8 @@ final class TpLinkVisualRenderer {
                 idle = animation;
             } else if ("walk".equalsIgnoreCase(name)) {
                 walk = animation;
+            } else if ("sword".equalsIgnoreCase(name)) {
+                sword = animation;
             }
         }
 
@@ -811,7 +862,8 @@ final class TpLinkVisualRenderer {
             if (idle == null || walk == null) {
                 throw new IllegalArgumentException("DMK must contain named idle and walk ANIM chunks");
             }
-            if (idle.jointCount != jointCount || walk.jointCount != jointCount) {
+            if (idle.jointCount != jointCount || walk.jointCount != jointCount
+                    || (sword != null && sword.jointCount != jointCount)) {
                 throw new IllegalArgumentException("DMK animation/skeleton joint counts do not match");
             }
         }
