@@ -5,8 +5,10 @@ import tempfile
 from pathlib import Path
 
 
-HAND_JOINT = 0x0E
-WEAPON_JOINT = 0x0F
+ACTIVE_HAND_JOINT = 0x09
+ACTIVE_WEAPON_JOINT = 0x0A
+RIGHT_HAND_JOINT = 0x0E
+RIGHT_WEAPON_JOINT = 0x0F
 HEAD_JOINT = 0x04
 CENTER_JOINT = 0x00
 
@@ -139,18 +141,18 @@ def annotate_frame(
     from PIL import ImageDraw
 
     draw = ImageDraw.Draw(image)
-    draw.rectangle((10, 10, 365, 58), fill=(0, 0, 0))
+    draw.rectangle((10, 10, 390, 58), fill=(0, 0, 0))
     draw.text((18, 16), f"TP Link - {clip_name}", fill=(255, 255, 255))
     draw.text(
         (18, 36),
-        "REAL BCK / body + head + hands + face + al_swb",
+        "GZ2E01 LEFT sword socket / body + parts + al_swb",
         fill=(210, 210, 210),
     )
 
     draw_marker(
         draw,
         hand_xy,
-        f"0xE {hand_name}",
+        f"0x9 {hand_name}",
         (64, 208, 255),
         radius=7,
         cross=False,
@@ -158,7 +160,7 @@ def annotate_frame(
     draw_marker(
         draw,
         weapon_xy,
-        f"0xF {weapon_name}",
+        f"0xA {weapon_name}",
         (255, 64, 64),
         radius=9,
         cross=True,
@@ -215,14 +217,14 @@ def render_clip(
                 image = Image.open(frame_path).convert("RGB")
 
                 pose = preview.sample_pose(anim, t)
-                if WEAPON_JOINT >= len(pose):
+                if ACTIVE_WEAPON_JOINT >= len(pose):
                     raise RuntimeError(
                         f"animation {anim['name']!r} only has {len(pose)} joints; "
-                        "weapon joint 0xF is missing"
+                        f"active sword joint 0x{ACTIVE_WEAPON_JOINT:X} is missing"
                     )
 
-                hand_world = pose[HAND_JOINT].reshape(3, 4)[:, 3]
-                weapon_world = pose[WEAPON_JOINT].reshape(3, 4)[:, 3]
+                hand_world = pose[ACTIVE_HAND_JOINT].reshape(3, 4)[:, 3]
+                weapon_world = pose[ACTIVE_WEAPON_JOINT].reshape(3, 4)[:, 3]
                 positions = preview.skinned_positions(data, t)
                 hand_xy = project_point(
                     preview,
@@ -318,8 +320,10 @@ def main():
     face_model = bmd.BmdModel(face_path.read_bytes())
     sword_model = bmd.BmdModel(sword_model_path.read_bytes())
 
-    right_hand_name = choose_body_joint(body_model, HAND_JOINT, "handr")
-    right_weapon_name = choose_body_joint(body_model, WEAPON_JOINT, "weaponr")
+    active_hand_name = choose_body_joint(body_model, ACTIVE_HAND_JOINT, "handl")
+    active_weapon_name = choose_body_joint(body_model, ACTIVE_WEAPON_JOINT, "weaponl")
+    right_hand_name = choose_body_joint(body_model, RIGHT_HAND_JOINT, "handr")
+    right_weapon_name = choose_body_joint(body_model, RIGHT_WEAPON_JOINT, "weaponr")
     head_joint_name = choose_body_joint(body_model, HEAD_JOINT, "head")
     center_joint_name = body_model.joints[CENTER_JOINT]["name"]
 
@@ -339,7 +343,7 @@ def main():
         (head_path.read_bytes(), head_joint_name),
         (hands_path.read_bytes(), center_joint_name),
         (face_path.read_bytes(), head_joint_name),
-        (sword_model_path.read_bytes(), right_weapon_name),
+        (sword_model_path.read_bytes(), active_weapon_name),
     ]
 
     mesh_data = bmd.build_mesh(
@@ -365,10 +369,10 @@ def main():
     for role, path in clip_paths:
         clip = bck.parse(path.read_bytes())
         anim = bck.to_anim(clip, model, role)
-        if anim["frames"].shape[1] <= WEAPON_JOINT:
+        if anim["frames"].shape[1] <= ACTIVE_WEAPON_JOINT:
             raise RuntimeError(
                 f"{role} animation has {anim['frames'].shape[1]} joints; "
-                "weapon joint 0xF is missing"
+                f"active sword joint 0x{ACTIVE_WEAPON_JOINT:X} is missing"
             )
         anims.append(anim)
 
@@ -388,8 +392,8 @@ def main():
     data = dmk.read(dmk_path)
     if data.get("skeleton") is None or data.get("skin") is None:
         raise RuntimeError("visual conversion produced no skeleton/skin")
-    if len(data["skeleton"]["parents"]) <= WEAPON_JOINT:
-        raise RuntimeError("visual conversion dropped weapon joint 0xF")
+    if len(data["skeleton"]["parents"]) <= RIGHT_WEAPON_JOINT:
+        raise RuntimeError("visual conversion dropped expected human Link item joints")
     if len(data["anims"]) != 3:
         raise RuntimeError(
             f"visual conversion wrote {len(data['anims'])} animations; expected 3"
@@ -404,8 +408,8 @@ def main():
             anim,
             preview,
             gif_path,
-            right_hand_name,
-            right_weapon_name,
+            active_hand_name,
+            active_weapon_name,
         )
         clip_results[role] = result
         combined_frames.extend(rendered)
@@ -443,16 +447,24 @@ def main():
             "triangles": int(data["mesh"]["vertex_count"] // 3),
             "joints": int(len(data["skeleton"]["parents"])),
         },
-        "right_hand": {
-            "index": HAND_JOINT,
-            "name": right_hand_name,
-            "marker": "cyan circle rendered from each sampled BCK world-space hand pose",
+        "active_sword_hand": {
+            "side": "left",
+            "index": ACTIVE_HAND_JOINT,
+            "name": active_hand_name,
+            "marker": "cyan circle rendered from each sampled BCK world-space left-hand pose",
         },
         "weapon_socket": {
-            "index": WEAPON_JOINT,
-            "name": right_weapon_name,
-            "marker": "red cross/circle rendered from each sampled BCK world-space item pose",
+            "side": "left",
+            "index": ACTIVE_WEAPON_JOINT,
+            "name": active_weapon_name,
+            "marker": "red cross/circle rendered from each sampled BCK world-space left-item pose",
             "proof_attachment": str(sword_model_path),
+        },
+        "alternate_right_item_socket": {
+            "hand_index": RIGHT_HAND_JOINT,
+            "hand_name": right_hand_name,
+            "weapon_index": RIGHT_WEAPON_JOINT,
+            "weapon_name": right_weapon_name,
         },
         "animations": clip_results,
         "outputs": {
@@ -475,8 +487,9 @@ def main():
         f"Mesh: {visual_manifest['mesh']['triangles']} triangles / "
         f"{visual_manifest['mesh']['vertices']} vertices",
         f"Skeleton: {visual_manifest['mesh']['joints']} joints",
-        f"Right hand: 0x{HAND_JOINT:X} {right_hand_name}",
-        f"Weapon socket: 0x{WEAPON_JOINT:X} {right_weapon_name}",
+        f"Active GC sword hand: 0x{ACTIVE_HAND_JOINT:X} {active_hand_name}",
+        f"Active GC sword socket: 0x{ACTIVE_WEAPON_JOINT:X} {active_weapon_name}",
+        f"Alternate right item pair: 0x{RIGHT_HAND_JOINT:X} {right_hand_name} / 0x{RIGHT_WEAPON_JOINT:X} {right_weapon_name}",
         "Animations:",
     ]
     for role in ("idle", "walk", "sword"):
@@ -490,9 +503,11 @@ def main():
         f"Combined proof: {combined_path}",
         f"Visual manifest: {visual_manifest_path}",
         "",
-        "Cyan circle = animated body right-hand joint 0xE.",
-        "Red cross/circle = animated body right-item/weapon joint 0xF.",
-        "al_swb.bmd is rigidly attached to body joint 0xF for this diagnostic proof.",
+        "GZ2E01 is the GameCube Link model; the active sword proof uses the left hand/item pair.",
+        "Cyan circle = animated body left-hand joint 0x9.",
+        "Red cross/circle = animated body left-item/weapon joint 0xA.",
+        "al_swb.bmd is rigidly attached to body joint 0xA for this diagnostic proof.",
+        "The right-side 0xE/0xF pair remains valid as the alternate right-hand/item socket.",
         "A successful renderer exit only means the artifacts were generated; visual PASS still requires user acceptance.",
         "It does not yet prove TP Link rendering inside the Matrix3 client.",
     ]
@@ -500,8 +515,8 @@ def main():
 
     print("TP LINK VISUAL PROOF GENERATED")
     print(f"Combined GIF: {combined_path}")
-    print(f"Right hand: 0x{HAND_JOINT:X} {right_hand_name}")
-    print(f"Weapon joint: 0x{WEAPON_JOINT:X} {right_weapon_name}")
+    print(f"Active GC sword hand: 0x{ACTIVE_HAND_JOINT:X} {active_hand_name}")
+    print(f"Active GC sword joint: 0x{ACTIVE_WEAPON_JOINT:X} {active_weapon_name}")
     print(f"Attached proof sword: {sword_model_path.name}")
     print("Visual acceptance: REQUIRED")
     print(f"Summary: {summary_path}")
