@@ -3,9 +3,8 @@ package game;
 /**
  * Matrix3-native activation boundary for alternate local-player controllers.
  *
- * Normal RuneScape control remains the default. Mario and OoT Link are opt-in
- * imported controllers; TP Link currently has a presentation-only mode so normal
- * RuneScape input/world authority stays untouched while its local DMK is rendered.
+ * Normal RuneScape control remains the default. Mario, OoT Link and TP Link are
+ * opt-in imported-character modes while Matrix3 retains world/gameplay authority.
  */
 public final class PlayerControllerMode {
 
@@ -35,8 +34,8 @@ public final class PlayerControllerMode {
      * detection keeps held chords from oscillating between modes.
      *
      * Ctrl+L keeps the established OoT Link controller. Ctrl+Shift+L activates
-     * TP Link presentation only. The base Ctrl+L chord is latched until released,
-     * so releasing Shift first cannot accidentally retrigger OoT Link.
+     * TP Link. The base Ctrl+L chord is latched until release, so releasing Shift
+     * first cannot accidentally retrigger OoT Link.
      */
     public static void tick() {
         if (lastTickCycle == client.cycles) {
