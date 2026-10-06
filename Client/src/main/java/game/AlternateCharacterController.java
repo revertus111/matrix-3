@@ -1,12 +1,11 @@
 package game;
 
 /**
- * One client-side horizontal movement controller for native character drivers.
+ * One client-side horizontal movement controller for imported character drivers.
  *
  * Matrix remains the host camera/input/world architecture. Character-specific
- * This owner samples one control frame, resolves world/native input and applies
- * one free/clipped horizontal movement state. Drivers exchange native state and
- * retain their action, animation, vertical physics and combat integration only.
+ * drivers exchange state through this owner and retain only their own action,
+ * animation, vertical-physics and combat presentation behavior.
  */
 public final class AlternateCharacterController {
 
@@ -20,7 +19,6 @@ public final class AlternateCharacterController {
     private static ControlState sampledControls;
 
     // UI requests only; the shared movement state applies transitions on the client thread.
-    // Free movement is the default for this local development controller.
     private static volatile boolean runeScapeClippingEnabled;
 
     public static boolean isRuneScapeClippingEnabled() {
@@ -33,7 +31,8 @@ public final class AlternateCharacterController {
 
     public enum CharacterId {
         MARIO,
-        LINK
+        LINK,
+        TP_LINK
     }
 
     public enum CombatStyle {
@@ -58,10 +57,7 @@ public final class AlternateCharacterController {
         }
     }
 
-    /**
-     * One generic control vocabulary shared by all alternate-character drivers.
-     * A driver decides what Jump/Primary/Modifier mean for that character.
-     */
+    /** Generic control vocabulary shared by all alternate-character drivers. */
     static final class ControlState {
         final float moveX;
         final float moveY;
@@ -81,8 +77,6 @@ public final class AlternateCharacterController {
             this.primaryAction = primaryAction;
             this.modifierAction = modifierAction;
             this.cameraForward = cameraForward;
-            // Single screen-to-world owner for every imported character.
-            // W is forward/up-screen; D is right, independent of actor facing.
             this.worldMoveX = moveX * cameraForward.z + moveY * cameraForward.x;
             this.worldMoveZ = -moveX * cameraForward.x + moveY * cameraForward.z;
         }
@@ -93,7 +87,7 @@ public final class AlternateCharacterController {
         }
     }
 
-    /** One world intent plus its native transport encoding; no actor-facing input. */
+    /** One world intent plus its native/adapter transport encoding. */
     static final class MovementInput {
         final float worldMoveX, worldMoveZ;
         final float cameraX, cameraZ, stickX, stickY;
@@ -116,19 +110,18 @@ public final class AlternateCharacterController {
             PlanarDirection movementForward) {
         ControlState resolved = controls.withMovementForward(movementForward);
         /* verified-static at libsm64 fd118132, liboot 25208734 / OoT 269d0301.
-         * The controller alone owns native axis conversion. Both profiles decode
-         * to resolved.worldMoveX/Z; an explicit Z-target basis uses the SAME
-         * world intent for native input and optional Matrix clipping. */
+         * Matrix world intent is resolved once here. TP Link uses the same world
+         * intent but has no native transport in the current Java controller. */
         if (character == CharacterId.MARIO) {
             return new MovementInput(resolved.worldMoveX, resolved.worldMoveZ,
                     0.0F, 1.0F, -resolved.worldMoveX, -resolved.worldMoveZ);
         }
-        if (character == CharacterId.LINK) {
+        if (character == CharacterId.LINK || character == CharacterId.TP_LINK) {
             return new MovementInput(resolved.worldMoveX, resolved.worldMoveZ,
                     resolved.cameraForward.x, resolved.cameraForward.z,
                     -resolved.moveX, resolved.moveY);
         }
-        throw new IllegalArgumentException("Missing native movement profile: " + character);
+        throw new IllegalArgumentException("Missing movement profile: " + character);
     }
 
     static void beginHorizontalMovement(CharacterId character, Player player) {
@@ -206,13 +199,27 @@ public final class AlternateCharacterController {
         }
     };
 
+    private static final CharacterDriver TP_LINK_DRIVER = new CharacterDriver() {
+        @Override
+        public CharacterId getId() {
+            return CharacterId.TP_LINK;
+        }
+
+        @Override
+        public void tick() {
+            TpLinkController.tickTpLinkDriver();
+        }
+
+        @Override
+        public boolean supportsCombatStyle(CombatStyle style) {
+            return style == CombatStyle.MELEE;
+        }
+    };
+
     private AlternateCharacterController() {
     }
 
-    /**
-     * Compatibility entry used by the established viewport hook. Imported
-     * characters dispatch here instead of adding per-game viewport ticks.
-     */
+    /** Compatibility entry used by the established viewport hook. */
     public static void tick() {
         if (lastTickCycle == client.cycles) {
             return;
@@ -220,6 +227,7 @@ public final class AlternateCharacterController {
         lastTickCycle = client.cycles;
         MARIO_DRIVER.tick();
         LINK_DRIVER.tick();
+        TP_LINK_DRIVER.tick();
     }
 
     static CharacterId getActiveCharacter() {
@@ -228,6 +236,9 @@ public final class AlternateCharacterController {
         }
         if (PlayerControllerMode.isLinkMode()) {
             return CharacterId.LINK;
+        }
+        if (PlayerControllerMode.isTpLinkMode()) {
+            return CharacterId.TP_LINK;
         }
         return null;
     }
@@ -239,6 +250,9 @@ public final class AlternateCharacterController {
         }
         if (active == CharacterId.LINK) {
             return LINK_DRIVER.supportsCombatStyle(style);
+        }
+        if (active == CharacterId.TP_LINK) {
+            return TP_LINK_DRIVER.supportsCombatStyle(style);
         }
         return false;
     }
@@ -296,18 +310,8 @@ public final class AlternateCharacterController {
         return AlternateCharacterInputKeyboard.rawKeyDown(internalKey);
     }
 
-    /**
-     * Resolve the ground-plane basis from the camera that owns the view.
-     * Prefer the live Class411 position/look transform for normal and detached views;
-     * Construction's helper and vanilla camera geometry remain fallbacks.
-     */
+    /** Resolve the ground-plane basis from the camera that owns the view. */
     static PlanarDirection getCameraForward() {
-        /*
-         * The active Class411 transform is the rendered camera. Read it first
-         * every tick so mouse/Q/E orbit changes reach WASD immediately. The
-         * Construction helper remains a fallback for frames where the camera
-         * owner is being created or torn down.
-         */
         Class411_Sub1 detached = null;
         try {
             if (ConstructionBuildCamera.isRequested()
@@ -383,10 +387,6 @@ public final class AlternateCharacterController {
         Class240 position = null;
         Class240 forwardPoint = null;
         try {
-            /* verified-static: Class411's getters dispatch to the active position
-             * and look owners. Normal views may use Class423_Sub3 / Class658_Sub5;
-             * casting these to RTS Sub2 types silently falls back to stale
-             * client.aFloat8678 even while the rendered camera rotates. */
             position = camera.method4968(-452703663);
             forwardPoint = camera.method4997(185996933);
             if (position == null || forwardPoint == null) {
@@ -398,7 +398,6 @@ public final class AlternateCharacterController {
         } catch (RuntimeException ex) {
             return null;
         } finally {
-            // These getters return temporary vectors, as in Class411.method5000.
             if (position != null) {
                 position.method3261();
             }
