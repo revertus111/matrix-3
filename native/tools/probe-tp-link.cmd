@@ -57,8 +57,9 @@ echo ================================================
 echo TP LINK VISUAL PROOF GENERATED
 echo ================================================
 echo The combined idle / walk / sword GIF should open automatically.
-echo Cyan 0xE marks Link's right hand. Red 0xF marks the right item/weapon joint.
-echo The TP al_swb sword model is attached to 0xF for the socket diagnostic.
+echo Cyan 0x9 marks GameCube Link's left hand. Red 0xA marks the active left item/weapon joint.
+echo The TP al_swb wooden sword model is attached to 0xA for the sword-socket diagnostic.
+echo The right-side 0xE/0xF pair remains the alternate right hand/item socket.
 echo This is NOT a visual PASS until the generated GIF is inspected and accepted.
 echo Matrix3 in-client rendering remains the next bundle only after that acceptance.
 echo.
