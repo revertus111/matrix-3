@@ -112,3 +112,15 @@
 - Visual proof now attaches `al_swb.bmd` to `0xA weaponL`, marks `0x9 handL` in cyan and `0xA weaponL` in red, and retains `0xE/0xF` only as the alternate right-hand/item socket in diagnostics.
 - No donor extraction, MSYS2 dependency, or pinned converter path changed.
 - Status: previous right-side visual is classified as a failed sword-side diagnostic, not a donor/toolchain failure. Corrected left-side visual acceptance remains NEEDS TEST.
+
+2026-10-05 - Bundle 2.1 Matrix3 TP Link presentation
+- Added `TpLinkVisualRenderer`, a presentation-only Java 8 client path that loads `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.dmk` generated from the user's local GZ2E01 donor. No Nintendo assets or third-party source are committed.
+- The renderer parses the proven f32 DMK `MESH` / `TEXT` / `SKEL` / `SKIN` / `ANIM` representation, evaluates `world_pose * inverse_bind` skin matrices, builds a normal Matrix `Model`, and renders it at the local RuneScape player's transform through the established direct scene seam.
+- Authentic named `idle` and `walk` animation chunks are selected automatically from the DMK; locomotion is presentation-driven from actual local-player X/Z movement while Matrix3 remains input/world authority.
+- Added presentation-only `TP_LINK` mode on `Ctrl+Shift+L`; existing `Ctrl+L` OoT Link behavior is preserved and TP mode is intentionally excluded from the imported movement/controller owner.
+- Added TP rendering to `Class578.method6834(...)` beside the established Mario/OoT presentation calls.
+- Reused the existing shared `Player.method10696(...)` suppression seam through `MarioVisualRenderer.shouldSuppressLocalPlayer(...)`. TP suppression is fail-open and activates only after a fresh successful TP Matrix render.
+- Static verification found and fixed a hotkey release-order bug: the whole `Ctrl+L` chord is now latched until release, so releasing Shift first after `Ctrl+Shift+L` cannot accidentally switch TP mode into OoT Link.
+- Verified-static against the existing DMK writer: the local proof intentionally writes f32 `ANIM` chunks named `idle`, `walk`, and `sword`; Bundle 2.1 consumes only idle/walk and leaves combat/equipment out of scope.
+- Added one consolidated in-client acceptance test to `docs/tp-link/TESTLIST.md`.
+- Status: `IMPLEMENTED / NEEDS TEST`. Bundle 1.2 corrected left-side local visual acceptance remains a separate carryover gate.
