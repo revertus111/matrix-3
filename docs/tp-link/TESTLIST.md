@@ -115,38 +115,51 @@ PASS means Bundle 1.2 can be promoted to `VERIFIED`. FAIL should be classified b
 
 ## Bundle 2.1 - Matrix3 TP Link presentation
 
-Status: `IMPLEMENTED / NEEDS TEST`
+Status: `PARTIAL VERIFIED / SCALE CALIBRATION NEEDS TEST`
 
 This is presentation only. It does **not** add TP movement, TP combat, RuneScape weapon replacement, or a native TP sidecar.
 
-### Consolidated runtime test
+### Runtime evidence - first in-client render
+
+The first Matrix3 run is a real partial PASS:
+
+- `Ctrl+Shift+L` entered `TP_LINK`.
+- The client loaded `C:\Users\rever\AppData\Local\Matrix3\TPLinkProof\visual\tp-link-proof.dmk`.
+- Runtime parsed `19821` vertices, `35` joints, `30` idle frames and `24` walk frames.
+- Matrix rendering reported `19821` vertices / `6607` triangles / `35` joints with named `idle` and `walk` animations.
+- The supplied screenshot visibly shows TP Link rendered inside the live revision-830 world.
+- The architecture/toolchain path therefore passes: local DMK load -> Java skinning -> Matrix model conversion -> scene render.
+- Default `scale=1.0` is a visual FAIL: Link is dramatically undersized/action-figure sized relative to the world.
+- Default scale has been changed to `5.0` for the next calibration run. This value is not yet runtime accepted.
+- Idle/walk transition, facing/yaw, Shift-release hotkey regression, and clean restoration to RuneScape presentation still need explicit runtime acceptance.
+
+### Consolidated calibration/remainder test
 
 1. Pull current `main` once.
-2. Confirm `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.dmk` exists from the generated Bundle 1.2 proof. Do not copy it into the repository.
+2. Confirm `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.dmk` still exists. Do not regenerate it.
 3. Eclipse: clean/build the **Client** with Java 8, then launch normally and log in.
-4. Stand somewhere safe with the normal RuneScape local player visible.
-5. Press `Ctrl+Shift+L` once, then release the keys in any order.
-6. Expected console sequence includes:
+4. Press `Ctrl+Shift+L` once.
+5. Expected console sequence includes:
    - `[Alternate Character] Controller mode: TP_LINK`
    - `[TP Visual] Loaded local TP Link DMK: ...`
-   - `[TP Visual] GZ2E01 Link -> Matrix Model ACTIVE ... idle=idle walk=walk ...`
-7. Expected presentation:
-   - authentic TP Link appears at the local player's Matrix world transform;
-   - the normal RuneScape local-player model disappears only after TP Link successfully renders;
-   - remote players remain normal;
-   - while standing still, the real TP idle clip loops;
-   - move with normal RuneScape movement and verify the real TP locomotion clip takes over while the player position changes, then returns to idle after stopping;
-   - normal RuneScape camera/input/world behavior remains intact because TP mode is presentation-only.
-8. Hotkey regression: after TP mode activates, release **Shift first** while still briefly holding `Ctrl+L`. Expected: mode stays `TP_LINK`; it must not jump to OoT `LINK`.
-9. Press `Ctrl+Shift+L` again after fully releasing the first chord. Expected: controller mode returns to `RUNESCAPE` and the normal local-player model returns immediately.
-10. If Link is the wrong size or facing direction but otherwise renders/animates correctly, report that separately as calibration evidence; do not classify the DMK/skinning path as failed.
+   - `[TP Visual] GZ2E01 Link -> Matrix Model ACTIVE ... scale=5.0 yawOffset=0.0 ...`
+6. Compare Link against nearby normal humanoids:
+   - if roughly human-sized, mark scale close/pass;
+   - if still clearly small or now too large, send a screenshot and do not alter any other renderer architecture.
+7. Stand still for a few seconds. Expected: authentic TP idle visibly loops.
+8. Move using normal RuneScape movement. Expected: authentic TP locomotion visibly takes over while position changes, then returns to idle after stopping.
+9. Check at least two movement directions. Report if Link faces correctly, backward, sideways, or otherwise needs yaw calibration.
+10. Hotkey regression: after TP mode activates, release **Shift first** while still briefly holding `Ctrl+L`. Expected: mode stays `TP_LINK`; it must not jump to OoT `LINK`.
+11. Fully release the chord, then press `Ctrl+Shift+L` again. Expected: controller mode returns to `RUNESCAPE` and the normal local-player presentation returns.
+12. Remote players/NPCs and normal RuneScape camera/world/input should remain unaffected.
 
 ### Fail-open/static boundary
 
+- `VERIFIED`: local generated DMK loads and renders as a Matrix model in the live client.
 - `verified-static`: local-player suppression is shared through the existing `Player.method10696(...)` gate and only returns true after `TpLinkVisualRenderer` records a successful fresh Matrix render.
 - `verified-static`: missing/invalid DMK, failed skin/model conversion, missing player transform, or render exceptions leave the RuneScape local player visible.
 - `verified-static`: the renderer consumes only the local generated DMK and does not commit or ship Nintendo assets.
-- `VERIFIED` requires the runtime test above.
+- Full Bundle 2.1 `VERIFIED` still requires scale, idle/walk, facing, hotkey-release and restoration acceptance.
 
 ## Regression sanity
 
@@ -160,4 +173,4 @@ This is presentation only. It does **not** add TP movement, TP combat, RuneScape
 
 ## Current acceptance boundary
 
-Bundle 1.1 is runtime VERIFIED. Bundle 1.2 has runtime-verified extraction and visual-tool execution but still needs corrected left-side visual acceptance. Bundle 2.1 is implemented at verified-static level and now needs the single in-client runtime test above.
+Bundle 1.1 is runtime VERIFIED. Bundle 1.2 has runtime-verified extraction and visual-tool execution but still needs corrected left-side visual acceptance. Bundle 2.1 has a runtime-verified in-client render path; the current gate is the `5.0` scale calibration plus idle/walk/facing/hotkey/restoration acceptance.
