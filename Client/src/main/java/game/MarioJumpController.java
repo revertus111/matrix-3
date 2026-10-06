@@ -29,7 +29,7 @@ public final class MarioJumpController {
     private static Player lastPlayer;
     private static boolean modeWasMario;
     private static boolean spaceReleaseRequired, attackReleaseRequired, crouchReleaseRequired;
-    private static boolean combatAttackWasDown, baselineValid, appliedPositionValid;
+    private static boolean combatAttackWasDown, combatAttackQueued, baselineValid, appliedPositionValid;
     private static float groundY, nativeGroundY, lastAppliedY;
 
     private MarioJumpController() {
@@ -57,6 +57,7 @@ public final class MarioJumpController {
             attackReleaseRequired = false;
             crouchReleaseRequired = false;
             combatAttackWasDown = false;
+            combatAttackQueued = false;
             PlayerControllerMode.resetForPlayerLifecycle();
             lastPlayer = player;
         }
@@ -163,18 +164,31 @@ public final class MarioJumpController {
 
         /*
          * Capture the current native frame BEFORE publishing a new slash request.
-         * That guarantees the shared attack lifecycle arms against the pre-swing
-         * state and then observes combatAnimation 0 -> 1 on a later native frame.
+         * A physical F press is queued one-deep while the previous native slash is
+         * still active. The queued press is converted into a new native request
+         * only after combatAnimation returns idle, and the shared combat owner is
+         * armed from that real native start rather than from the earlier key edge.
+         * This preserves one press -> one attack attempt without allowing held-F
+         * repeat or letting recovery-time presses poison the next contact cycle.
          */
         Sm64BridgeSession.GeometryFrame contactFrame =
                 Sm64BridgeSession.getLatestGeometryFrame();
         boolean attackEdge = buttonB && !combatAttackWasDown;
-        boolean weaponCombat = MarioWeaponCombat.updateInput(attackEdge);
+        if (attackEdge) {
+            combatAttackQueued = true;
+        }
+        boolean nativeSlashBusy = contactFrame != null && contactFrame.combatAnimation == 1;
+        boolean startQueuedAttack = combatAttackQueued && !nativeSlashBusy;
+        boolean weaponCombat = MarioWeaponCombat.updateInput(startQueuedAttack);
+        boolean nativeAttackStarted = startQueuedAttack && weaponCombat;
+        if (startQueuedAttack) {
+            combatAttackQueued = false;
+        }
 
         AlternateCharacterCombatBridge.updateNativeMeleeContact(
                 player,
                 AlternateCharacterController.CharacterId.MARIO,
-                buttonB && weaponCombat,
+                nativeAttackStarted,
                 controls.cameraForward,
                 contactFrame == null ? -1L : contactFrame.sequence,
                 contactFrame == null ? 0 : contactFrame.combatAnimation,
@@ -206,6 +220,7 @@ public final class MarioJumpController {
                 Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976);
         AlternateCharacterCombatBridge.reset();
         combatAttackWasDown = false;
+        combatAttackQueued = false;
         AlternateCharacterInputKeyboard.install();
         captureHeldActionGuards();
         Sm64BridgeSession.start();
@@ -218,6 +233,7 @@ public final class MarioJumpController {
         AlternateCharacterCombatBridge.reset();
         resetPresentation();
         combatAttackWasDown = false;
+        combatAttackQueued = false;
         captureHeldActionGuards();
     }
 
@@ -230,6 +246,7 @@ public final class MarioJumpController {
         AlternateCharacterCombatBridge.reset();
         resetPresentation();
         combatAttackWasDown = false;
+        combatAttackQueued = false;
         captureHeldActionGuards();
         modeWasMario = false;
         PlayerControllerMode.setMode(PlayerControllerMode.Mode.RUNESCAPE);
