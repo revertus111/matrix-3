@@ -86,13 +86,13 @@ The corrected GZ2E01 left-side proof was explicitly accepted by the user. Do not
    - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\visual-summary.txt`
 9. The combined `tp-link-proof.gif` should open automatically. A successful script exit ends with `TP LINK VISUAL PROOF GENERATED`, not `PASS`; generation alone is not visual acceptance.
 10. Visually accept only if all of these are true:
-    - TP Link's authentic body/head/hands/face render coherently enough to verify the skeleton/animation path; the software proof renderer does not need final-game material quality;
+    - TP Link's authentic body/head/hands/face render coherently enough to verify the skeleton/animation path;
     - the idle segment animates rather than remaining bind-pose/static;
     - the walk/run segment visibly animates as locomotion;
     - the sword segment visibly plays a real TP sword cut;
     - the cyan `0x9 handL` marker follows GameCube Link's animated left hand;
     - the red `0xA weaponL` marker follows the animated left item/weapon joint;
-    - `al_swb.bmd` is visibly present and remains rigidly attached to red `0xA` through the sword animation, proving the active GameCube sword seam that a replacement RuneScape weapon can use later.
+    - `al_swb.bmd` is visibly present and remains rigidly attached to red `0xA` through the sword animation.
 
 ### Bundle 1.2 runtime evidence
 
@@ -106,93 +106,106 @@ The corrected GZ2E01 left-side proof was explicitly accepted by the user. Do not
 
 ### Acceptance boundary
 
-Bundle 1.2 is `VERIFIED`. The failure classifications below remain useful only for future regression diagnosis:
-
-- **asset/extraction failure:** missing BMD/BCK or wrong archive path;
-- **decoder failure:** BMD/BCK parser/converter rejects authentic TP data;
-- **geometry/material failure:** Link animates but parts/texture/mesh are too broken to validate the character;
-- **animation failure:** mesh renders but BCK pose/playback is wrong;
-- **socket failure:** `0x9` tracks the left hand but red `0xA` / attached `al_swb.bmd` does not remain on the intended active sword socket.
+Bundle 1.2 is `VERIFIED`. Do not rerun the donor proof for this controller test.
 
 ## Bundle 2.1 - Matrix3 TP Link presentation
 
-Status: `PARTIAL VERIFIED / PROPORTION + MOTION ACCEPTANCE`
-
-This is still presentation only. It does **not** add authoritative TP movement, damage, NPC combat, RuneScape weapon replacement, or a native TP sidecar.
+Status: `PARTIAL VERIFIED / CONTROLLER ACCEPTANCE PENDING`
 
 ### Runtime evidence so far
 
-- `Ctrl+Shift+L` entered `TP_LINK`.
-- The client loaded `C:\Users\rever\AppData\Local\Matrix3\TPLinkProof\visual\tp-link-proof.dmk`.
-- Runtime parsed `19821` vertices, `35` joints, `30` idle frames and `24` walk frames.
-- Matrix rendering reported `19821` vertices / `6607` triangles / `35` joints with named `idle` and `walk` animations.
-- The first screenshot proved the architecture path but showed `scale=1.0` was dramatically undersized.
-- The next screenshots at world scale `5.0` were explicitly accepted by the user as correct overall height.
-- Those same screenshots showed Link is slightly too thick for the intended RuneScape equipment envelope.
-- World scale `5.0` is therefore retained. Proportion calibration now happens in TP model space before yaw, starting at `width=0.92`, `height=1.00`, `depth=0.95`.
+- `Ctrl+Shift+L` entered `TP_LINK` and the local DMK rendered inside revision-830.
+- Runtime parsed `19821` vertices, `6607` triangles, `35` joints, `30` idle frames and `24` walk frames.
+- World scale `1.0` failed as dramatically undersized; follow-up screenshots at world scale `5.0` were explicitly accepted for overall height.
+- The accepted-height screenshots showed Link remains slightly too thick for the intended RuneScape equipment envelope.
+- World scale `5.0` remains fixed for this pass; RuneScape-fit proportions start at `0.92 / 1.00 / 0.95`.
 
-### Consolidated workbench / remainder test
+## Phase 3 / first playable-controller slice
+
+Status: `IMPLEMENTED / NEEDS RUNTIME TEST`
+
+This pass intentionally reuses Matrix3's established shared owners instead of adding a second movement/combat stack.
+
+### Consolidated pull/build/test
 
 1. Pull current `main` once.
-2. Confirm `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.dmk` still exists. Do not regenerate it.
-3. Eclipse: clean/build the **Client** with Java 8, then launch normally and log in.
-4. Open Client Console -> `N64`.
-5. Confirm the established Mario workspace is still present and a top-level `TP Link` tab now exists.
-6. Open `TP Link -> Presentation`.
-   - expected World scale: `5.0`;
-   - expected Body width: `0.92`;
-   - expected Body height: `1.00`;
-   - expected Body depth: `0.95`;
-   - keep world scale `5.0` unless new evidence contradicts the already-accepted height;
-   - tune Width/Depth live until Link looks appropriately narrow for future RuneScape equipment.
-7. Press `Ctrl+Shift+L` once.
-8. Expected console sequence includes:
+2. Eclipse: clean/build **Client** with Java 8, launch normally, and log in.
+3. Open Client Console -> `N64` -> `TP Link`.
+4. UI acceptance:
+   - there must be **one vertically scrolling TP Link workspace**, not Presentation/Animation/Movement/Combat nested tabs;
+   - no horizontal scrollbar;
+   - numeric controls use compact `- / direct value / +` editors;
+   - cards remain usable when the console is narrowed or widened.
+5. Press `Ctrl+Shift+L` once.
+6. Expected console includes:
    - `[Alternate Character] Controller mode: TP_LINK`
-   - `[TP Visual] Loaded local TP Link DMK: ... swordFrames=...`
-   - `[TP Visual] GZ2E01 Link -> Matrix Model ACTIVE ... scale=5.0 bodyScale=0.92/1.0/0.95 yawOffset=0.0 ...`
-9. Stand still for a few seconds. Expected: authentic TP idle visibly loops.
-10. Move using normal RuneScape movement. Expected: authentic TP locomotion visibly takes over while position changes, then returns to idle after stopping.
-11. In `TP Link -> Animation`, verify Preview=`AUTO`, then try forced `IDLE` and `WALK`; return to `AUTO` afterward.
-12. In `TP Link -> Combat`, click `Preview authentic sword BCK`.
-   - expected: the authentic DMK sword clip plays visually;
-   - this does **not** deal damage or change RuneScape combat state;
-   - click `Return to AUTO` afterward.
-13. Check at least two movement directions. Report if Link faces correctly, backward, sideways, or otherwise needs yaw calibration. If needed, change only the Yaw correction control first.
-14. Hotkey regression: after TP mode activates, release **Shift first** while still briefly holding `Ctrl+L`. Expected: mode stays `TP_LINK`; it must not jump to OoT `LINK`.
-15. Fully release the chord, then press `Ctrl+Shift+L` again. Expected: controller mode returns to `RUNESCAPE` and the normal local-player presentation returns.
-16. Open `TP Link -> Materials`.
-   - `Use DMK UV/palette color sampling` ON is the current face-colour texture fallback;
-   - toggling it OFF should visibly switch to vertex-colour-only output without crashing;
-   - there is intentionally no fake smoothing toggle yet because the DMK mesh is triangle-expanded and proper smoothing requires normals or a seam-aware weld.
-17. Open `TP Link -> Diagnostics` and press `Reload local DMK` once.
-   - expected: one reload log, then TP Link resumes rendering;
-   - fail-open suppression must keep/restore the RuneScape body if the local DMK cannot be reloaded.
-18. Remote players/NPCs and normal RuneScape camera/world/input should remain unaffected.
+   - `[TP] Controls: camera-relative WASD move, F authentic sword, Shift target lock`
+   - the existing TP DMK load/ACTIVE lines.
+7. Release **Shift first** while still briefly holding `Ctrl+L` from activation. Expected: mode stays `TP_LINK`, not OoT `LINK`.
+8. WASD movement:
+   - with camera north, W moves Link forward relative to the camera;
+   - rotate the camera east/west/south and W follows the new camera direction;
+   - A/S/D work consistently;
+   - existing N64 camera WASD must not also move while TP owns controls.
+9. Locomotion presentation:
+   - authentic walk takes over while moving;
+   - authentic idle returns after movement stops;
+   - Player Fit world scale remains `5.0`.
+10. Facing:
+   - Link turns toward movement direction rather than sliding sideways;
+   - turn smoothing is controlled by `Turn speed (deg/sec)`;
+   - if he is consistently backward/offset, tune only `Yaw correction` and report the required value.
+11. Movement tuning:
+   - default `Move speed (60 Hz units)` is `18`;
+   - if movement is clearly too fast/slow, change only this control first;
+   - toggle `RuneScape clipping (tile authority)` once and confirm the existing shared clipping mode still works.
+12. Shift target lock:
+   - release the activation chord fully, then hold Shift near an NPC;
+   - TP Link should report `Target = NPC <index>` when a valid target is acquired;
+   - while locked, Link should face the target and movement should use the shared target-relative basis;
+   - releasing Shift clears the lock.
+13. F sword action:
+   - stand within melee range of an NPC and tap F once;
+   - authentic `sword` BCK must play once, not loop forever;
+   - the Combat card should show the current sword frame while active;
+   - at the configured `Contact frame`, the shared combat bridge sends one manual melee intent;
+   - expected console on a valid hit includes `[Alt Character Combat] TP_LINK immediate contact -> target=...`;
+   - holding F must not spam repeated attacks; release and press again for the next swing.
+14. Contact/range sanity:
+   - F with no valid NPC in the forward/locked melee envelope should visibly swing but report a miss/no server contact;
+   - no click-to-attack or repeating auto-combat should start.
+15. Combat authority sanity:
+   - Matrix/server remains authoritative for legality, range, cooldown, accuracy, damage, XP, death and drops;
+   - this pass does not replace equipped RuneScape weapon visuals yet.
+16. TP panel actions:
+   - `Preview sword` plays the authentic sword once without damage;
+   - `Stop / AUTO` returns presentation to automatic idle/walk;
+   - `Reload DMK` still reloads fail-open;
+   - texture-sampling toggle still changes the existing colour fallback without crashing.
+17. Toggle `Ctrl+Shift+L` off after fully releasing the first chord. Expected: normal RuneScape body/control returns cleanly.
+18. Mario and OoT Link regression: their existing controllers and N64 workspace remain unchanged.
 
-### Fail-open/static boundary
+### verified-static boundary
 
-- `VERIFIED`: local generated DMK loads and renders as a Matrix model in the live client.
-- `VERIFIED`: world scale `5.0` is accepted for overall TP Link height.
-- `verified-static`: model-local X/Y/Z proportion fitting occurs before player yaw, preventing width/depth from becoming world-axis dependent.
-- `verified-static`: initial RuneScape-fit body envelope is `0.92 / 1.00 / 0.95`; final width/depth still need user visual acceptance.
-- `verified-static`: local-player suppression is shared through the existing `Player.method10696(...)` gate and only returns true after `TpLinkVisualRenderer` records a successful fresh Matrix render.
-- `verified-static`: missing/invalid DMK, failed skin/model conversion, missing player transform, or render exceptions leave the RuneScape local player visible.
-- `verified-static`: the renderer consumes only the local generated DMK and does not commit or ship Nintendo assets.
-- `verified-static`: the workbench reads the existing `sword` ANIM chunk only for visual preview; no combat authority is transferred.
-- Full Bundle 2.1 `VERIFIED` still requires body-proportion, idle/walk, sword-preview, facing, hotkey-release and restoration acceptance.
+- `TP_LINK` is a distinct `AlternateCharacterController.CharacterId` and driver.
+- TP movement uses the existing shared camera-relative control sample and `AlternateCharacterFreeMovement`; it does not duplicate WASD/clipping ownership.
+- TP targeting uses `AlternateCharacterCombatBridge.updateTargeting(...)`.
+- F starts the existing authentic DMK `sword` clip once and uses `AlternateCharacterCombatBridge.requestPrimaryMeleeAttack()` only at the configured contact frame.
+- RuneScape server combat remains authoritative; no TP damage formula was added.
+- TP facing writes only the local Matrix player transform rotation from the controller's movement/target direction; yaw correction remains presentation tuning.
+- The TP console was flattened into one width-tracking vertical workspace with compact direct-entry numeric controls.
+- Full runtime acceptance is still required before marking the playable-controller slice VERIFIED.
 
 ## Regression sanity
 
 - Mario button still launches the Mario builder.
 - OoT button still launches the OoT builder.
-- `PREP + BUILD TP LINK` still launches donor prep/build.
-- `PROBE TP LINK` launches only the local visual proof.
+- `PREP + BUILD TP LINK` and `PROBE TP LINK` remain unchanged.
 - N64 -> Mario 64 existing Runtime / Custom combat / Equipment Workbench behavior is unchanged.
-- N64 -> TP Link appears as a sibling top-level game workspace.
+- N64 -> TP Link remains a sibling top-level game workspace.
 - `Ctrl+L` remains the OoT Link controller toggle after the chord is fully released.
-- `Ctrl+Shift+L` is TP Link presentation only.
-- Closing Native Builder still works normally.
+- `Ctrl+Shift+L` now owns TP Link presentation + Matrix-owned action controls.
 
 ## Current acceptance boundary
 
-Bundle 1.1 is runtime VERIFIED. Bundle 1.2 is VERIFIED from the explicitly accepted corrected GZ2E01 left-side model/animation/socket proof. Bundle 2.1 has a runtime-verified in-client render path and accepted world-height scale; the current gate is TP body proportion plus idle/walk/sword-preview/facing/hotkey/restoration/workbench acceptance.
+Bundle 1.1 and 1.2 remain VERIFIED. Bundle 2.1 has runtime-verified TP rendering and accepted world-height scale. The current gate is one consolidated runtime pass for the flattened TP workspace, model proportions, camera-relative WASD/facing, Shift targeting, authentic one-shot F sword/contact, and clean mode restoration.
