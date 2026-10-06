@@ -298,12 +298,12 @@ public final class AlternateCharacterController {
 
     /**
      * Resolve the ground-plane basis from the camera that owns the view.
-     * Prefer the live rendered detached position/look transform used by RTS orbit;
+     * Prefer the live Class411 position/look transform for normal and detached views;
      * Construction's helper and vanilla camera geometry remain fallbacks.
      */
     static PlanarDirection getCameraForward() {
         /*
-         * The detached Class411 transform is the rendered camera. Read it first
+         * The active Class411 transform is the rendered camera. Read it first
          * every tick so mouse/Q/E orbit changes reach WASD immediately. The
          * Construction helper remains a fallback for frames where the camera
          * owner is being created or torn down.
@@ -380,18 +380,31 @@ public final class AlternateCharacterController {
     }
 
     private static PlanarDirection getDetachedCameraForward(Class411_Sub1 camera) {
+        Class240 position = null;
+        Class240 forwardPoint = null;
         try {
-            Class423_Sub2 positionController =
-                    (Class423_Sub2) camera.method4990((byte) -37);
-            Class658_Sub2 lookController =
-                    (Class658_Sub2) camera.method4991(-589573040);
-            Class240 position = positionController.method5159((byte) -54);
-            Class240 forwardPoint = lookController.method7736(0);
+            /* verified-static: Class411's getters dispatch to the active position
+             * and look owners. Normal views may use Class423_Sub3 / Class658_Sub5;
+             * casting these to RTS Sub2 types silently falls back to stale
+             * client.aFloat8678 even while the rendered camera rotates. */
+            position = camera.method4968(-452703663);
+            forwardPoint = camera.method4997(185996933);
+            if (position == null || forwardPoint == null) {
+                return null;
+            }
             return normalize(
                     forwardPoint.aFloat2653 - position.aFloat2653,
                     forwardPoint.aFloat2657 - position.aFloat2657);
         } catch (RuntimeException ex) {
             return null;
+        } finally {
+            // These getters return temporary vectors, as in Class411.method5000.
+            if (position != null) {
+                position.method3261();
+            }
+            if (forwardPoint != null) {
+                forwardPoint.method3261();
+            }
         }
     }
 

@@ -149,28 +149,32 @@ Copy this structure when adding a reusable mapping. Remove fields that genuinely
 - Local-player scene transform — `Class611` / `Class456`
 - Matrix3 held-key state — `Class549_Sub1`
 
-### Construction detached camera ownership — ConstructionBuildCamera / Class24
+### Active Class411 camera ownership — ConstructionBuildCamera / Class24 / Class133_Sub1
 
 **Subsystem:** Camera / viewport  
-**Evidence:** VERIFIED  
-**Tags:** ConstructionBuildCamera, Class24, Class411_Sub1, aClass411_Sub1_158, RTS camera, Free Build camera, detached camera, camera forward, AlternateCharacterController
+**Evidence:** VERIFIED for Construction ownership; verified-static for normal-camera subtype read
+**Tags:** ConstructionBuildCamera, Class24, Class133_Sub1, Class411, Class411_Sub1, Class423_Sub3, Class658_Sub5, method4968, method4997, aFloat8678, aClass411_Sub1_158, RTS camera, normal orbit camera, Free Build camera, detached camera, camera forward, AlternateCharacterController
 
 **Exact symbols / IDs**
 - Construction owner: `ConstructionBuildCamera`
 - Active/requested state: `ConstructionBuildCamera.isRequested()`
 - Rendered detached camera: `Class24.aClass411_Sub1_158`
-- Camera position controller: `Class411_Sub1.method4990(...) -> Class423_Sub2`
-- Camera look controller: `Class411_Sub1.method4991(...) -> Class658_Sub2`
+- Construction position subtype: `Class411_Sub1.method4990(...) -> Class423_Sub2`
+- Construction look subtype: `Class411_Sub1.method4991(...) -> Class658_Sub2`
 - Look point: `Class658_Sub2.method7736(...)`
+- Camera mode 1 owner: `Class133_Sub1.aClass411_Sub1_9827`; normal orbit position can be `Class423_Sub3`, look can be `Class658_Sub5`.
+- General position: `Class411.method4968(...) -> active Class423.method5159(...)`; null while the position owner is unavailable.
+- General look point: `Class411.method4997(...) -> active Class658.method7736(...)`; null while the look owner is unavailable.
 
 **Established responsibility**
 - While Construction Free/RTS camera mode is active, the rendered Construction view is owned by `Class24.aClass411_Sub1_158`.
 - That ownership is independent of the normal Matrix detached-camera flags used by stock camera-mode detection; consumers that need the *rendered* Construction view must check Construction ownership explicitly before falling back to vanilla camera state.
 - The real ground-plane camera-forward direction is obtained from the detached camera's actual look point minus its actual position, then normalized.
+- The same general position/look getter contract covers normal Class411 cameras; their concrete controller types need not match Construction's Sub2 types. AlternateCharacterController uses these general getters for the selected owner and releases their temporary vectors.
 
 **Relationships / call flow**
 - `ConstructionBuildCamera.tick()` -> mutate/manage `Class24.aClass411_Sub1_158` -> viewport renders detached camera.
-- camera-relative consumer -> if Construction active, select `Class24.aClass411_Sub1_158` -> position/look controllers -> normalized look-minus-position vector.
+- camera-relative consumer -> select active Construction/stock detached Class24 camera, or mode-1 Class133_Sub1 camera -> general Class411 position/look getters -> normalized look-minus-position vector.
 - `AlternateCharacterController.getCameraForward()` now follows this ownership order before normal detached/vanilla fallback.
 
 **Runtime evidence**
@@ -180,6 +184,9 @@ Copy this structure when adding a reusable mapping. Remove fields that genuinely
 **Static evidence**
 - `ConstructionBuildCamera` directly manages the Class24 detached camera and already derives screen-relative editor movement from its real position/look direction.
 - `Class343.method4302(...)` ticks `ConstructionBuildCamera` immediately before consuming/rendering the active scene camera.
+- `Class343.method4302(...)` renders `Class24.aClass411_Sub1_158` for the detached flag, otherwise `Class133_Sub1.aClass411_Sub1_9827` for camera mode 1. `Class411.method4971/method4972` construct several look/position subtypes; the Sub2 casts are not a general camera contract.
+- `client.method8034(...)` rotates the mode-1 Class423_Sub3 quaternion; its other-mode branch updates `client.aFloat8678`. Falling back to that inactive yaw after a subtype cast fails can leave imported-character movement facing north while the normal camera rotates.
+- 2026-10-05 focused regression holds that vanilla yaw north and rotates normal orbit/target plus detached cameras: old shared reader fails, general-getter reader passes. Normal-camera rendered acceptance remains pending; this evidence is `verified-static`.
 
 **Matrix3 usage / ownership notes**
 - Camera-relative gameplay/editor consumers should use the camera that actually owns the rendered view, not infer ownership solely from stock camera-mode flags.
@@ -188,6 +195,7 @@ Copy this structure when adding a reusable mapping. Remove fields that genuinely
 **Do not assume**
 - Construction detached-camera ownership does not grant server movement, collision, pathfinding, or gameplay authority.
 - This does not imply every detached camera is Construction-owned; outside active Construction mode, normal Matrix detached/vanilla ownership rules still apply.
+- Do not cast every active Class411 owner to Class423_Sub2/Class658_Sub2 or use stale vanilla yaw after a valid normal-camera subtype is rejected.
 
 **Related entries**
 - Live world viewport update seam — `Class343.method4302(...)`

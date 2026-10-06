@@ -2,13 +2,23 @@
 
 Status: active architecture authority for Mario, OoT Link and future imported playable characters.
 
-## Current checkpoint - universal horizontal controller, 2026-10-05
+## Current checkpoint - normal-camera direction read, 2026-10-05
+
+Runtime report: movement works facing north but remains north when the normal camera turns east/west/south. Source diagnosis is `verified-static`: the shared reader cast all Class411 position/look owners to Construction's Class423_Sub2/Class658_Sub2. Normal orbit uses Class423_Sub3 and can use Class658_Sub5; a failed cast silently selected the unchanged client.aFloat8678 fallback.
+
+The AAA-approved fix is implemented / `verified-static`: shared getDetachedCameraForward now uses Class411.method4968/method4997 to dispatch to the actual owners, validates missing geometry and releases temporary vectors. Existing owner priority, world/native encoding, free/clipped policy and combat remain shared and unchanged.
+
+Java 8-targeted checks pass: 440,138 camera/input/native-axis checks across normal orbit/target and both detached-view ownership paths, 6,089 complete production-driver checks and 112 OoT interpolation samples. The new test fails against the old shared reader at the first non-north normal-camera heading. Test stubs also retain the latest Mario/Link shared native-contact API.
+
+Resume Here: pull main, refresh/clean/build Client, fully restart/login and run the normal-camera direction session at the top of TESTLIST.md. Test both characters with Shift/Z released, all four headings and continuous camera rotation; then recheck RTS steering, actions and mode exit. Full rendered/native gameplay acceptance remains pending. No native rebuild required.
+
+## Previous checkpoint - universal horizontal controller, 2026-10-05
 
 The user's AAA-approved horizontal consolidation is implemented / verified-static. AlternateCharacterController owns one sampled control frame, native profile encoding and exactly one horizontal movement state. Both adapters delegate free/clipped motion, pending tile approval, mode/toggle restoration and resets. They supply native position/scale and retain native action/vertical/render evidence only.
 
 Java 8-targeted focused checks pass: 110,902 shared-input/native-axis checks, 6,089 complete production-driver checks including matching clipped traces/switches/jump height/target basis, and 112 OoT interpolation samples. An ownership guard rejects the pre-consolidation drivers. The newer shared combat API/contact gate is preserved; LinkCombatController is not reintroduced.
 
-Resume Here: pull current main, refresh/clean/build Client and Server, restart/login, then run the consolidated universal-controller session in docs/n64/TESTLIST.md plus the shared-combat checks in SHARED_CONTROLLERS_TESTLIST.md. Full client/native gameplay remains pending. Free motion is local presentation; optional clipping remains stock tile authority, not continuous RuneScape world collision. No native rebuild required.
+The consolidated universal-controller session in docs/n64/TESTLIST.md and shared-combat checks in SHARED_CONTROLLERS_TESTLIST.md remain acceptance gates; start with the current camera checkpoint above. Full client/native gameplay remains pending. Free motion is local presentation; optional clipping remains stock tile authority, not continuous RuneScape world collision. No native rebuild required.
 
 ## Mandatory shared-controller rule
 
@@ -103,6 +113,7 @@ There is one Matrix3 input/camera/movement policy, not separate Mario and Link k
 
 - `AlternateCharacterController.ControlState` is the common movement vocabulary.
 - Camera-relative intent is resolved once by the shared controller.
+- Active Class411 cameras use their general position/look getters; do not assume every position/look owner has Construction's Sub2 types or substitute inactive vanilla yaw for a valid normal camera.
 - Shared `movementInput` resolves the native profile and optional combat basis. Both native input and clipped movement consume the same resolved world intent.
 - All drivers delegate `applyHorizontalMovement`, `restoreHorizontalMovement` and `resetHorizontalMovement`; they do not instantiate their own mover, compute stick signs or send walk packets.
 - Native physics/presentation may differ because libsm64 and liboot are different engines; that difference does not authorize duplicate Matrix input, camera, clipping-policy or world-authority systems.
@@ -122,6 +133,7 @@ Do **not** add `SonicCombatController`, `BanjoCombatController`, another NPC tar
 ## Verification status - 2026-10-05
 
 - Shared input/camera/native encoding and single horizontal free/clipped owner: `verified-static`; focused production checks pass, rendered native gameplay acceptance pending.
+- Normal orbit/target camera subtype correction: `verified-static`; old reader reproduces the fixed-north regression in the focused test, in-game acceptance pending.
 - Shared Mario/Link combat target + packet ownership: `verified-static`; strict one-keypress/one-contact/zero-follow server path implemented, Eclipse/client/server runtime acceptance pending.
 - Link exact sword-contact frame: `HYPOTHESIS` until runtime accepted.
 - Mario native slash visual profile remains tracked in `docs/n64/CUSTOM_COMBAT.md` and does not own server combat.

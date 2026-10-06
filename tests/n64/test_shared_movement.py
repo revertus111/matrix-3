@@ -2,7 +2,8 @@
 """ROM-free production controller checks; requires Python 3 and a JDK (8+).
 
 Compiles the complete shared controller and extracts the actual camera/native
-input methods into dependency stubs. Decodes the published input with the pinned
+input methods into dependency stubs, including normal orbit/target camera types.
+Decodes the published input with the pinned
 native yaw/XZ equations; this is not a full client/native build or runtime proof.
 """
 import os
@@ -53,10 +54,12 @@ class ConstructionBuildCamera {
 """ + method(camera, "    static float[] getMovementForward()") + "\n}\n"
     adapters += """
 class MarioJumpController {
+    static final float MARIO_MELEE_CONTACT_TIME=0.45F;
+    static final long MAX_ARMED_NATIVE_TICKS=24L;
     static boolean spaceReleaseRequired, attackReleaseRequired, crouchReleaseRequired, combatAttackWasDown;
     static AlternateCharacterController.MovementInput lastMovement;
-    static void tickMarioDriver() { lastMovement = publishControls(); }
-""" + method(mario, "    private static AlternateCharacterController.MovementInput publishControls()") + "\n}\n"
+    static void tickMarioDriver() { lastMovement = publishControls(new Player()); }
+""" + method(mario, "    private static AlternateCharacterController.MovementInput publishControls(Player player)") + "\n}\n"
     adapters += """
 class LinkController {
     static final long MAX_ARMED_NATIVE_TICKS=12L;
@@ -67,12 +70,27 @@ class LinkController {
 """ + method(link, "    private static AlternateCharacterController.MovementInput publishControls(") + "\n}\n"
     stubs = r"""
 package game;
-class Class240 { float aFloat2653, aFloat2656, aFloat2657; }
-class Class423_Sub2 { Class240 p = new Class240(); Class240 method5159(byte b) { return p; } }
-class Class658_Sub2 { Class240 p = new Class240(); Class240 method7736(int n) { return p; } }
+class Class240 {
+    float aFloat2653, aFloat2656, aFloat2657;
+    Class240 copy() {
+        Class240 v=new Class240(); v.aFloat2653=aFloat2653; v.aFloat2656=aFloat2656; v.aFloat2657=aFloat2657;
+        return v;
+    }
+    void method3261() {}
+}
+class Class423 { Class240 p = new Class240(); Class240 method5159(byte b) { return p.copy(); } }
+class Class423_Sub2 extends Class423 {}
+class Class423_Sub3 extends Class423 {}
+class Class658 { Class240 p = new Class240(); Class240 method7736(int n) { return p.copy(); } }
+class Class658_Sub2 extends Class658 {}
+class Class658_Sub5 extends Class658 {}
 class Class411_Sub1 {
-    Class423_Sub2 position = new Class423_Sub2(); Class658_Sub2 look = new Class658_Sub2();
-    Object method4990(byte b) { return position; } Object method4991(int n) { return look; }
+    Class423 position; Class658 look;
+    Class411_Sub1() { this(new Class423_Sub2(),new Class658_Sub2()); }
+    Class411_Sub1(Class423 p,Class658 l) { position=p; look=l; }
+    Class423 method4990(byte b) { return position; } Class658 method4991(int n) { return look; }
+    Class240 method4968(int n) { return position==null?null:position.method5159((byte)0); }
+    Class240 method4997(int n) { return look==null?null:look.method7736(0); }
 }
 class Class24 { static Class411_Sub1 aClass411_Sub1_158 = new Class411_Sub1(); }
 class Class133_Sub1 { static Class411_Sub1 aClass411_Sub1_9827; }
@@ -89,7 +107,8 @@ class client {
     static Class195 aClass195_8589; static Class613 aClass613_8605;
 }
 class IncomingPacket {
-    static boolean method4113(byte b) { return false; }
+    static boolean detached;
+    static boolean method4113(byte b) { return detached; }
     static Class572_Sub25 method4108(int x,int z,int a,int b) { return null; }
 }
 class PlayerControllerMode {
@@ -129,6 +148,8 @@ class AlternateCharacterCombatBridge {
             int action,int animId,float animFrame,float contactFrame,long maxTicks){contactCalls++;}
 }
 class Sm64BridgeSession {
+    static final class GeometryFrame { long sequence; int combatAnimation; float combatTime; }
+    static GeometryFrame getLatestGeometryFrame() { return null; }
     static float cx, cz, sx, sy;
     static void setCombatInput(float x, float z, float a, float b, boolean c, boolean d, boolean e, int f, int g) {
         cx=x; cz=z; sx=a; sy=b;
@@ -171,7 +192,18 @@ public class SharedMovementTest {
         return new double[] {Math.sin(yaw), Math.cos(yaw)};
     }
     public static void main(String[] args) {
-        Class411_Sub1 camera = Class24.aClass411_Sub1_158;
+        Class411_Sub1 constructionCamera = Class24.aClass411_Sub1_158;
+        Class411_Sub1 orbitCamera = new Class411_Sub1(new Class423_Sub3(),new Class658_Sub5());
+        Class411_Sub1 targetCamera = new Class411_Sub1(new Class423_Sub2(),new Class658_Sub5());
+        Class411_Sub1[] views = {orbitCamera,targetCamera,constructionCamera,constructionCamera};
+        // Real normal-camera types must rotate both drivers even while the
+        // inactive vanilla yaw stays north and the Class24 camera still exists.
+        for (int view=0;view<views.length;view++) {
+        ConstructionBuildCamera.active = view==2;
+        IncomingPacket.detached = view==3;
+        Class18.anInt143 = 1860248359; // encoded camera mode 1
+        Class133_Sub1.aClass411_Sub1_9827 = view<2?views[view]:orbitCamera;
+        Class411_Sub1 camera = views[view];
         camera.position.p.aFloat2653 = 1200;
         camera.position.p.aFloat2657 = -800;
         // All key combinations at every integer heading, including wraparound.
@@ -179,10 +211,10 @@ public class SharedMovementTest {
             double angle = Math.toRadians(degree), fx = Math.sin(angle), fz = Math.cos(angle);
             camera.look.p.aFloat2653 = 1200 + (float)(fx * 1000);
             camera.look.p.aFloat2657 = -800 + (float)(fz * 1000);
-            // Deliberately unrelated fallback yaw: active rendered camera must win.
-            client.aFloat8678 = 4567;
+            // The reported failure: only fallback north works, other views fail.
+            client.aFloat8678 = 0;
             for (int bits = 0; bits < 16; bits++) {
-                context = "camera=" + degree + " keys=" + bits;
+                context = "view=" + view + " camera=" + degree + " keys=" + bits;
                 int[] keys = {33, 49, 48, 50}; // W, S, A, D
                 for (int i=0; i<4; i++) AlternateCharacterInputKeyboard.keys[keys[i]] = (bits & (1<<i)) != 0;
                 double x = ((bits & 8)!=0 ? 1:0) - ((bits & 4)!=0 ? 1:0);
@@ -222,6 +254,11 @@ public class SharedMovementTest {
                 }
             }
         }
+        }
+        ConstructionBuildCamera.active = true;
+        IncomingPacket.detached = false;
+        Class133_Sub1.aClass411_Sub1_9827 = null;
+        Class411_Sub1 camera = constructionCamera;
         // Preserve the current combat-owned Z-target basis, even when unrelated
         // to the visible camera. Exercise all directions and opposing-key pairs.
         AlternateCharacterInputKeyboard.keys[81] = true;
@@ -266,11 +303,18 @@ public class SharedMovementTest {
         client.aFloat8678 = 0;
         near(0,AlternateCharacterController.getCameraForward().x);
         near(1,AlternateCharacterController.getCameraForward().z);
+        // Missing normal-camera controllers must safely fall back during teardown.
         ConstructionBuildCamera.active = false;
         if (ConstructionBuildCamera.getMovementForward() != null) throw new AssertionError("inactive camera");
+        Class133_Sub1.aClass411_Sub1_9827 = new Class411_Sub1(null,new Class658_Sub5());
+        near(0,AlternateCharacterController.getCameraForward().x);
+        near(1,AlternateCharacterController.getCameraForward().z);
+        Class133_Sub1.aClass411_Sub1_9827 = new Class411_Sub1(new Class423_Sub3(),null);
+        near(0,AlternateCharacterController.getCameraForward().x);
+        near(1,AlternateCharacterController.getCameraForward().z);
         if(AlternateCharacterCombatBridge.contactCalls==0)
             throw new AssertionError("current shared native-contact API was dropped");
-        System.out.println("PASS " + checks + " checks: shared frame input/world intent, native decoded screen axes, Z-target basis, camera fallback");
+        System.out.println("PASS " + checks + " checks: normal orbit/target and detached cameras with stale north yaw, shared native screen axes, Z-target basis, camera fallback");
     }
 }
 """

@@ -1,3 +1,8 @@
+2026-10-05 - Shared normal-camera direction read
+- Read active Class411 position/look through method4968/method4997 instead of casting every camera to the Construction RTS Sub2 types. Normal orbit/target cameras now supply live forward direction to both Mario and Link instead of silently falling back to stale vanilla yaw.
+- Preserve shared native-axis encoding, free/clipped routing, camera-owner priority and native combat/actions. Release the temporary camera vectors; unavailable cameras retain safe fallback behavior.
+- Expanded the ROM-free Java 8-targeted regression to normal orbit/target, Construction and stock detached views with vanilla yaw held north: old controller fails on rotation, corrected controller passes 440,138 direction/input checks. Shared movement drivers pass 6,089 checks; OoT interpolation passes 112 samples. Full rendered gameplay acceptance pending; no native rebuild required.
+
 2026-10-05 - Strict one-keypress / zero-follow imported melee
 - Removed `PlayerCombatNew.start()` from the shared imported-character server bridge. That stock entry immediately called `process()`, which could `calcFollow`, add walk steps or apply diagonal correction and caused the reported Mario target-scoot before attacking.
 - Manual Mario/Link contact now prevalidates legal melee range and invokes exactly one `PlayerCombatNew.processWithDelay()` cycle without installing the action into `ActionManager`.

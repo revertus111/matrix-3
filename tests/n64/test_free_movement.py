@@ -11,7 +11,7 @@ SRC = ROOT / "Client/src/main/java/game"
 
 STUBS = r'''
 package game;
-class Class240 { float aFloat2653, aFloat2656, aFloat2657; }
+class Class240 { float aFloat2653, aFloat2656, aFloat2657; void method3261(){} }
 class Class238 { Class240 aClass240_2647 = new Class240(); }
 class Player {
     int[] screenX={0}, screenY={0}; Class238 p=new Class238();
@@ -59,6 +59,8 @@ class Mario64Diagnostics {
     static void observeControls(AlternateCharacterController.ControlState c,boolean a,boolean b,boolean z){}
 }
 class Sm64BridgeSession {
+    static final class GeometryFrame {long sequence;int combatAnimation;float combatTime;}
+    static GeometryFrame getLatestGeometryFrame(){return null;}
     static final class NativePosition { float x,y,z; }
     static NativePosition p=new NativePosition();
     static void start(){} static void stop(){} static boolean hasFailed(){return false;} static String getFailureReason(){return null;}
@@ -79,7 +81,10 @@ class LinkCharacterFit { static final class Profile {float scale=3;} static Prof
 class ConstructionBuildCamera { static float[] getMovementForward(){return new float[]{0,1};} static boolean isRequested(){return false;} }
 class Class423_Sub2 { Class240 method5159(byte b){return new Class240();} }
 class Class658_Sub2 { Class240 method7736(int n){return new Class240();} }
-class Class411_Sub1 { Object method4990(byte b){return new Class423_Sub2();} Object method4991(int n){return new Class658_Sub2();} }
+class Class411_Sub1 {
+    Object method4990(byte b){return new Class423_Sub2();} Object method4991(int n){return new Class658_Sub2();}
+    Class240 method4968(int n){return new Class240();} Class240 method4997(int n){return new Class240();}
+}
 class Class24 { static Class411_Sub1 aClass411_Sub1_158; }
 class Class133_Sub1 { static Class411_Sub1 aClass411_Sub1_9827; }
 class Class18 { static int anInt143; }

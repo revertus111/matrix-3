@@ -1,5 +1,18 @@
 # N64 Client Console Runtime Test List
 
+## Normal-camera direction read - 2026-10-05
+
+Status: implemented / `verified-static`; rendered native gameplay acceptance pending. The shared reader now dispatches through Class411.method4968/method4997 for normal orbit/target and detached cameras. The old RTS-only casts silently lost normal-camera rotation and fell back to unchanged north yaw.
+
+One short acceptance session:
+
+1. [ ] `git pull origin main`; Eclipse Java 8 refresh/clean/build Client, fully close/relaunch and login. No native rebuild required for this Java-only camera read.
+2. [ ] Clipping OFF, Shift/Z released, normal player camera: Ctrl+M and test W/S/A/D at north/east/south/west. W must follow screen-up, S screen-down, A left and D right regardless of character facing. Hold W while turning the camera in both directions through a full circle; travel must turn with the view instead of staying north. Repeat with Ctrl+L.
+3. [ ] Check diagonals/opposing keys, then repeat the cardinal/rotation checks in Construction RTS and Free views. Camera ownership must remain correct. Test Space/F and Link Shift/Z release; native actions/contact timing remain separate acceptance items.
+4. [ ] Switch Mario -> Link -> RuneScape, then re-enter: no stale camera basis/offset. Normal RuneScape walking and camera control, a representative interface and teleport still work. This is the relevant startup/movement/lifecycle subset of docs/rs3/SMOKE_TEST.md.
+
+Focused regression: `python3 tests/n64/test_shared_movement.py` passes 440,138 checks across 361 headings/all 16 WASD combinations in normal Class423_Sub3/Class658_Sub5 orbit, normal point/target, Construction and stock detached views, with inactive vanilla yaw held north. Both production native-input methods are exercised. The old shared controller fails at the first rotated normal-camera heading. Missing camera owners retain safe fallback. `test_free_movement.py` passes 6,089 production-driver checks and 112 production OoT interpolation samples. Java 8 target; these engine stubs are not rendered/native gameplay proof.
+
 ## Universal horizontal controller - 2026-10-05
 
 Status: implemented / `verified-static`; rendered native gameplay acceptance pending. AlternateCharacterController owns one sampled control frame, all movement encodings and one shared horizontal state. Both native drivers delegate direction, free/clipped routing and restoration; native physics/actions remain engine-owned.
@@ -13,7 +26,7 @@ One consolidated acceptance session:
 5. [ ] Mario jump/backflip/ground-pound and F remain native. Toggle clipping during a jump: horizontal baseline changes must not reset native jump height. In Link, hold/release Shift/Z on an NPC; target-relative directions and F contact routing remain intact, and free camera steering resumes on release.
 6. [ ] Exit to ordinary RuneScape: normal walking, click-to-walk and camera WASD return with no native offset; teleport and representative interface open/close still work. Logout/relog, re-enter both characters and verify clean baselines/bridge failure fallback. This is the relevant build/lifecycle/movement subset of docs/rs3/SMOKE_TEST.md; no server/cache/network changes are included.
 
-Focused automation: `test_shared_movement.py` rejects duplicate movement ownership in the old drivers and passes 110,902 input/native-axis checks. `test_free_movement.py` compiles complete production controller/helper/drivers and passes 6,089 checks, including identical clipped traces, pending approvals, blocked-delta reversal, multi-tile corrections, late old-driver cleanup, jump preservation and target-relative clipping. OoT bridge interpolation: 112 samples pass. Java 8 target; no full client/native gameplay proof from these stubs.
+Focused automation: `test_shared_movement.py` rejects duplicate movement ownership in the old drivers and passes 440,138 input/native-axis checks, including normal and detached camera types. `test_free_movement.py` compiles complete production controller/helper/drivers and passes 6,089 checks, including identical clipped traces, pending approvals, blocked-delta reversal, multi-tile corrections, late old-driver cleanup, jump preservation and target-relative clipping. OoT bridge interpolation: 112 samples pass. Java 8 target; no full client/native gameplay proof from these stubs.
 
 Limits: native turning/acceleration/action rules still differ by source game. This controller unifies direction and horizontal host routing, not the native physics implementations. Free movement remains local presentation; clipping ON still uses stock tile authority and may restrict motion. Proper continuous RuneScape collision is not implemented by this consolidation.
 
@@ -71,7 +84,7 @@ Automated: `python3 tests/n64/test_free_movement.py` with JDK on PATH (or JAVA/J
 
 Status: implemented / verified-static; runtime acceptance pending. This steering patch does not fix the separately tracked tile-handoff hitching.
 
-Automated check: `python3 tests/n64/test_shared_movement.py` with a JDK available (`JAVA`/`JAVAC` overrides supported). Compiles the complete shared controller/helper and extracts the actual Construction/native-input methods into dependency stubs. 110,902 checks pass, including one control sample per frame, identical world intent, 361 camera headings/all key combinations, native-equation decoding to screen axes, and 12 Z-target headings/all key combinations. An ownership guard rejects duplicate native encoding/horizontal routing in the old drivers. This does not exercise the complete client, native simulation, rendered camera or server.
+Automated check: `python3 tests/n64/test_shared_movement.py` with a JDK available (`JAVA`/`JAVAC` overrides supported). Compiles the complete shared controller/helper and extracts the actual Construction/native-input methods into dependency stubs. 440,138 checks pass, including one control sample per frame, identical world intent, 361 headings/all key combinations across normal and detached camera types, native-equation decoding to screen axes, and 12 Z-target headings/all key combinations. An ownership guard rejects duplicate native encoding/horizontal routing in the old drivers. This does not exercise the complete client, native simulation, rendered camera or server.
 
 One runtime session; repeat for both Mario and Link:
 1. [ ] `git pull origin main`; Eclipse Java 8 refresh/clean/build, then launch/login. No native rebuild for this patch.
@@ -90,7 +103,7 @@ Drivers MUST delegate to `AlternateCharacterController.movementInput`, `applyHor
 
 - Mario: neutral camera (0,+1), stick (-worldX,-worldZ), verified-static libsm64 fd118132 input contract.
 - Link: live camera/locked-target `inputForward`, stick (-moveX,+moveY). Pinned liboot 25208734 `src/liboot.c` scales stick by +67; `z_player.c` adds camera yaw to the control-stick angle; `z_lib.c` computes `Math_Atan2S(relY,-relX)`; `sys_math_atan.c` uses arguments (x,y), unlike C atan2(y,x). This yields the shared world intent when freely moving and preserves the existing target-relative basis with Z held. verified-static; native lock-on/action behavior still needs gameplay acceptance.
-- Camera basis: rendered detached camera transform first, then Construction live position -> look point matching its RTS pan path; existing Matrix camera fallbacks retained.
+- Camera basis: the active rendered Class411 camera supplies general position/look getters for both normal and detached owners; Construction ownership/RTS pan convention and Matrix fallbacks are retained. Never cast every camera to Construction's Sub2 types.
 
 
 ## Temporary vanilla RS3 collision handoff
@@ -222,5 +235,6 @@ Older v1/v2 sidecar: Java connects with original STEP layout, custom combat repo
 - [ ] Normal RuneScape appearance/server authority remain unchanged outside Mario mode.
 ## Camera-relative movement regression
 
+- [ ] Normal player camera, Shift/Z released: rotate north/east/south/west and hold W in Mario and Link; camera-relative intent must rotate while inactive vanilla yaw may remain fixed.
 - [ ] Hold W, rotate the RTS camera 90 degrees, and confirm Link follows screen-up immediately.
 - [ ] Repeat with A/S/D and Mario; no direction may continue along the previous world heading.
