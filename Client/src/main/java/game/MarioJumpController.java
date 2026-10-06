@@ -9,66 +9,17 @@ package game;
  */
 public final class MarioJumpController {
 
-    private static final AlternateCharacterFreeMovement freeMovement =
-            new AlternateCharacterFreeMovement();
-    private static boolean clippingWasEnabled;
-
-    // Presentation calibration only. libsm64 remains the action/physics owner.
+    // Native action/vertical presentation calibration, not horizontal policy.
     private static final float DEFAULT_SM64_TO_MATRIX_Y_SCALE = 3.0F;
     private static final float DEFAULT_SM64_TO_MATRIX_XZ_SCALE = 3.0F;
     private static final float SM64_TO_MATRIX_Y_SCALE = resolveVerticalScale();
     private static final float SM64_TO_MATRIX_XZ_SCALE = resolveHorizontalScale();
     private static final float EXTERNAL_POSITION_EPSILON = 0.5F;
-    private static final int WALK_RETRY_CYCLES = 10;
-    private static final float MOVE_DIRECTION_DEADZONE = 0.20F;
-
-    /*
-     * Temporary hybrid collision mode. RuneScape decides whether the next tile is
-     * legal, but native Mario remains continuous inside the accepted corridor.
-     * Exactly half a tile is the legal edge: without an accepted adjacent tile,
-     * Mario may reach that boundary but never cross it visually.
-     */
-    private static final float COLLISION_PRESENTATION_LEAD = 256.0F;
-    private static final float WALK_REQUEST_LEAD = 128.0F;
-
-    /*
-     * Keep libsm64's camera basis fixed and encode Matrix's already-resolved
-     * screen-relative movement as a world-space stick vector. This avoids a
-     * second camera-handedness conversion at the native boundary.
-     */
-    private static final float LIBSM64_NEUTRAL_CAMERA_X = 0.0F;
-    private static final float LIBSM64_NEUTRAL_CAMERA_Z = 1.0F;
-
-    private static int lastTickCycle = Integer.MIN_VALUE;
     private static Player lastPlayer;
     private static boolean modeWasMario;
-    private static boolean spaceReleaseRequired;
-    private static boolean attackReleaseRequired;
-    private static boolean crouchReleaseRequired;
-    private static boolean combatAttackWasDown;
-    private static boolean baselineValid;
-    private static boolean appliedPositionValid;
-    private static boolean nativePresentationValid;
-    private static boolean pendingAuthorityTileValid;
-
-    private static float groundX;
-    private static float groundY;
-    private static float groundZ;
-    private static float nativeGroundY;
-    private static float lastAppliedX;
-    private static float lastAppliedY;
-    private static float lastAppliedZ;
-    private static float lastNativePresentationX;
-    private static float lastNativePresentationZ;
-    private static float requestedWorldMoveX;
-    private static float requestedWorldMoveZ;
-    private static int collisionTileX = Integer.MIN_VALUE;
-    private static int collisionTileY = Integer.MIN_VALUE;
-    private static int pendingAuthorityTileX = Integer.MIN_VALUE;
-    private static int pendingAuthorityTileY = Integer.MIN_VALUE;
-    private static int lastWalkTargetX = Integer.MIN_VALUE;
-    private static int lastWalkTargetY = Integer.MIN_VALUE;
-    private static int lastWalkRequestCycle = Integer.MIN_VALUE;
+    private static boolean spaceReleaseRequired, attackReleaseRequired, crouchReleaseRequired;
+    private static boolean combatAttackWasDown, baselineValid, appliedPositionValid;
+    private static float groundY, nativeGroundY, lastAppliedY;
 
     private MarioJumpController() {
     }
@@ -84,11 +35,6 @@ public final class MarioJumpController {
 
     /** Mario/libsm64 driver invoked by AlternateCharacterController. */
     static void tickMarioDriver() {
-        if (lastTickCycle == client.cycles) {
-            return;
-        }
-        lastTickCycle = client.cycles;
-
         Player player = Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976;
         if (player != lastPlayer) {
             Sm64BridgeSession.stop();
@@ -133,278 +79,55 @@ public final class MarioJumpController {
             return;
         }
 
-        boolean clipping = AlternateCharacterController.isRuneScapeClippingEnabled();
-        if (baselineValid && clipping != clippingWasEnabled) {
-            restoreGroundBaseline(player);
-            resetPresentation();
-        }
-        clippingWasEnabled = clipping;
-
         Sm64BridgeSession.NativePosition latestNative = Sm64BridgeSession.getLatestPosition();
         if (!baselineValid) {
-            // Do not feed movement/actions until Matrix and native baselines exist.
             publishIdleInput();
             if (latestNative == null) {
                 Mario64Diagnostics.observeRuntime(player);
                 return;
             }
-
-            Class240 position = player.method5394().aClass240_2647;
-            collisionTileX = player.screenX[0];
-            collisionTileY = player.screenY[0];
-            groundX = clipping ? tileCenter(player, collisionTileX) : position.aFloat2653;
-            groundY = position.aFloat2656;
-            groundZ = clipping ? tileCenter(player, collisionTileY) : position.aFloat2657;
+            groundY = player.method5394().aClass240_2647.aFloat2656;
             nativeGroundY = latestNative.y;
             baselineValid = true;
             appliedPositionValid = false;
-            nativePresentationValid = false;
-            pendingAuthorityTileValid = false;
             System.out.println("[SM64 Bridge] Native state -> Matrix transform ACTIVE (Y scale "
                     + SM64_TO_MATRIX_Y_SCALE + ", XZ scale " + SM64_TO_MATRIX_XZ_SCALE
-                    + (clipping ? ", vanilla RS3 tile clipping)" : ", continuous free movement / clipping OFF)"));
+                    + "; shared horizontal controller)");
             System.out.println("[Mario] Controls: camera-relative WASD move, Space jump, F attack, Shift crouch/ground-pound");
         }
 
-        publishControls();
-
-        Sm64BridgeSession.NativePosition interpolatedNative =
-                Sm64BridgeSession.getInterpolatedPosition();
-        if (interpolatedNative == null) {
+        AlternateCharacterController.MovementInput input = publishControls();
+        Sm64BridgeSession.NativePosition position = Sm64BridgeSession.getInterpolatedPosition();
+        if (position == null) {
             Mario64Diagnostics.observeRuntime(player);
             return;
         }
-
-        Class240 position = player.method5394().aClass240_2647;
-        float currentX = position.aFloat2653;
-        float currentY = position.aFloat2656;
-        float currentZ = position.aFloat2657;
+        float currentY = player.method5394().aClass240_2647.aFloat2656;
         if (appliedPositionValid && Math.abs(currentY - lastAppliedY) > EXTERNAL_POSITION_EPSILON) {
-            /*
-             * Terrain/plane corrections remain Matrix-owned. Horizontal stock
-             * movement is intentionally NOT copied directly into groundX/Z here:
-             * doing that every accepted tile was the source of the visible hitch.
-             */
-            groundY = currentY;
+            groundY = currentY; // Terrain/plane corrections remain Matrix-owned.
         }
+        AlternateCharacterController.applyHorizontalMovement(
+                AlternateCharacterController.CharacterId.MARIO, player,
+                position.x, position.z, SM64_TO_MATRIX_XZ_SCALE, input);
 
-        if (!clipping) {
-            freeMovement.apply(player, interpolatedNative.x, interpolatedNative.z,
-                    SM64_TO_MATRIX_XZ_SCALE);
-            Class240 freePosition = player.method5394().aClass240_2647;
-            float height = Math.max(0.0F, interpolatedNative.y - nativeGroundY);
-            lastAppliedX = freePosition.aFloat2653;
-            lastAppliedY = groundY - height * SM64_TO_MATRIX_Y_SCALE;
-            lastAppliedZ = freePosition.aFloat2657;
-            player.method5395(lastAppliedX, lastAppliedY, lastAppliedZ);
-            appliedPositionValid = true;
-            Mario64Diagnostics.observeRuntime(player);
-            return;
-        }
-
-        float nativeDeltaX = 0.0F;
-        float nativeDeltaZ = 0.0F;
-        if (nativePresentationValid) {
-            nativeDeltaX = (interpolatedNative.x - lastNativePresentationX) * SM64_TO_MATRIX_XZ_SCALE;
-            nativeDeltaZ = (interpolatedNative.z - lastNativePresentationZ) * SM64_TO_MATRIX_XZ_SCALE;
-        }
-        lastNativePresentationX = interpolatedNative.x;
-        lastNativePresentationZ = interpolatedNative.z;
-        nativePresentationValid = true;
-
-        float presentationBaseX = appliedPositionValid ? lastAppliedX : currentX;
-        float presentationBaseZ = appliedPositionValid ? lastAppliedZ : currentZ;
-        float desiredX = presentationBaseX + nativeDeltaX;
-        float desiredZ = presentationBaseZ + nativeDeltaZ;
-
-        /*
-         * Stock RuneScape may approve the requested adjacent tile before Mario's
-         * continuous presentation reaches the shared boundary. Keep that approval
-         * pending. Only switch the collision anchor when the visible native motion
-         * reaches the boundary, where old-tile +256 and new-tile -256 are the exact
-         * same world coordinate. This makes the handoff mathematically continuous.
-         */
-        syncVanillaAuthority(player, desiredX, desiredZ);
-        requestVanillaRuneScapeStep(player, desiredX, desiredZ);
-
-        float targetX = clamp(desiredX,
-                groundX - COLLISION_PRESENTATION_LEAD,
-                groundX + COLLISION_PRESENTATION_LEAD);
-        float targetZ = clamp(desiredZ,
-                groundZ - COLLISION_PRESENTATION_LEAD,
-                groundZ + COLLISION_PRESENTATION_LEAD);
-
-        float nativeHeight = interpolatedNative.y - nativeGroundY;
-        if (nativeHeight < 0.0F) {
-            nativeHeight = 0.0F;
-        }
-
-        // Matrix altitude increases as scene-Y decreases.
-        float targetY = groundY - nativeHeight * SM64_TO_MATRIX_Y_SCALE;
-        player.method5395(targetX, targetY, targetZ);
-        lastAppliedX = targetX;
-        lastAppliedY = targetY;
-        lastAppliedZ = targetZ;
+        // Native Mario retains vertical physics/actions, not horizontal policy.
+        Class240 horizontal = player.method5394().aClass240_2647;
+        float height = Math.max(0.0F, position.y - nativeGroundY);
+        lastAppliedY = groundY - height * SM64_TO_MATRIX_Y_SCALE;
+        player.method5395(horizontal.aFloat2653, lastAppliedY, horizontal.aFloat2657);
         appliedPositionValid = true;
-
         Mario64Diagnostics.observeRuntime(player);
     }
 
-    /**
-     * Observe the stock player tile as collision approval, but defer adopting an
-     * adjacent approved tile until continuous Mario motion reaches the shared tile
-     * boundary. Larger stock corrections are treated as teleports/rebases and are
-     * adopted immediately rather than hidden behind presentation smoothing.
-     */
-    private static void syncVanillaAuthority(Player player, float desiredX, float desiredZ) {
-        int authorityTileX = player.screenX[0];
-        int authorityTileY = player.screenY[0];
-
-        if (collisionTileX == Integer.MIN_VALUE || collisionTileY == Integer.MIN_VALUE) {
-            collisionTileX = authorityTileX;
-            collisionTileY = authorityTileY;
-            groundX = tileCenter(player, collisionTileX);
-            groundZ = tileCenter(player, collisionTileY);
-            pendingAuthorityTileValid = false;
-            return;
-        }
-
-        if (authorityTileX == collisionTileX && authorityTileY == collisionTileY) {
-            pendingAuthorityTileValid = false;
-            return;
-        }
-
-        int tileDeltaX = authorityTileX - collisionTileX;
-        int tileDeltaY = authorityTileY - collisionTileY;
-        if (Math.abs(tileDeltaX) > 1 || Math.abs(tileDeltaY) > 1) {
-            hardRebaseHorizontalAuthority(player, authorityTileX, authorityTileY);
-            return;
-        }
-
-        pendingAuthorityTileX = authorityTileX;
-        pendingAuthorityTileY = authorityTileY;
-        pendingAuthorityTileValid = true;
-
-        float boundaryX = groundX + tileDeltaX * COLLISION_PRESENTATION_LEAD;
-        float boundaryZ = groundZ + tileDeltaY * COLLISION_PRESENTATION_LEAD;
-        boolean crossedX = tileDeltaX == 0
-                || (tileDeltaX > 0 ? desiredX >= boundaryX : desiredX <= boundaryX);
-        boolean crossedZ = tileDeltaY == 0
-                || (tileDeltaY > 0 ? desiredZ >= boundaryZ : desiredZ <= boundaryZ);
-
-        if (!crossedX || !crossedZ) {
-            return;
-        }
-
-        collisionTileX = pendingAuthorityTileX;
-        collisionTileY = pendingAuthorityTileY;
-        groundX = tileCenter(player, collisionTileX);
-        groundZ = tileCenter(player, collisionTileY);
-        pendingAuthorityTileValid = false;
-        lastWalkTargetX = Integer.MIN_VALUE;
-        lastWalkTargetY = Integer.MIN_VALUE;
-        lastWalkRequestCycle = Integer.MIN_VALUE;
-    }
-
-    private static void hardRebaseHorizontalAuthority(Player player, int tileX, int tileY) {
-        collisionTileX = tileX;
-        collisionTileY = tileY;
-        groundX = tileCenter(player, collisionTileX);
-        groundZ = tileCenter(player, collisionTileY);
-        pendingAuthorityTileValid = false;
-        lastWalkTargetX = Integer.MIN_VALUE;
-        lastWalkTargetY = Integer.MIN_VALUE;
-        lastWalkRequestCycle = Integer.MIN_VALUE;
-        lastAppliedX = groundX;
-        lastAppliedZ = groundZ;
-        nativePresentationValid = false;
-    }
-
-    private static float tileCenter(Player player, int tile) {
-        return tile * 512.0F + player.method10556((short) -23679) * 256.0F;
-    }
-
-    /**
-     * Temporary collision handoff. Native Mario owns the continuous presentation,
-     * but crossing the local tile boundary requires a normal Matrix3 walk request.
-     * Once the server/client stock path approves that adjacent tile, the approval
-     * remains pending until Mario visibly reaches the boundary.
-     */
-    private static void requestVanillaRuneScapeStep(Player player, float desiredX, float desiredZ) {
-        if (player == null || client.aClass195_8589 == null || pendingAuthorityTileValid) {
-            return;
-        }
-
-        float leadX = desiredX - groundX;
-        float leadZ = desiredZ - groundZ;
-        int dx = 0;
-        int dz = 0;
-
-        if (requestedWorldMoveX > MOVE_DIRECTION_DEADZONE && leadX >= WALK_REQUEST_LEAD) {
-            dx = 1;
-        } else if (requestedWorldMoveX < -MOVE_DIRECTION_DEADZONE && leadX <= -WALK_REQUEST_LEAD) {
-            dx = -1;
-        }
-        if (requestedWorldMoveZ > MOVE_DIRECTION_DEADZONE && leadZ >= WALK_REQUEST_LEAD) {
-            dz = 1;
-        } else if (requestedWorldMoveZ < -MOVE_DIRECTION_DEADZONE && leadZ <= -WALK_REQUEST_LEAD) {
-            dz = -1;
-        }
-
-        if (dx == 0 && dz == 0) {
-            return;
-        }
-
-        int targetTileX = collisionTileX + dx;
-        int targetTileY = collisionTileY + dz;
-
-        if (targetTileX < 0 || targetTileY < 0
-                || targetTileX >= client.aClass613_8605.method7347(-520836217)
-                || targetTileY >= client.aClass613_8605.method7278(277214477)) {
-            return;
-        }
-
-        boolean targetChanged = targetTileX != lastWalkTargetX || targetTileY != lastWalkTargetY;
-        boolean retryDue = lastWalkRequestCycle == Integer.MIN_VALUE
-                || client.cycles - lastWalkRequestCycle >= WALK_RETRY_CYCLES;
-        if (!targetChanged && !retryDue) {
-            return;
-        }
-
-        Class572_Sub25 packet = IncomingPacket.method4108(targetTileX, targetTileY, 0, 0);
-        if (packet == null) {
-            return;
-        }
-        client.aClass195_8589.method2929(packet, (byte) -1);
-        lastWalkTargetX = targetTileX;
-        lastWalkTargetY = targetTileY;
-        lastWalkRequestCycle = client.cycles;
-    }
-
-    private static float clamp(float value, float min, float max) {
-        if (value < min) {
-            return min;
-        }
-        if (value > max) {
-            return max;
-        }
-        return value;
-    }
-
     private static void publishIdleInput() {
-        AlternateCharacterController.ControlState controls =
-                AlternateCharacterController.sampleControls();
-        requestedWorldMoveX = 0.0F;
-        requestedWorldMoveZ = 0.0F;
-        Sm64BridgeSession.setInput(
-                LIBSM64_NEUTRAL_CAMERA_X,
-                LIBSM64_NEUTRAL_CAMERA_Z,
-                0.0F, 0.0F,
+        AlternateCharacterController.ControlState controls = AlternateCharacterController.sampleControls();
+        AlternateCharacterController.MovementInput input = AlternateCharacterController.IDLE_MOVEMENT;
+        Sm64BridgeSession.setInput(input.cameraX, input.cameraZ, input.stickX, input.stickY,
                 false, false, false);
         Mario64Diagnostics.observeControls(controls, false, false, false);
     }
 
-    private static void publishControls() {
+    private static AlternateCharacterController.MovementInput publishControls() {
         AlternateCharacterController.ControlState controls =
                 AlternateCharacterController.sampleControls();
 
@@ -423,21 +146,16 @@ public final class MarioJumpController {
         }
         boolean buttonZ = !crouchReleaseRequired && controls.modifierAction;
 
-        /* verified-static, libsm64 fd118132: ControlState already resolves the
-         * live Matrix camera into world X/Z. With camera (0,+1), stick (-X,-Z)
-         * yields native intendedYaw toward that vector. Raw (+moveX,+moveY)
-         * with a live camera reverses both screen axes in libsm64. */
-        float worldMoveX = controls.worldMoveX;
-        float worldMoveZ = controls.worldMoveZ;
-        requestedWorldMoveX = worldMoveX;
-        requestedWorldMoveZ = worldMoveZ;
+        AlternateCharacterController.MovementInput input =
+                AlternateCharacterController.movementInput(
+                        AlternateCharacterController.CharacterId.MARIO, controls, null);
 
         boolean weaponCombat = MarioWeaponCombat.updateInput(buttonB && !combatAttackWasDown);
         Sm64BridgeSession.setCombatInput(
-                LIBSM64_NEUTRAL_CAMERA_X,
-                LIBSM64_NEUTRAL_CAMERA_Z,
-                -worldMoveX,
-                -worldMoveZ,
+                input.cameraX,
+                input.cameraZ,
+                input.stickX,
+                input.stickY,
                 buttonA,
                 weaponCombat ? false : buttonB,
                 buttonZ,
@@ -449,10 +167,14 @@ public final class MarioJumpController {
             AlternateCharacterCombatBridge.requestPrimaryMeleeAttack();
         }
         combatAttackWasDown = buttonB;
+        return input;
     }
 
     private static void enterMarioMode() {
         resetPresentation();
+        AlternateCharacterController.beginHorizontalMovement(
+                AlternateCharacterController.CharacterId.MARIO,
+                Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976);
         AlternateCharacterCombatBridge.reset();
         combatAttackWasDown = false;
         AlternateCharacterInputKeyboard.install();
@@ -491,15 +213,11 @@ public final class MarioJumpController {
     }
 
     private static void restoreGroundBaseline(Player player) {
-        if (player == null || !baselineValid) {
-            return;
-        }
-        if (!clippingWasEnabled) {
-            freeMovement.restore(player);
+        AlternateCharacterController.restoreHorizontalMovement(
+                AlternateCharacterController.CharacterId.MARIO, player);
+        if (player != null && baselineValid) {
             Class240 position = player.method5394().aClass240_2647;
             player.method5395(position.aFloat2653, groundY, position.aFloat2657);
-        } else {
-            player.method5395(groundX, groundY, groundZ);
         }
     }
 
@@ -534,30 +252,14 @@ public final class MarioJumpController {
     }
 
     private static void resetPresentation() {
-        freeMovement.reset();
+        AlternateCharacterController.resetHorizontalMovement(
+                AlternateCharacterController.CharacterId.MARIO);
         MarioWeaponCombat.reset();
         baselineValid = false;
         appliedPositionValid = false;
-        nativePresentationValid = false;
-        pendingAuthorityTileValid = false;
-        groundX = 0.0F;
         groundY = 0.0F;
-        groundZ = 0.0F;
         nativeGroundY = 0.0F;
-        lastAppliedX = 0.0F;
         lastAppliedY = 0.0F;
-        lastAppliedZ = 0.0F;
-        lastNativePresentationX = 0.0F;
-        lastNativePresentationZ = 0.0F;
-        requestedWorldMoveX = 0.0F;
-        requestedWorldMoveZ = 0.0F;
-        collisionTileX = Integer.MIN_VALUE;
-        collisionTileY = Integer.MIN_VALUE;
-        pendingAuthorityTileX = Integer.MIN_VALUE;
-        pendingAuthorityTileY = Integer.MIN_VALUE;
-        lastWalkTargetX = Integer.MIN_VALUE;
-        lastWalkTargetY = Integer.MIN_VALUE;
-        lastWalkRequestCycle = Integer.MIN_VALUE;
     }
 
     public static boolean isAirborne() {

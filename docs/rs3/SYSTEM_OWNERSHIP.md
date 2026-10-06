@@ -17,7 +17,8 @@ Do not add a competing implementation without explicitly changing this record.
 | Item/NPC/object/cache definitions | Revision-830 cache/data consumed by Matrix3 | Data authority does not imply engine ownership. |
 | Animations/models/GFX | Revision-830 cache/data consumed by Matrix3 | Construction visuals should use existing data/definitions where practical. |
 | Interfaces | Matrix3 client/cache path | Construction UI must use Matrix3 interface ownership; 718 interfaces are reference-only. |
-| Mario alternate local controller / vertical physics | `PlayerControllerMode` + `Sm64BridgeSession` + `MarioJumpController` presentation seam | RuneScape remains default. While `MARIO` mode is active, libsm64 owns Mario simulation at fixed 30 Hz; Matrix client thread owns transform presentation. RuneScape X/Z, plane, clipping, server authority and world collision remain Matrix-owned until explicitly migrated in later phases. |
+| Native-character horizontal controls / local presentation | `AlternateCharacterController` + its single shared `AlternateCharacterFreeMovement` state | One sampled frame, world/native input encoding and free/clipped routing for Mario, Link and future drivers. Default continuous native X/Z is local presentation only; optional clipping uses stock tile authority. Matrix retains authoritative multiplayer position, plane, pathfinding and world collision. |
+| Native character actions / vertical physics | `PlayerControllerMode` + native bridges + thin Mario/Link adapters | libsm64/liboot retain their native simulation/animation/action rules. MarioJumpController retains native Y presentation; LinkController retains Link combat/native action routing. Neither driver owns horizontal WASD, tile walking or free-movement state. |
 | Construction / settlement gameplay | `Player.settlementState` + `SettlementInstance` in the custom Matrix3 Construction content layer | `SettlementState` is the sole saved freeform-settlement owner, including placed pieces, settlement resources/milestones and persistent worker records. `SettlementInstance` owns transient dynamic-map/object/resource-node/worker-NPC projection and uses Matrix3 `MapBuilder`/`World`/`NPC` authority. Classic POH `House` remains separate. |
 | Historical custom tools/features | Reference documentation only until revalidated | The runtime tree was reset to the protected Matrix3 baseline; preserved docs do not prove current code ownership. |
 | 718 project implementations | Reference only | Ideas/UX/algorithms may be studied; never automatic authority. |
@@ -32,6 +33,15 @@ When ownership actually changes, record:
 4. compatibility boundary,
 5. migration/rollback risk,
 6. required smoke tests.
+
+### 2026-10-05 - Universal native-character horizontal controller
+
+1. **Old authority:** shared keyboard/camera vocabulary, but MarioJumpController and LinkController separately owned native stick conversion, free-movement instances, clipping/tile requests and movement restoration.
+2. **New authority:** AlternateCharacterController owns one sampled frame, native profile encoding and one shared horizontal state/helper for every native character.
+3. **Why:** one universal screen-relative controller must not diverge by character or duplicate movement routing; recent native sign patches alone did not complete that ownership.
+4. **Compatibility boundary:** native bridges/actions/animation/vertical physics, Link combat and Matrix server/world authority are unchanged. Default free travel remains local presentation; optional clipping remains stock tile approval, not a continuous world collision adapter.
+5. **Migration/rollback risk:** no saved/server/cache/protocol changes. Link clipping now uses the same boundary/pending-approval path as Mario; character/toggle cleanup and native jump/Z behavior require rendered acceptance.
+6. **Required smoke tests:** Java 8 client clean/build, launch/login; both characters' cardinal/orbit/diagonal free input, clipping toggles/blocked and legal crossings, direct character switches, native actions/Link target combat, normal RuneScape movement/camera after exit, logout/relog and native failure fallback. Focused stubbed checks pass; full gameplay remains pending.
 
 
 ### 2026-09-17 — Freeform Construction settlement foundation

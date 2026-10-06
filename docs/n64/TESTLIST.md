@@ -1,5 +1,22 @@
 # N64 Client Console Runtime Test List
 
+## Universal horizontal controller - 2026-10-05
+
+Status: implemented / `verified-static`; rendered native gameplay acceptance pending. AlternateCharacterController owns one sampled control frame, all movement encodings and one shared horizontal state. Both native drivers delegate direction, free/clipped routing and restoration; native physics/actions remain engine-owned.
+
+One consolidated acceptance session:
+
+1. [ ] `git pull origin main`; Eclipse Java 8 refresh/clean/build Client and Server, fully restart and login. No native rebuild required. The newer shared combat refactor is preserved.
+2. [ ] Clipping OFF, Shift/Z released: Ctrl+M, test W/S/A/D at opposite and quarter-turn camera headings. Hold W while orbiting; short taps must stop at sub-tile positions and long travel must have no tile clamp/walk requests. Test diagonals/opposing keys.
+3. [ ] Switch directly to Ctrl+L and repeat the same direction/free-travel checks. Switch Link -> Mario -> Link while moving; no leftover offset, fixed-heading input or cleanup from the previous driver may affect the new character.
+4. [ ] Enable clipping for each character. Both now use the same boundary-lead/pending-tile-approval path, not Link's former immediate tile-step path. Check blocked edges, legal crossings and reversal; disable clipping and confirm continuous free motion resumes without accumulated native-distance jumps.
+5. [ ] Mario jump/backflip/ground-pound and F remain native. Toggle clipping during a jump: horizontal baseline changes must not reset native jump height. In Link, hold/release Shift/Z on an NPC; target-relative directions and F contact routing remain intact, and free camera steering resumes on release.
+6. [ ] Exit to ordinary RuneScape: normal walking, click-to-walk and camera WASD return with no native offset; teleport and representative interface open/close still work. Logout/relog, re-enter both characters and verify clean baselines/bridge failure fallback. This is the relevant build/lifecycle/movement subset of docs/rs3/SMOKE_TEST.md; no server/cache/network changes are included.
+
+Focused automation: `test_shared_movement.py` rejects duplicate movement ownership in the old drivers and passes 110,902 input/native-axis checks. `test_free_movement.py` compiles complete production controller/helper/drivers and passes 6,089 checks, including identical clipped traces, pending approvals, blocked-delta reversal, multi-tile corrections, late old-driver cleanup, jump preservation and target-relative clipping. OoT bridge interpolation: 112 samples pass. Java 8 target; no full client/native gameplay proof from these stubs.
+
+Limits: native turning/acceleration/action rules still differ by source game. This controller unifies direction and horizontal host routing, not the native physics implementations. Free movement remains local presentation; clipping ON still uses stock tile authority and may restrict motion. Proper continuous RuneScape collision is not implemented by this consolidation.
+
 ## Native-axis steering correction - 2026-10-05
 
 Status: `verified-static`; full client/native gameplay acceptance pending. Mario now sends neutral-camera world input (-X,-Z); Link negates only horizontal stick input and preserves its live camera/Z-target basis. Free movement and the clipping toggle are unchanged.
@@ -16,9 +33,9 @@ Status: `verified-static`; full client/native gameplay acceptance pending. Mario
 Status: `verified-static`; runtime acceptance pending. Exact native sword-contact frame is a `HYPOTHESIS` until visually tested.
 
 1. [ ] `git pull origin main`; Eclipse Java 8 refresh/clean/build client and server, then launch/login. No liboot/native rebuild is required for this Java-only slice.
-2. [ ] Ctrl+L into Link near two attackable NPCs. Hold Shift/Z while facing one NPC. Console should print `[OoT Combat] Z lock -> NPC index=...`; Link should keep the same target while it remains loaded and within the drop radius.
+2. [ ] Ctrl+L into Link near two attackable NPCs. Hold Shift/Z while facing one NPC. Console should print `[Alt Character Combat] target lock -> NPC index=...`; Link should keep the same target while it remains loaded and within the drop radius.
 3. [ ] While still holding Shift, use W/A/S/D. Link/native movement should remain target-relative so left/right read as lock-on strafing/orbit behavior rather than reverting to the free camera basis.
-4. [ ] Release Shift. Console should print `Z lock released`, and ordinary camera-relative Link steering should resume immediately.
+4. [ ] Release Shift. Console should print `[Alt Character Combat] target lock released`, and ordinary camera-relative Link steering should resume immediately.
 5. [ ] Hold Shift on an NPC and press F once. Native OoT sword animation must begin first; exactly one Matrix melee hit may be requested when the animation reaches the contact gate. Holding F must not create repeating RuneScape auto-attacks.
 6. [ ] With Shift released, face an attackable NPC within roughly 3 tiles and press F. Forward fallback may hit that NPC; an NPC behind Link/camera-forward should not be selected by the fallback cone.
 7. [ ] Move the locked NPC out of range, kill/despawn it, or leave its loaded region. Lock must drop/reacquire cleanly and no stale-index hit may occur.
@@ -48,13 +65,13 @@ Current priority: restore continuous native X/Z for Mario AND Link. The earlier 
 
 Known limits: free movement is local presentation, not authoritative multiplayer travel. Normal Matrix corrections remain authoritative; an outstanding stock route can still correct presentation. Toggling clipping ON or exiting restores the underlying baseline. Native proof-floor/world bounds still exist. Proper continuous RuneScape world collision is future work.
 
-Automated: `python3 tests/n64/test_free_movement.py` with JDK on PATH (or JAVA/JAVAC overrides). Production shared controller, free-movement helper and both drivers compile against engine stubs with Java 8 target; 6,017 checks pass. Complete OoT Java bridge compiles and 112 production interpolation samples pass. Full client/native runtime acceptance remains pending.
+Automated: `python3 tests/n64/test_free_movement.py` with JDK on PATH (or JAVA/JAVAC overrides). Production shared controller, movement helper and both drivers compile against engine stubs with Java 8 target; 6,089 checks pass, including identical free/clipped ownership paths. Complete OoT Java bridge compiles and 112 production interpolation samples pass. Full client/native runtime acceptance remains pending.
 
 ## Shared screen-relative WASD - Mario and Link (2026-10-05)
 
 Status: implemented / verified-static; runtime acceptance pending. This steering patch does not fix the separately tracked tile-handoff hitching.
 
-Automated check: `python3 tests/n64/test_shared_movement.py` with a JDK available (`JAVA`/`JAVAC` overrides supported). Compiles the complete shared controller and extracts the actual Construction/native-input methods into dependency stubs. 81,638 checks pass, including 361 camera headings with all 16 key combinations, native-equation decoding to screen axes, and 12 Z-target headings with all key combinations. The updated test rejects original-main Mario W and Link A input signs. This does not exercise the complete client, native simulation, rendered camera or server.
+Automated check: `python3 tests/n64/test_shared_movement.py` with a JDK available (`JAVA`/`JAVAC` overrides supported). Compiles the complete shared controller/helper and extracts the actual Construction/native-input methods into dependency stubs. 110,902 checks pass, including one control sample per frame, identical world intent, 361 camera headings/all key combinations, native-equation decoding to screen axes, and 12 Z-target headings/all key combinations. An ownership guard rejects duplicate native encoding/horizontal routing in the old drivers. This does not exercise the complete client, native simulation, rendered camera or server.
 
 One runtime session; repeat for both Mario and Link:
 1. [ ] `git pull origin main`; Eclipse Java 8 refresh/clean/build, then launch/login. No native rebuild for this patch.
@@ -68,6 +85,8 @@ One runtime session; repeat for both Mario and Link:
 ### Contract for future character drivers
 
 Use shared `ControlState` for screen input, camera basis and `worldMoveX/worldMoveZ` movement intent. Never rotate by character facing. At the native boundary, encode either world intent with a neutral native camera or local input with the matching native camera basis; verify that engine's actual yaw/sign equations rather than assuming axes match.
+
+Drivers MUST delegate to `AlternateCharacterController.movementInput`, `applyHorizontalMovement`, `restoreHorizontalMovement` and `resetHorizontalMovement`. Provide native X/Z and scale; keep actions/vertical pose in the adapter. Register the native input profile centrally. Do not create a per-driver mover, transform WASD, send walk packets, or implement another clipping/toggle/reset path. An explicit combat basis goes through the same world-intent resolver and horizontal policy.
 
 - Mario: neutral camera (0,+1), stick (-worldX,-worldZ), verified-static libsm64 fd118132 input contract.
 - Link: live camera/locked-target `inputForward`, stick (-moveX,+moveY). Pinned liboot 25208734 `src/liboot.c` scales stick by +67; `z_player.c` adds camera yaw to the control-stick angle; `z_lib.c` computes `Math_Atan2S(relY,-relX)`; `sys_math_atan.c` uses arguments (x,y), unlike C atan2(y,x). This yields the shared world intent when freely moving and preserves the existing target-relative basis with Z held. verified-static; native lock-on/action behavior still needs gameplay acceptance.

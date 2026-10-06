@@ -3,7 +3,7 @@
 Date: 2026-10-05
 Status: `verified-static`; Eclipse Java 8 build + gameplay acceptance pending.
 
-Purpose: prove Mario and Link use the same Matrix-owned input/combat architecture after removing Link's duplicate combat controller.
+Purpose: prove Mario and Link use the same Matrix-owned input/horizontal movement/combat architecture after removing per-driver movement paths and Link's duplicate combat controller. Focused movement automation passes; native gameplay acceptance remains pending.
 
 ## Build / startup
 
@@ -33,8 +33,9 @@ Purpose: prove Mario and Link use the same Matrix-owned input/combat architectur
 
 1. [ ] In both Mario and Link modes, W/A/S/D remain owned by the shared `AlternateCharacterController` and do not also pan the camera.
 2. [ ] Rotate the camera while holding W in each character. Both must follow the current visible camera basis according to their native axis adapter.
-3. [ ] Toggle the shared RuneScape clipping option and verify both characters continue using the same shared policy toggle; native presentation differences are allowed, duplicate keyboard/camera ownership is not.
+3. [ ] With clipping OFF, both stop at arbitrary sub-tile positions and travel freely without tile walk requests/clamps. Toggle ON: both now use the same boundary-lead/pending-approval route, not separate Mario/Link tile policies. Toggle OFF without an accumulated-distance jump.
 4. [ ] Switch Mario -> Link -> Mario and exit to RuneScape. No stale shared target/combat state or held-key state may carry between modes.
+5. [ ] Run the consolidated movement session at the top of docs/n64/TESTLIST.md, including cardinal/diagonal/opposing input, Mario jump preservation and the shared target-relative Link clipping basis. Native action/acceleration differences are allowed; separate horizontal movement owners are not.
 
 ## Packet/server regression
 

@@ -1,15 +1,25 @@
 package game;
 
 /**
- * Shared client-side controller foundation for non-RuneScape character drivers.
+ * One client-side horizontal movement controller for native character drivers.
  *
  * Matrix remains the host camera/input/world architecture. Character-specific
- * drivers consume the same camera-relative input and combat bridge instead of
- * each game implementing its own keyboard/camera rules.
+ * This owner samples one control frame, resolves world/native input and applies
+ * one free/clipped horizontal movement state. Drivers exchange native state and
+ * retain their action, animation, vertical physics and combat integration only.
  */
 public final class AlternateCharacterController {
 
-    // UI requests only; each driver applies transitions on the client thread.
+    private static final AlternateCharacterFreeMovement HORIZONTAL_MOVEMENT =
+            new AlternateCharacterFreeMovement();
+    private static CharacterId horizontalOwner;
+    private static int lastTickCycle = Integer.MIN_VALUE;
+    private static int lastControlCycle = Integer.MIN_VALUE;
+    private static CharacterId sampledCharacter;
+    private static boolean sampledCalibration;
+    private static ControlState sampledControls;
+
+    // UI requests only; the shared movement state applies transitions on the client thread.
     // Free movement is the default for this local development controller.
     private static volatile boolean runeScapeClippingEnabled;
 
@@ -76,6 +86,78 @@ public final class AlternateCharacterController {
             this.worldMoveX = moveX * cameraForward.z + moveY * cameraForward.x;
             this.worldMoveZ = -moveX * cameraForward.x + moveY * cameraForward.z;
         }
+
+        ControlState withMovementForward(PlanarDirection forward) {
+            return forward == null || forward == cameraForward ? this : new ControlState(
+                    moveX, moveY, jump, primaryAction, modifierAction, forward);
+        }
+    }
+
+    /** One world intent plus its native transport encoding; no actor-facing input. */
+    static final class MovementInput {
+        final float worldMoveX, worldMoveZ;
+        final float cameraX, cameraZ, stickX, stickY;
+
+        MovementInput(float worldX, float worldZ, float cameraX, float cameraZ,
+                float stickX, float stickY) {
+            this.worldMoveX = worldX;
+            this.worldMoveZ = worldZ;
+            this.cameraX = cameraX;
+            this.cameraZ = cameraZ;
+            this.stickX = stickX;
+            this.stickY = stickY;
+        }
+    }
+
+    static final MovementInput IDLE_MOVEMENT =
+            new MovementInput(0.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F);
+
+    static MovementInput movementInput(CharacterId character, ControlState controls,
+            PlanarDirection movementForward) {
+        ControlState resolved = controls.withMovementForward(movementForward);
+        /* verified-static at libsm64 fd118132, liboot 25208734 / OoT 269d0301.
+         * The controller alone owns native axis conversion. Both profiles decode
+         * to resolved.worldMoveX/Z; an explicit Z-target basis uses the SAME
+         * world intent for native input and optional Matrix clipping. */
+        if (character == CharacterId.MARIO) {
+            return new MovementInput(resolved.worldMoveX, resolved.worldMoveZ,
+                    0.0F, 1.0F, -resolved.worldMoveX, -resolved.worldMoveZ);
+        }
+        if (character == CharacterId.LINK) {
+            return new MovementInput(resolved.worldMoveX, resolved.worldMoveZ,
+                    resolved.cameraForward.x, resolved.cameraForward.z,
+                    -resolved.moveX, resolved.moveY);
+        }
+        throw new IllegalArgumentException("Missing native movement profile: " + character);
+    }
+
+    static void beginHorizontalMovement(CharacterId character, Player player) {
+        if (horizontalOwner != character) {
+            HORIZONTAL_MOVEMENT.restore(player);
+            HORIZONTAL_MOVEMENT.reset();
+            horizontalOwner = character;
+        }
+    }
+
+    static void applyHorizontalMovement(CharacterId character, Player player,
+            float nativeX, float nativeZ, float scale, MovementInput input) {
+        beginHorizontalMovement(character, player);
+        HORIZONTAL_MOVEMENT.apply(player, nativeX, nativeZ, scale,
+                input.worldMoveX, input.worldMoveZ, isRuneScapeClippingEnabled());
+    }
+
+    static void restoreHorizontalMovement(CharacterId character, Player player) {
+        if (horizontalOwner == character) {
+            HORIZONTAL_MOVEMENT.restore(player);
+            horizontalOwner = null;
+        }
+    }
+
+    static void resetHorizontalMovement(CharacterId character) {
+        if (horizontalOwner == character) {
+            HORIZONTAL_MOVEMENT.reset();
+            horizontalOwner = null;
+        }
     }
 
     // Class549_Sub1 normalized-key mappings, verified from anIntArray8901.
@@ -132,6 +214,10 @@ public final class AlternateCharacterController {
      * characters dispatch here instead of adding per-game viewport ticks.
      */
     public static void tick() {
+        if (lastTickCycle == client.cycles) {
+            return;
+        }
+        lastTickCycle = client.cycles;
         MARIO_DRIVER.tick();
         LINK_DRIVER.tick();
     }
@@ -158,11 +244,22 @@ public final class AlternateCharacterController {
     }
 
     static ControlState sampleControls() {
-        if (PlayerControllerMode.isMarioMode() && MarioHelmetCalibrationController.isActive()) {
-            return new ControlState(
+        CharacterId character = getActiveCharacter();
+        boolean calibration = character == CharacterId.MARIO
+                && MarioHelmetCalibrationController.isActive();
+        if (sampledControls != null && lastControlCycle == client.cycles
+                && sampledCharacter == character && sampledCalibration == calibration) {
+            return sampledControls;
+        }
+        lastControlCycle = client.cycles;
+        sampledCharacter = character;
+        sampledCalibration = calibration;
+        if (calibration) {
+            sampledControls = new ControlState(
                     0.0F, 0.0F,
                     false, false, false,
                     getCameraForward());
+            return sampledControls;
         }
 
         float moveX = (rawKeyDown(INTERNAL_D_KEY) ? 1.0F : 0.0F)
@@ -173,13 +270,14 @@ public final class AlternateCharacterController {
             moveX *= DIAGONAL_STICK_SCALE;
             moveY *= DIAGONAL_STICK_SCALE;
         }
-        return new ControlState(
+        sampledControls = new ControlState(
                 moveX,
                 moveY,
                 rawKeyDown(INTERNAL_JUMP_KEY),
                 rawPrimaryDown(),
                 rawModifierDown(),
                 getCameraForward());
+        return sampledControls;
     }
 
     static boolean rawJumpDown() {

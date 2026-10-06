@@ -1,3 +1,10 @@
+2026-10-05 - One shared horizontal movement owner
+- AlternateCharacterController now owns one per-client-cycle control sample, native-axis encoding and one horizontal movement state for every character. Mario/Link drivers no longer contain stick signs, independent free movers or tile-walk routing.
+- Moved Mario's optional tile-authority handoff into the shared movement helper and made Link use the same free/clipped path, pending approvals, boundary lead, correction, toggle and restoration rules.
+- Preserved native animation/actions, Mario vertical physics/scales and Link combat/Z targeting. Target-relative world intent now feeds both native input and optional Matrix clipping consistently.
+- Ownership guard rejects the pre-consolidation drivers. Java 8-targeted focused tests pass: 110,902 shared-input/native-axis checks, 6,089 production-driver checks including matching traces/switches, and 112 OoT interpolation samples.
+- Free mode remains continuous/local-only and sends no walk packets; clipping ON remains stock tile authority, not proper continuous RuneScape world collision. Full Eclipse/native gameplay acceptance pending; no native rebuild required.
+
 2026-10-05 - Shared imported-character controller/combat ownership cleanup
 - Added authoritative `docs/n64/PROJECT.md`: Mario, Link and future imported characters share Matrix-owned input/camera/movement policy, targeting, attack lifecycle, packet routing and server combat; per-character classes are native adapters only.
 - Replaced Link-only client combat ownership with `AlternateCharacterCombatBridge`; Link now supplies liboot action/animation/frame evidence into the shared native-contact gate instead of owning its own NPC scanner/packet path.

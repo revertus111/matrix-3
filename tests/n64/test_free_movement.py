@@ -20,13 +20,13 @@ class Player {
     int method10556(short x){return 1;}
 }
 class Class611 { static Player aClass456_Sub1_Sub2_Sub3_Sub2_7976; }
-class Class195 { int sent; void method2929(Class572_Sub25 p,byte b){sent++;} }
-class Class572_Sub25 {}
+class Class195 { int sent,lastX,lastZ; void method2929(Class572_Sub25 p,byte b){sent++;lastX=p.x;lastZ=p.z;} }
+class Class572_Sub25 { int x,z; Class572_Sub25(int x,int z){this.x=x;this.z=z;} }
 class Class613 { int method7347(int x){return 100;} int method7278(int x){return 100;} }
 class client { static int cycles,anInt8665; static float aFloat8678; static Class195 aClass195_8589=new Class195(); static Class613 aClass613_8605=new Class613(); }
 class IncomingPacket {
     static boolean method4113(byte b){return false;}
-    static Class572_Sub25 method4108(int x,int y,int a,int b){return new Class572_Sub25();}
+    static Class572_Sub25 method4108(int x,int y,int a,int b){return new Class572_Sub25(x,y);}
 }
 class PlayerControllerMode {
     enum Mode {RUNESCAPE,MARIO,LINK} static Mode mode=Mode.RUNESCAPE;
@@ -38,7 +38,21 @@ class AlternateCharacterInputKeyboard {
     static boolean rawKeyDown(int k){return keys[k];}
 }
 class MarioHelmetCalibrationController { static boolean isActive(){return false;} }
-class AlternateCharacterCombatBridge { static void reset(){} static void requestPrimaryMeleeAttack(){} }
+class AlternateCharacterCombatBridge {
+    static AlternateCharacterController.PlanarDirection target;
+    static boolean returnNull;
+    static int contactCalls;
+    static void reset(){}
+    static boolean requestPrimaryMeleeAttack(){return true;}
+    static AlternateCharacterController.PlanarDirection updateTargeting(Player p,boolean z,
+            AlternateCharacterController.PlanarDirection forward){
+        if(returnNull)return null;
+        return z && target!=null?target:forward;
+    }
+    static void updateNativeMeleeContact(Player p,AlternateCharacterController.CharacterId id,
+            boolean b,AlternateCharacterController.PlanarDirection forward,long sequence,
+            int action,int animId,float animFrame,float contactFrame,long maxTicks){contactCalls++;}
+}
 class MarioWeaponCombat { static void reset(){} static boolean updateInput(boolean b){return false;} static int getRequest(){return 0;} }
 class Mario64Diagnostics {
     static void observeRuntime(Player p){} static void noteFallback(String s){}
@@ -54,7 +68,7 @@ class Sm64BridgeSession {
     static void setCombatInput(float a,float b,float c,float d,boolean e,boolean f,boolean g,int h,int i){}
 }
 class OotBridgeSession {
-    static final class LinkFrame {}
+    static final class LinkFrame {long sequence;int action,animId;float animFrame;}
     static final class NativePosition {float x,z;}
     static NativePosition p=new NativePosition(); static LinkFrame frame=new LinkFrame();
     static void start(){} static void stop(){} static boolean hasFailed(){return false;} static String getFailureReason(){return null;}
@@ -62,11 +76,6 @@ class OotBridgeSession {
     static void setInput(float a,float b,float c,float d,boolean e,boolean f,boolean g){}
 }
 class LinkCharacterFit { static final class Profile {float scale=3;} static Profile resolve(Player p,OotBridgeSession.LinkFrame f){return new Profile();} }
-class LinkCombatController {
-    static void reset(){}
-    static AlternateCharacterController.PlanarDirection update(Player p,boolean b,boolean z,
-            AlternateCharacterController.PlanarDirection forward){return forward;}
-}
 class ConstructionBuildCamera { static float[] getMovementForward(){return new float[]{0,1};} static boolean isRequested(){return false;} }
 class Class423_Sub2 { Class240 method5159(byte b){return new Class240();} }
 class Class658_Sub2 { Class240 method7736(int n){return new Class240();} }
@@ -88,6 +97,71 @@ public class FreeMovementTest {
     static void tick(){client.cycles++;AlternateCharacterController.tick();}
     static float x(Player p){return p.method5394().aClass240_2647.aFloat2653;}
     static float z(Player p){return p.method5394().aClass240_2647.aFloat2657;}
+    static void keysOff(){java.util.Arrays.fill(AlternateCharacterInputKeyboard.keys,false);AlternateCharacterCombatBridge.target=null;}
+    static void nativePosition(AlternateCharacterController.CharacterId id,float x,float z){
+        if(id==AlternateCharacterController.CharacterId.MARIO){Sm64BridgeSession.p.x=x;Sm64BridgeSession.p.z=z;}
+        else{OotBridgeSession.p.x=x;OotBridgeSession.p.z=z;}
+    }
+    static Player prepare(AlternateCharacterController.CharacterId id,boolean clipping){
+        PlayerControllerMode.mode=PlayerControllerMode.Mode.RUNESCAPE;tick();keysOff();
+        Player p=new Player();p.method5395(256,0,256);Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976=p;
+        Sm64BridgeSession.p.x=Sm64BridgeSession.p.y=Sm64BridgeSession.p.z=0;
+        OotBridgeSession.p.x=OotBridgeSession.p.z=0;
+        client.aClass195_8589=new Class195();AlternateCharacterController.setRuneScapeClippingEnabled(clipping);
+        PlayerControllerMode.mode=id==AlternateCharacterController.CharacterId.MARIO?PlayerControllerMode.Mode.MARIO:PlayerControllerMode.Mode.LINK;
+        tick();return p;
+    }
+    // Identical native X/Z samples must traverse the SAME horizontal pipeline.
+    static float[] clippedTrace(AlternateCharacterController.CharacterId id){
+        Player p=prepare(id,true);AlternateCharacterInputKeyboard.keys[50]=true;
+        float[] trace=new float[11];int n=0;
+        nativePosition(id,50,0);tick();near(406,x(p));trace[n++]=x(p);
+        near(1,client.aClass195_8589.sent);near(1,client.aClass195_8589.lastX);near(0,client.aClass195_8589.lastZ);
+        nativePosition(id,75,0);tick();near(481,x(p));trace[n++]=x(p);
+        near(1,client.aClass195_8589.sent);
+        p.screenX[0]=1;nativePosition(id,82,0);tick();near(502,x(p));trace[n++]=x(p);
+        near(1,client.aClass195_8589.sent); // approval pending; no early centre snap
+        nativePosition(id,86,0);tick();near(514,x(p));trace[n++]=x(p);
+        nativePosition(id,300,0);tick();near(1024,x(p));trace[n++]=x(p);
+        near(2,client.aClass195_8589.sent);near(2,client.aClass195_8589.lastX);
+        nativePosition(id,400,0);tick();near(1024,x(p));
+        nativePosition(id,399,0);tick();near(1021,x(p));trace[n++]=x(p); // no stored blocked delta
+        keysOff();tick();near(1021,x(p));
+        p.screenX[0]=5;p.method5395(2816,0,256);nativePosition(id,500,0);tick();near(2816,x(p));trace[n++]=x(p);
+        nativePosition(id,500.125F,0);tick();near(2816.375F,x(p));trace[n++]=x(p);
+        int packets=client.aClass195_8589.sent;
+        AlternateCharacterController.setRuneScapeClippingEnabled(false);tick();near(2816,x(p));trace[n++]=x(p);
+        nativePosition(id,500.25F,0);tick();near(2816.375F,x(p));trace[n++]=x(p);
+        near(packets,client.aClass195_8589.sent);
+        PlayerControllerMode.mode=PlayerControllerMode.Mode.RUNESCAPE;tick();near(2816,x(p));trace[n++]=x(p);
+        return trace;
+    }
+    static void switchAndVerticalChecks(){
+        Player p=prepare(AlternateCharacterController.CharacterId.MARIO,false);
+        Sm64BridgeSession.p.x=2;tick();near(262,x(p));
+        float before=x(p);Sm64BridgeSession.p.x=3;AlternateCharacterController.tick();near(before,x(p));
+        tick();near(265,x(p)); // shared viewport guard, exactly one update per cycle
+        Sm64BridgeSession.p.y=2;tick();near(-6,p.method5394().aClass240_2647.aFloat2656);
+        AlternateCharacterController.setRuneScapeClippingEnabled(true);tick();near(-6,p.method5394().aClass240_2647.aFloat2656);
+        AlternateCharacterController.setRuneScapeClippingEnabled(false);tick();near(-6,p.method5394().aClass240_2647.aFloat2656);
+        PlayerControllerMode.mode=PlayerControllerMode.Mode.LINK;tick();near(256,x(p));near(0,p.method5394().aClass240_2647.aFloat2656);
+        OotBridgeSession.p.x=2;tick();near(262,x(p));
+        AlternateCharacterController.restoreHorizontalMovement(AlternateCharacterController.CharacterId.MARIO,p);
+        AlternateCharacterController.resetHorizontalMovement(AlternateCharacterController.CharacterId.MARIO);near(262,x(p));
+        OotBridgeSession.p.x=3;tick();near(265,x(p)); // late old-driver cleanup cannot steal ownership
+        PlayerControllerMode.mode=PlayerControllerMode.Mode.MARIO;tick();near(256,x(p));
+        Sm64BridgeSession.p.x=4;tick();near(259,x(p));
+        AlternateCharacterController.restoreHorizontalMovement(AlternateCharacterController.CharacterId.LINK,p);near(259,x(p));
+        PlayerControllerMode.mode=PlayerControllerMode.Mode.RUNESCAPE;tick();near(256,x(p));
+    }
+    static void targetClippingCheck(){
+        Player p=prepare(AlternateCharacterController.CharacterId.LINK,true);
+        AlternateCharacterCombatBridge.target=new AlternateCharacterController.PlanarDirection(1,0);
+        AlternateCharacterInputKeyboard.keys[33]=AlternateCharacterInputKeyboard.keys[81]=true;
+        OotBridgeSession.p.x=50;tick();near(406,x(p));
+        near(1,client.aClass195_8589.lastX);near(0,client.aClass195_8589.lastZ);
+        PlayerControllerMode.mode=PlayerControllerMode.Mode.RUNESCAPE;tick();keysOff();
+    }
     public static void main(String[] args){
         if(AlternateCharacterController.isRuneScapeClippingEnabled())throw new AssertionError("clipping must default OFF");
         Player p=new Player();p.method5395(256,0,256);Class611.aClass456_Sub1_Sub2_Sub3_Sub2_7976=p;
@@ -109,7 +183,10 @@ public class FreeMovementTest {
         for(int i=1;i<=2000;i++){OotBridgeSession.p.x=i*0.625F;OotBridgeSession.p.z=-i*0.25F;tick();near(256+i*1.875F,x(p));near(256-i*0.75F,z(p));}
         near(packets,client.aClass195_8589.sent);
         AlternateCharacterController.setRuneScapeClippingEnabled(true);tick();near(256,x(p));near(256,z(p));
+        near(packets,client.aClass195_8589.sent); // shared clipping waits for actual boundary lead
+        OotBridgeSession.p.x+=100;tick();
         if(client.aClass195_8589.sent<=packets)throw new AssertionError("Link clipping routing");
+        if(x(p)>512)throw new AssertionError("Link clipping boundary bypass");
         AlternateCharacterController.setRuneScapeClippingEnabled(false);tick();
         OotBridgeSession.p.x+=0.125F;tick();near(256.375F,x(p));
         PlayerControllerMode.mode=PlayerControllerMode.Mode.RUNESCAPE;tick();near(256,x(p));
@@ -119,7 +196,12 @@ public class FreeMovementTest {
         f.restore(p);near(1000,x(p));near(2000,z(p));
         f.apply(p,0,0,3);f.apply(p,100,0,3);
         Player replacement=new Player();replacement.method5395(11,12,13);f.restore(replacement);near(11,x(replacement));
-        System.out.println("PASS "+checks+" production-driver checks: free travel, zero walk packets, toggle, clipping, restore, corrections");
+        float[] mario=clippedTrace(AlternateCharacterController.CharacterId.MARIO);
+        float[] link=clippedTrace(AlternateCharacterController.CharacterId.LINK);
+        for(int i=0;i<mario.length;i++)near(mario[i],link[i]);
+        switchAndVerticalChecks();targetClippingCheck();
+        if(AlternateCharacterCombatBridge.contactCalls==0)throw new AssertionError("shared Link combat contact seam lost");
+        System.out.println("PASS "+checks+" production-driver checks: one shared free/clipped path, matching traces, pending approval, mode switches, vertical preservation, target basis");
     }
 }
 '''

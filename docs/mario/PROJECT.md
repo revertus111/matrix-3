@@ -1,5 +1,16 @@
 # Mario 64 in Matrix3 / Revision 830
 
+## Current universal-controller checkpoint - 2026-10-05
+
+- User AAA approved completing real movement consolidation after identifying that the previous patch only adjusted two native adapters. Shared input alone did not satisfy the requested horizontal ownership.
+- IMPLEMENTED / verified-static: AlternateCharacterController owns one per-client-cycle input sample, shared world intent/native profile encoding and exactly one horizontal movement state. MarioJumpController/LinkController only exchange native input/state/scale and retain game-specific action, vertical presentation and combat seams.
+- Both characters now use the same default continuous free path and optional stock tile-authority handoff. Removed per-driver free-mover instances, walk packet/clipping paths and native stick-sign math. Shared mode transitions/restore prevent late old-driver cleanup from resetting the new owner.
+- Mario native Y/jump/scales and Link native Z/manual contact bridge remain intact. The combat-selected Link basis resolves through shared world intent, including optional clipping directions.
+- Focused Java 8-targeted checks pass: 110,902 input/native-axis assertions, 6,089 production-driver checks with matching clipped traces, pending approvals/corrections/switches/vertical preservation/target basis, and 112 OoT interpolation samples. Ownership guard rejects the pre-consolidation implementation.
+- Full Eclipse build/rendered native gameplay acceptance remains pending. No native rebuild/protocol/server/cache change. Free motion is local presentation; clipping ON remains stock tile authority, not continuous RuneScape world collision.
+- Resume here: pull current main, refresh/clean/build/restart client, then run the single consolidated universal-controller session at the top of docs/n64/TESTLIST.md. Confirm ordinary screen directions with Shift/Z released before Link target-relative controls.
+- This checkpoint supersedes older per-driver horizontal ownership below. Historical runtime evidence stays preserved; native source games still own their distinct acceleration/turning/action rules.
+
 ## Current native-axis steering checkpoint - 2026-10-05
 
 - Completing the user's already-AAA-approved movement fix against current main, preserving newer Link combat. Earlier steering commit 67f29afc existed but was not on main; its existence was not proof of delivery.
