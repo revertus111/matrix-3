@@ -15,6 +15,17 @@ public final class MarioJumpController {
     private static final float SM64_TO_MATRIX_Y_SCALE = resolveVerticalScale();
     private static final float SM64_TO_MATRIX_XZ_SCALE = resolveHorizontalScale();
     private static final float EXTERNAL_POSITION_EPSILON = 0.5F;
+
+    /*
+     * V4 native slash keyframes are 0.00, 0.20, 0.45, 0.70, 1.00. The 0.45
+     * pose is the cross-body strike point, so the shared combat owner uses that
+     * native progress as Mario's contact threshold. Visual acceptance remains a
+     * runtime check; this value is sourced from combat_overlay.h, not invented
+     * RuneScape timing.
+     */
+    private static final float MARIO_MELEE_CONTACT_TIME = 0.45F;
+    private static final long MAX_ARMED_NATIVE_TICKS = 24L;
+
     private static Player lastPlayer;
     private static boolean modeWasMario;
     private static boolean spaceReleaseRequired, attackReleaseRequired, crouchReleaseRequired;
@@ -96,7 +107,7 @@ public final class MarioJumpController {
             System.out.println("[Mario] Controls: camera-relative WASD move, Space jump, F attack, Shift crouch/ground-pound");
         }
 
-        AlternateCharacterController.MovementInput input = publishControls();
+        AlternateCharacterController.MovementInput input = publishControls(player);
         Sm64BridgeSession.NativePosition position = Sm64BridgeSession.getInterpolatedPosition();
         if (position == null) {
             Mario64Diagnostics.observeRuntime(player);
@@ -127,7 +138,7 @@ public final class MarioJumpController {
         Mario64Diagnostics.observeControls(controls, false, false, false);
     }
 
-    private static AlternateCharacterController.MovementInput publishControls() {
+    private static AlternateCharacterController.MovementInput publishControls(Player player) {
         AlternateCharacterController.ControlState controls =
                 AlternateCharacterController.sampleControls();
 
@@ -150,7 +161,28 @@ public final class MarioJumpController {
                 AlternateCharacterController.movementInput(
                         AlternateCharacterController.CharacterId.MARIO, controls, null);
 
-        boolean weaponCombat = MarioWeaponCombat.updateInput(buttonB && !combatAttackWasDown);
+        /*
+         * Capture the current native frame BEFORE publishing a new slash request.
+         * That guarantees the shared attack lifecycle arms against the pre-swing
+         * state and then observes combatAnimation 0 -> 1 on a later native frame.
+         */
+        Sm64BridgeSession.GeometryFrame contactFrame =
+                Sm64BridgeSession.getLatestGeometryFrame();
+        boolean attackEdge = buttonB && !combatAttackWasDown;
+        boolean weaponCombat = MarioWeaponCombat.updateInput(attackEdge);
+
+        AlternateCharacterCombatBridge.updateNativeMeleeContact(
+                player,
+                AlternateCharacterController.CharacterId.MARIO,
+                buttonB && weaponCombat,
+                controls.cameraForward,
+                contactFrame == null ? -1L : contactFrame.sequence,
+                contactFrame == null ? 0 : contactFrame.combatAnimation,
+                0,
+                contactFrame == null ? 0.0F : contactFrame.combatTime,
+                MARIO_MELEE_CONTACT_TIME,
+                MAX_ARMED_NATIVE_TICKS);
+
         Sm64BridgeSession.setCombatInput(
                 input.cameraX,
                 input.cameraZ,
@@ -163,9 +195,6 @@ public final class MarioJumpController {
                 MarioWeaponCombat.getRequest());
         Mario64Diagnostics.observeControls(controls, buttonA, weaponCombat ? false : buttonB, buttonZ);
 
-        if (buttonB && !combatAttackWasDown) {
-            AlternateCharacterCombatBridge.requestPrimaryMeleeAttack();
-        }
         combatAttackWasDown = buttonB;
         return input;
     }
