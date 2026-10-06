@@ -1,3 +1,6 @@
+2026-10-06 - Walking fix runtime acceptance
+- User confirmed walking is fixed following shared normal-camera reader patch 428e33c4. Marked the reported walking defect VERIFIED and updated the checkpoint/test evidence; detailed clipping/action/combat/lifecycle coverage remains separate. Documentation-only update.
+
 2026-10-05 - Shared normal-camera direction read
 - Read active Class411 position/look through method4968/method4997 instead of casting every camera to the Construction RTS Sub2 types. Normal orbit/target cameras now supply live forward direction to both Mario and Link instead of silently falling back to stale vanilla yaw.
 - Preserve shared native-axis encoding, free/clipped routing, camera-owner priority and native combat/actions. Release the temporary camera vectors; unavailable cameras retain safe fallback behavior.

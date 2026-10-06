@@ -2,7 +2,9 @@
 
 ## Normal-camera direction read - 2026-10-05
 
-Status: implemented / `verified-static`; rendered native gameplay acceptance pending. The shared reader now dispatches through Class411.method4968/method4997 for normal orbit/target and detached cameras. The old RTS-only casts silently lost normal-camera rotation and fell back to unchanged north yaw.
+Status: reported walking fix `VERIFIED` by user runtime confirmation on 2026-10-06 following `428e33c4`. The shared reader dispatches through Class411.method4968/method4997 for normal orbit/target and detached cameras. The old RTS-only casts silently lost normal-camera rotation and fell back to unchanged north yaw.
+
+- [x] User runtime confirmation: "WALKING IS FIXED!!! ABOUT TIME!" Exact character/camera/key coverage was not itemized, so the broader checklist below remains open for its specific coverage.
 
 One short acceptance session:
 

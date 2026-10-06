@@ -2,15 +2,17 @@
 
 Status: active architecture authority for Mario, OoT Link and future imported playable characters.
 
-## Current checkpoint - normal-camera direction read, 2026-10-05
+## Current checkpoint - walking fix runtime-confirmed, 2026-10-06
+
+Walking fix: `VERIFIED` by the user's 2026-10-06 runtime confirmation following camera-reader patch `428e33c4552ab9b700b24e4271e97273cfe4b6e7`: "WALKING IS FIXED!!! ABOUT TIME!" Exact character/camera/key coverage was not itemized; broader clipping, native action/combat and lifecycle checks are not implied by this confirmation.
 
 Runtime report: movement works facing north but remains north when the normal camera turns east/west/south. Source diagnosis is `verified-static`: the shared reader cast all Class411 position/look owners to Construction's Class423_Sub2/Class658_Sub2. Normal orbit uses Class423_Sub3 and can use Class658_Sub5; a failed cast silently selected the unchanged client.aFloat8678 fallback.
 
-The AAA-approved fix is implemented / `verified-static`: shared getDetachedCameraForward now uses Class411.method4968/method4997 to dispatch to the actual owners, validates missing geometry and releases temporary vectors. Existing owner priority, world/native encoding, free/clipped policy and combat remain shared and unchanged.
+The AAA-approved fix is implemented and walking is runtime-confirmed. Shared getDetachedCameraForward uses Class411.method4968/method4997 to dispatch to the actual owners, validates missing geometry and releases temporary vectors. Existing owner priority, world/native encoding, free/clipped policy and combat remain shared and unchanged.
 
 Java 8-targeted checks pass: 440,138 camera/input/native-axis checks across normal orbit/target and both detached-view ownership paths, 6,089 complete production-driver checks and 112 OoT interpolation samples. The new test fails against the old shared reader at the first non-north normal-camera heading. Test stubs also retain the latest Mario/Link shared native-contact API.
 
-Resume Here: pull main, refresh/clean/build Client, fully restart/login and run the normal-camera direction session at the top of TESTLIST.md. Test both characters with Shift/Z released, all four headings and continuous camera rotation; then recheck RTS steering, actions and mode exit. Full rendered/native gameplay acceptance remains pending. No native rebuild required.
+Resume Here: the reported walking defect is closed by user runtime confirmation. Continue only the remaining detailed camera coverage, clipping, native action/combat and lifecycle acceptance in TESTLIST.md; do not restart investigation of the accepted walking fix. No rebuild is required for this documentation-only status update.
 
 ## Previous checkpoint - universal horizontal controller, 2026-10-05
 
@@ -133,7 +135,7 @@ Do **not** add `SonicCombatController`, `BanjoCombatController`, another NPC tar
 ## Verification status - 2026-10-05
 
 - Shared input/camera/native encoding and single horizontal free/clipped owner: `verified-static`; focused production checks pass, rendered native gameplay acceptance pending.
-- Normal orbit/target camera subtype correction: `verified-static`; old reader reproduces the fixed-north regression in the focused test, in-game acceptance pending.
+- Walking fix after the normal-camera subtype correction: `VERIFIED` by user runtime confirmation on 2026-10-06. The focused test reproduces the old fixed-north regression; detailed per-character/camera coverage remains unitemized.
 - Shared Mario/Link combat target + packet ownership: `verified-static`; strict one-keypress/one-contact/zero-follow server path implemented, Eclipse/client/server runtime acceptance pending.
 - Link exact sword-contact frame: `HYPOTHESIS` until runtime accepted.
 - Mario native slash visual profile remains tracked in `docs/n64/CUSTOM_COMBAT.md` and does not own server combat.

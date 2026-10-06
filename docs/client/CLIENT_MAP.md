@@ -152,7 +152,7 @@ Copy this structure when adding a reusable mapping. Remove fields that genuinely
 ### Active Class411 camera ownership — ConstructionBuildCamera / Class24 / Class133_Sub1
 
 **Subsystem:** Camera / viewport  
-**Evidence:** VERIFIED for Construction ownership; verified-static for normal-camera subtype read
+**Evidence:** VERIFIED for Construction ownership and user-confirmed walking fix; verified-static for subtype/getter semantics and exhaustive camera coverage
 **Tags:** ConstructionBuildCamera, Class24, Class133_Sub1, Class411, Class411_Sub1, Class423_Sub3, Class658_Sub5, method4968, method4997, aFloat8678, aClass411_Sub1_158, RTS camera, normal orbit camera, Free Build camera, detached camera, camera forward, AlternateCharacterController
 
 **Exact symbols / IDs**
@@ -180,13 +180,14 @@ Copy this structure when adding a reusable mapping. Remove fields that genuinely
 **Runtime evidence**
 - 2026-10-04 Mario steering video showed the rendered Construction/RTS camera rotating while the old alternate-character sampler stayed effectively frozen near `cameraForward=(-0.006, 1.000)`.
 - This proved stale vanilla camera sampling was the active steering defect; the rendered Construction camera itself was rotating correctly.
+- 2026-10-06 user confirmed "WALKING IS FIXED!!! ABOUT TIME!" following shared normal-camera reader patch 428e33c4. This verifies the reported walking fix; the report did not itemize character/camera/key coverage or unrelated clipping/action/combat/lifecycle checks.
 
 **Static evidence**
 - `ConstructionBuildCamera` directly manages the Class24 detached camera and already derives screen-relative editor movement from its real position/look direction.
 - `Class343.method4302(...)` ticks `ConstructionBuildCamera` immediately before consuming/rendering the active scene camera.
 - `Class343.method4302(...)` renders `Class24.aClass411_Sub1_158` for the detached flag, otherwise `Class133_Sub1.aClass411_Sub1_9827` for camera mode 1. `Class411.method4971/method4972` construct several look/position subtypes; the Sub2 casts are not a general camera contract.
 - `client.method8034(...)` rotates the mode-1 Class423_Sub3 quaternion; its other-mode branch updates `client.aFloat8678`. Falling back to that inactive yaw after a subtype cast fails can leave imported-character movement facing north while the normal camera rotates.
-- 2026-10-05 focused regression holds that vanilla yaw north and rotates normal orbit/target plus detached cameras: old shared reader fails, general-getter reader passes. Normal-camera rendered acceptance remains pending; this evidence is `verified-static`.
+- 2026-10-05 focused regression holds that vanilla yaw north and rotates normal orbit/target plus detached cameras: old shared reader fails, general-getter reader passes. These source/test mappings remain `verified-static`; user runtime confirmation of walking is recorded above.
 
 **Matrix3 usage / ownership notes**
 - Camera-relative gameplay/editor consumers should use the camera that actually owns the rendered view, not infer ownership solely from stock camera-mode flags.
