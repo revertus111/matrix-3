@@ -9,17 +9,19 @@ Purpose: prove Mario and Link use the same Matrix-owned input/horizontal movemen
 
 1. [ ] `git pull origin main`.
 2. [ ] Eclipse Java 8 refresh + clean/build Client and Server.
-3. [ ] Launch/login normally. No libsm64/liboot rebuild is required for this Java-only controller cleanup.
+3. [ ] Launch/login normally. No liboot rebuild is required. Mario already needs the existing protocol-v3 combat sidecar for its custom sword/contact proof; this Java patch does not change that protocol.
 
 ## Shared combat owner
 
-1. [ ] Ctrl+M near an attackable NPC with a melee weapon equipped. Press F once. Mario must send one imported-character manual-melee request; it must not start RuneScape repeating auto-combat.
-2. [ ] Hold F in Mario mode. Existing Mario native slash/request behavior must not create a repeating Matrix auto-attack loop.
-3. [ ] Ctrl+L near the same NPC. Press F once while facing it. Link native sword animation must begin first; one shared manual-melee request may fire when the configured liboot contact gate is reached.
-4. [ ] Hold F in Link mode. One armed native swing may produce at most one shared combat intent; no repeating RuneScape auto-combat.
-5. [ ] For both characters, equip a ranged/magic weapon and attempt the melee action. The shared server authority must reject manual melee. Re-equip melee/unarmed and confirm authority resumes.
-6. [ ] Verify both characters use normal RuneScape accuracy/damage/XP/NPC death/drop behavior after a valid one-shot contact.
-7. [ ] Exit imported-character mode and verify stock RuneScape click-to-attack remains unchanged.
+1. [ ] Ctrl+M near an attackable NPC with a supported melee sword equipped and the existing Mario protocol-v3 custom weapon path active. Press F once. Mario's native slash must begin first; **no Matrix hit may be requested on the F key edge**.
+2. [ ] During the same Mario swing, exactly one shared manual-melee request may fire when native `combatTime` reaches the V4 cross-body strike keyframe `0.45`. Console should report `[Alt Character Combat] MARIO contact ...` once. Actual blade/contact visual timing remains runtime acceptance.
+3. [ ] Hold F in Mario mode. The native request latch plus shared attack lifecycle must produce at most one Matrix contact for the armed swing and must never start RuneScape repeating auto-combat.
+4. [ ] Ctrl+L near the same NPC. Press F once while facing it. Link native sword animation must begin first; one shared manual-melee request may fire only after its configured native contact gate is reached. Console should report `[Alt Character Combat] LINK contact ...` once.
+5. [ ] Hold F in Link mode. One armed native swing may produce at most one shared combat intent; no repeating RuneScape auto-combat.
+6. [ ] For both characters, equip a ranged/magic weapon and attempt the melee action. The shared server authority must reject manual melee. Re-equip melee and confirm authority resumes.
+7. [ ] Verify both characters use normal RuneScape accuracy/damage/weapon-delay/XP/NPC death/drop behavior after a valid one-shot contact.
+8. [ ] Rapidly press F faster than the equipped RuneScape weapon's attack delay. Native animations may still be requested, but the server must not generate valid hits faster than existing RuneScape combat delay permits.
+9. [ ] Exit imported-character mode and verify stock RuneScape click-to-attack remains unchanged.
 
 ## Shared targeting / Link lock adapter
 
@@ -45,4 +47,4 @@ Purpose: prove Mario and Link use the same Matrix-owned input/horizontal movemen
 
 ## Acceptance rule
 
-Do not mark this cleanup `VERIFIED` until both Mario and Link have passed the same-session combat checks above. Link contact-frame timing remains a separate visual/runtime calibration question and may stay `HYPOTHESIS` even when shared ownership is accepted.
+Do not mark this cleanup `VERIFIED` until both Mario and Link have passed the same-session combat checks above. Both characters must demonstrate `native attack -> contact gate -> one shared server intent`; an immediate key-edge hit is a failure. Link contact-frame timing and Mario's exact visual blade-contact alignment may remain `HYPOTHESIS` until visually accepted.
