@@ -104,3 +104,11 @@
 - The proof now renders both socket references simultaneously: cyan `0xE handR` and red `0xF weaponR`, making a hand-vs-item-joint mismatch visible instead of hiding it behind one floating marker.
 - Generated manifests/summaries now use `NEEDS_VISUAL_ACCEPTANCE`; `probe-tp-link.cmd` reports `TP LINK VISUAL PROOF GENERATED` rather than PASS. Exit code 0 proves only that artifacts were generated successfully.
 - Status: extraction, MSYS2 dependencies and renderer execution are runtime VERIFIED. Corrected sword/socket visual acceptance remains NEEDS TEST.
+
+2026-10-05 - Correct GameCube Link sword proof to the left item socket
+- User-provided generated GIFs showed the authentic `al_swb.bmd` wooden sword was present but rigidly following the previously selected right-side `0xE handR` / `0xF weaponR` diagnostic while the opposite arm performed the visible sword-cut motion.
+- Pinned TP source confirms human Link assigns left hand/item joints `9/10` and right hand/item joints `14/15`; the GZ2E01 GameCube Link proof therefore must use left `0x9 handL` / `0xA weaponL` for the active sword-side diagnostic.
+- Static asset proof now validates and records both left and right hand/item pairs and explicitly records the left pair as the active GameCube sword contract.
+- Visual proof now attaches `al_swb.bmd` to `0xA weaponL`, marks `0x9 handL` in cyan and `0xA weaponL` in red, and retains `0xE/0xF` only as the alternate right-hand/item socket in diagnostics.
+- No donor extraction, MSYS2 dependency, or pinned converter path changed.
+- Status: previous right-side visual is classified as a failed sword-side diagnostic, not a donor/toolchain failure. Corrected left-side visual acceptance remains NEEDS TEST.
