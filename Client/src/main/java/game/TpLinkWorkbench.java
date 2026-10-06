@@ -1,7 +1,7 @@
 package game;
 
 /**
- * Live developer-owned tuning state for the Twilight Princess Link presentation.
+ * Live developer-owned tuning state for Twilight Princess Link.
  * Matrix3 remains the world/input/gameplay owner.
  */
 public final class TpLinkWorkbench {
@@ -17,6 +17,9 @@ public final class TpLinkWorkbench {
     private static final float DEFAULT_RS_WIDTH = 0.92F;
     private static final float DEFAULT_RS_HEIGHT = 1.0F;
     private static final float DEFAULT_RS_DEPTH = 0.95F;
+    private static final float DEFAULT_MOVE_SPEED = 18.0F;
+    private static final float DEFAULT_TURN_SPEED = 720.0F;
+    private static final float DEFAULT_CONTACT_FRAME = 5.0F;
 
     private static volatile float worldScale = positiveProperty(
             "matrix3.tp.modelScale", DEFAULT_WORLD_SCALE);
@@ -35,6 +38,12 @@ public final class TpLinkWorkbench {
     private static volatile float animationSpeed = 1.0F;
     private static volatile float movementThreshold = 0.25F;
     private static volatile int movementHoldMillis = 180;
+    private static volatile float controllerMoveSpeed = positiveProperty(
+            "matrix3.tp.moveSpeed", DEFAULT_MOVE_SPEED);
+    private static volatile float controllerTurnSpeed = positiveProperty(
+            "matrix3.tp.turnSpeed", DEFAULT_TURN_SPEED);
+    private static volatile float combatContactFrame = positiveProperty(
+            "matrix3.tp.combatContactFrame", DEFAULT_CONTACT_FRAME);
     private static volatile boolean textureColorSampling = true;
     private static volatile PreviewAnimation previewAnimation = PreviewAnimation.AUTO;
 
@@ -158,6 +167,30 @@ public final class TpLinkWorkbench {
         bumpConfig();
     }
 
+    public static float getControllerMoveSpeed() {
+        return controllerMoveSpeed;
+    }
+
+    public static void setControllerMoveSpeed(float value) {
+        controllerMoveSpeed = clampFinite(value, 1.0F, 128.0F, DEFAULT_MOVE_SPEED);
+    }
+
+    public static float getControllerTurnSpeed() {
+        return controllerTurnSpeed;
+    }
+
+    public static void setControllerTurnSpeed(float value) {
+        controllerTurnSpeed = clampFinite(value, 30.0F, 2160.0F, DEFAULT_TURN_SPEED);
+    }
+
+    public static float getCombatContactFrame() {
+        return combatContactFrame;
+    }
+
+    public static void setCombatContactFrame(float value) {
+        combatContactFrame = clampFinite(value, 0.0F, 120.0F, DEFAULT_CONTACT_FRAME);
+    }
+
     public static boolean isTextureColorSamplingEnabled() {
         return textureColorSampling;
     }
@@ -224,6 +257,12 @@ public final class TpLinkWorkbench {
         movementHoldMillis = 180;
         previewAnimation = PreviewAnimation.AUTO;
         bumpConfig();
+    }
+
+    public static void resetControllerTuning() {
+        controllerMoveSpeed = DEFAULT_MOVE_SPEED;
+        controllerTurnSpeed = DEFAULT_TURN_SPEED;
+        combatContactFrame = DEFAULT_CONTACT_FRAME;
     }
 
     static void reportAsset(String path, int vertices, int triangles, int joints,
