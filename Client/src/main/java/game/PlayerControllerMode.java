@@ -24,8 +24,7 @@ public final class PlayerControllerMode {
 
     private static Mode mode = Mode.RUNESCAPE;
     private static boolean marioToggleWasDown;
-    private static boolean linkToggleWasDown;
-    private static boolean tpLinkToggleWasDown;
+    private static boolean linkChordWasDown;
     private static int lastTickCycle = Integer.MIN_VALUE;
 
     private PlayerControllerMode() {
@@ -36,8 +35,8 @@ public final class PlayerControllerMode {
      * detection keeps held chords from oscillating between modes.
      *
      * Ctrl+L keeps the established OoT Link controller. Ctrl+Shift+L activates
-     * TP Link presentation only; the explicit Shift split prevents both toggles
-     * from firing from the same chord.
+     * TP Link presentation only. The base Ctrl+L chord is latched until released,
+     * so releasing Shift first cannot accidentally retrigger OoT Link.
      */
     public static void tick() {
         if (lastTickCycle == client.cycles) {
@@ -48,18 +47,18 @@ public final class PlayerControllerMode {
         boolean ctrl = keyDown(INTERNAL_CTRL_KEY);
         boolean shift = keyDown(INTERNAL_SHIFT_KEY);
         boolean marioToggleDown = ctrl && keyDown(INTERNAL_M_KEY);
-        boolean linkToggleDown = ctrl && !shift && keyDown(INTERNAL_L_KEY);
-        boolean tpLinkToggleDown = ctrl && shift && keyDown(INTERNAL_L_KEY);
+        boolean linkChordDown = ctrl && keyDown(INTERNAL_L_KEY);
         if (marioToggleDown && !marioToggleWasDown) {
             setMode(mode == Mode.MARIO ? Mode.RUNESCAPE : Mode.MARIO);
-        } else if (tpLinkToggleDown && !tpLinkToggleWasDown) {
-            setMode(mode == Mode.TP_LINK ? Mode.RUNESCAPE : Mode.TP_LINK);
-        } else if (linkToggleDown && !linkToggleWasDown) {
-            setMode(mode == Mode.LINK ? Mode.RUNESCAPE : Mode.LINK);
+        } else if (linkChordDown && !linkChordWasDown) {
+            if (shift) {
+                setMode(mode == Mode.TP_LINK ? Mode.RUNESCAPE : Mode.TP_LINK);
+            } else {
+                setMode(mode == Mode.LINK ? Mode.RUNESCAPE : Mode.LINK);
+            }
         }
         marioToggleWasDown = marioToggleDown;
-        linkToggleWasDown = linkToggleDown;
-        tpLinkToggleWasDown = tpLinkToggleDown;
+        linkChordWasDown = linkChordDown;
     }
 
     public static void setMode(Mode nextMode) {
@@ -77,10 +76,8 @@ public final class PlayerControllerMode {
     static void resetForPlayerLifecycle() {
         mode = Mode.RUNESCAPE;
         boolean ctrl = keyDown(INTERNAL_CTRL_KEY);
-        boolean shift = keyDown(INTERNAL_SHIFT_KEY);
         marioToggleWasDown = ctrl && keyDown(INTERNAL_M_KEY);
-        linkToggleWasDown = ctrl && !shift && keyDown(INTERNAL_L_KEY);
-        tpLinkToggleWasDown = ctrl && shift && keyDown(INTERNAL_L_KEY);
+        linkChordWasDown = ctrl && keyDown(INTERNAL_L_KEY);
         lastTickCycle = Integer.MIN_VALUE;
     }
 
