@@ -12,7 +12,7 @@ This table is the authoritative user-facing status table for this workstream acr
 | --- | --- |
 | TP source/decomp bootstrap | ✅ VERIFIED |
 | TP local model + native animation/socket proof | ⚠️ Generated; corrected left-side visual acceptance still pending |
-| Matrix3 TP Link presentation | ⚠️ Bundle 2.1 IMPLEMENTED / NEEDS TEST |
+| Matrix3 TP Link presentation | ⚠️ Bundle 2.1 PARTIAL VERIFIED - in-client render works; scale calibration + motion acceptance pending |
 | Matrix3 movement/controller integration | ❌ Not started for TP |
 | Zelda action combat + RuneScape gameplay authority | ❌ Not started for TP |
 | RuneScape equipment adaptation | ❌ Not started for TP |
@@ -82,6 +82,8 @@ The generated local presentation asset consumed by Bundle 2.1 is:
 - The donor progress report reported all code/data `100.00% matched`; overall linking was `87.13%` (`2583 / 2608 files`).
 - Authentic donor extraction is runtime proven: `al.bmd` parsed with 35 joints and real `waitb.bck`, `dasha.bck`, and `cutl.bck` clips were selected.
 - The MSYS2/UCRT64 visual dependency path has run to completion and generated the local proof artifacts.
+- Bundle 2.1 first in-client run loaded `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.dmk` successfully and rendered TP Link through Matrix3. Runtime log reported `19821` vertices, `6607` triangles, `35` joints, `idleFrames=30`, `walkFrames=24`, named `idle`/`walk` animations, and `GZ2E01 Link -> Matrix Model ACTIVE`.
+- The supplied runtime screenshot visibly shows TP Link in the revision-830 world at the local-player presentation position. This verifies the local DMK parser, skinning/model-conversion path, scene hook, and basic world placement are operational.
 
 ### verified-static
 
@@ -101,6 +103,7 @@ The generated local presentation asset consumed by Bundle 2.1 is:
 - Bundle 2.1 uses authentic `idle` and `walk` DMK animations only. Combat remains out of scope.
 - TP local-player suppression reuses the existing shared `Player.method10696(...)` gate and is fail-open: normal RuneScape presentation is suppressed only after a fresh successful TP render.
 - `Ctrl+Shift+L` activates presentation-only TP mode. The whole `Ctrl+L` chord is latched until release so releasing Shift first cannot accidentally trigger OoT Link.
+- Runtime evidence at default scale `1.0` showed TP Link was dramatically undersized relative to normal revision-830 humanoids. The narrow corrective patch changes the default `matrix3.tp.modelScale` fallback to `5.0`; this calibration is verified-static until rerun.
 
 ## Evidence still pending
 
@@ -110,11 +113,15 @@ The generated local presentation asset consumed by Bundle 2.1 is:
 
 ### NEEDS RUNTIME TEST
 
-- Bundle 2.1 in-client presentation: actual Matrix3 model visibility, scale, facing direction, idle/locomotion playback, local-only suppression/restoration, and hotkey behavior.
+- Bundle 2.1 scale calibration at default `5.0`.
+- Authentic idle loop while stationary and locomotion clip switching while the Matrix player position changes.
+- Facing/yaw correctness while moving in different directions.
+- `Ctrl+Shift+L` release-order regression and clean restoration to normal RuneScape presentation.
 
 ### UNKNOWN until runtime evidence
 
-- Final TP-to-Matrix scale and yaw calibration values.
+- Final TP-to-Matrix scale value after the `5.0` calibration rerun.
+- Whether yaw needs a nonzero correction after the model is large enough to judge clearly.
 - Whether rebuilding the Matrix `Model` on animation-frame changes is sufficiently smooth on the user's runtime; optimize only if profiling/runtime evidence shows a problem.
 - Final TP movement/action state-machine subset and later combat/equipment integration details.
 
@@ -164,18 +171,18 @@ The generated local presentation asset consumed by Bundle 2.1 is:
 
 #### Bundle 2.1 - Local DMK -> Matrix player presentation
 
-**Status:** IMPLEMENTED / NEEDS TEST
+**Status:** PARTIAL VERIFIED / SCALE CALIBRATION NEEDS TEST
 
 - [x] Add presentation-only `TP_LINK` mode without entering the existing Mario/OoT movement controller.
-- [x] Load the local generated DMK from `%LOCALAPPDATA%` only.
-- [x] Parse the proven f32 mesh/texture/skeleton/skin/animation representation in Java 8.
-- [x] Skin and render TP Link through Matrix `Class159` / `Model` at the local player's Matrix world transform.
-- [x] Select authentic idle/locomotion animation from actual local-player movement state.
-- [x] Reuse the existing direct Matrix scene render seam.
-- [x] Reuse the existing local-player suppression seam with fail-open behavior.
-- [x] Preserve existing `Ctrl+L` OoT Link and fix Shift release-order retrigger through one latched Ctrl+L chord.
-- [x] Document one consolidated runtime test.
-- [ ] Runtime accept actual in-client TP render, idle/walk, scale/facing, suppression/restoration and hotkey behavior.
+- [x] Load the local generated DMK from `%LOCALAPPDATA%` only. `VERIFIED`.
+- [x] Parse the proven f32 mesh/texture/skeleton/skin/animation representation in Java 8. `VERIFIED` through first in-client render.
+- [x] Skin and render TP Link through Matrix `Class159` / `Model` at the local player's Matrix world transform. `VERIFIED` through first in-client screenshot/log.
+- [x] Select authentic idle/locomotion animation from actual local-player movement state. `verified-static`; visual transition still needs runtime acceptance.
+- [x] Reuse the existing direct Matrix scene render seam. `VERIFIED`.
+- [x] Reuse the existing local-player suppression seam with fail-open behavior. `verified-static`; explicit toggle/restore regression still pending.
+- [x] Preserve existing `Ctrl+L` OoT Link and fix Shift release-order retrigger through one latched Ctrl+L chord. `verified-static`.
+- [x] Increase evidence-based default TP model scale from `1.0` to `5.0` after the first runtime screenshot showed action-figure scale. `NEEDS TEST`.
+- [ ] Runtime accept corrected scale, idle/walk transitions, facing, and suppression/restoration/hotkey behavior.
 
 ### Phase 3 - Movement and action controller
 
@@ -206,10 +213,11 @@ The generated local presentation asset consumed by Bundle 2.1 is:
 
 - Active phase: 2 - Matrix3 TP Link presentation
 - Active bundle: 2.1 - Local DMK -> Matrix player presentation
-- Bundle status: IMPLEMENTED / NEEDS TEST
+- Bundle status: PARTIAL VERIFIED / SCALE CALIBRATION NEEDS TEST
 - Approval state: SAP AAA approved by user on 2026-10-05 for this coherent presentation bundle
 - Carryover: Bundle 1.2 corrected left-side local visual acceptance is still pending and must not be mislabeled VERIFIED
-- Current objective: one pull/build/runtime session proving TP Link renders inside Matrix3 with authentic idle/locomotion, correct local-player replacement, and normal RuneScape world/camera/input ownership
+- Runtime evidence: first in-client TP render succeeded at scale `1.0`; Link was visibly far too small
+- Current objective: rerun once at default scale `5.0`, then accept/reject scale, idle/locomotion, facing and replacement behavior in the same session
 
 ## Testing
 
@@ -218,24 +226,24 @@ The authoritative steps are in `docs/tp-link/TESTLIST.md`.
 ### Bundle 2.1 quick path
 
 1. Pull current `main` once.
-2. Confirm `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.dmk` exists.
-3. Eclipse Java 8 clean/build Client; launch and log in.
-4. Press `Ctrl+Shift+L` once.
-5. Expect `TP_LINK`, local DMK load, and `GZ2E01 Link -> Matrix Model ACTIVE` console lines.
+2. Eclipse Java 8 clean/build Client; launch and log in.
+3. Press `Ctrl+Shift+L` once.
+4. Expect `TP_LINK`, local DMK load, and `GZ2E01 Link -> Matrix Model ACTIVE ... scale=5.0 ...`.
+5. Compare TP Link height against nearby normal humanoids; report whether `5.0` is too small, close, or too large.
 6. Check idle while still and locomotion while the normal RuneScape player position changes.
-7. Release Shift first once while the chord is still briefly held; TP mode must remain active.
-8. Toggle `Ctrl+Shift+L` again after fully releasing the first chord; normal RuneScape local-player presentation must return.
-9. Report exact visual issue separately if the only problem is scale/facing/material calibration.
+7. Check facing while walking in more than one direction.
+8. Release Shift first once while the chord is still briefly held; TP mode must remain active.
+9. Toggle `Ctrl+Shift+L` again after fully releasing the first chord; normal RuneScape local-player presentation must return.
 
 ## Carryover / blockers
 
 ### BLOCKED
 
-- None known for Bundle 2.1 implementation. Runtime acceptance is the next gate.
+- None known. The active issue is visual scale calibration, not architecture/toolchain failure.
 
 ### Carryover
 
-- Bundle 1.2 corrected left-side sword/socket visual proof still needs explicit user acceptance. This is separate from whether Bundle 2.1 renders the same local DMK successfully inside Matrix3.
+- Bundle 1.2 corrected left-side sword/socket visual proof still needs explicit user acceptance. This is separate from Bundle 2.1 Matrix rendering.
 
 ## Resume Here
 
@@ -243,8 +251,9 @@ The authoritative steps are in `docs/tp-link/TESTLIST.md`.
 
 - Bundle 1.1 donor bootstrap is runtime VERIFIED.
 - Bundle 1.2 extraction/tool execution and local artifact generation are runtime VERIFIED; corrected left `0x9/0xA` visual acceptance remains pending.
-- Bundle 2.1 code is implemented at verified-static level: `TpLinkVisualRenderer`, `TP_LINK` mode, Matrix scene hook, shared fail-open suppression, and latched Ctrl+L family hotkey behavior.
-- DMK parser contract was checked directly against the existing `tp-link-visual-proof.py` writer: f32 `ANIM` names are `idle`, `walk`, and `sword`.
+- Bundle 2.1 local DMK loading and actual TP Link rendering inside Matrix3 are runtime VERIFIED from the first in-client run.
+- First runtime log: `vertices=19821`, `triangles=6607`, `joints=35`, `idleFrames=30`, `walkFrames=24`, `scale=1.0`, `yawOffset=0.0`.
+- First screenshot showed the TP model was dramatically undersized; default presentation scale is now `5.0` for the next calibration run.
 
 **Current phase:**
 
@@ -252,15 +261,15 @@ The authoritative steps are in `docs/tp-link/TESTLIST.md`.
 
 **Active bundle:**
 
-- Bundle 2.1 - Local DMK -> Matrix player presentation (`IMPLEMENTED / NEEDS TEST`).
+- Bundle 2.1 - Local DMK -> Matrix player presentation (`PARTIAL VERIFIED / SCALE CALIBRATION NEEDS TEST`).
 
 **Next checklist item:**
 
-- Run the single in-client Bundle 2.1 test from `docs/tp-link/TESTLIST.md`.
+- Pull/build once and rerun TP presentation at `scale=5.0`; judge size, idle/walk transition, facing and toggle restoration in one session.
 
 **Current state / next action:**
 
-- Do not rerun donor bootstrap research. Pull once, Java 8 clean/build the Client, log in, press `Ctrl+Shift+L`, and report the console lines plus what TP Link looks like while standing and moving.
+- Do not rerun donor bootstrap or TP proof generation. The local DMK is loading correctly. Pull current `main`, Java 8 clean/build the Client, launch, toggle `Ctrl+Shift+L`, and inspect the calibrated in-client model.
 
 **Files/systems already inspected for Bundle 2.1:**
 
@@ -283,4 +292,4 @@ The authoritative steps are in `docs/tp-link/TESTLIST.md`.
 
 ## Next recommended work
 
-Runtime-test Bundle 2.1. If TP Link renders/animates but only scale or yaw is wrong, calibrate those two presentation constants as a narrow corrective patch. If the DMK or skin/model conversion fails, use the exact `[TP Visual]` console error as the evidence for the next minimal fix.
+Runtime-test the `5.0` scale calibration. If the size is close, finish yaw/idle-walk/toggle acceptance and close Bundle 2.1. If size is still off, adjust only `matrix3.tp.modelScale` from the visual evidence; do not reopen the renderer architecture.
