@@ -1,79 +1,98 @@
 package game.console;
 
+import game.AlternateCharacterController;
+import game.TpLinkController;
 import game.TpLinkWorkbench;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.GridLayout;
+import java.awt.Rectangle;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.util.Locale;
+import java.util.function.DoubleConsumer;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JSpinner;
-import javax.swing.JTabbedPane;
-import javax.swing.SpinnerNumberModel;
+import javax.swing.Scrollable;
+import javax.swing.JTextField;
 import javax.swing.Timer;
 
-/** Developer workspace for the presentation-only TP Link bridge. */
+/** Responsive TP Link development workspace inside the N64 console. */
 final class TpLinkPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;
     private static final int REFRESH_MS = 100;
 
-    private final JLabel rendererValue = valueLabel();
-    private final JLabel assetValue = valueLabel();
-    private final JLabel geometryValue = valueLabel();
+    private final JLabel controllerValue = valueLabel();
     private final JLabel animationValue = valueLabel();
     private final JLabel movementValue = valueLabel();
+    private final JLabel facingValue = valueLabel();
+    private final JLabel targetValue = valueLabel();
+    private final JLabel attackValue = valueLabel();
+    private final JLabel assetValue = valueLabel();
+    private final JLabel geometryValue = valueLabel();
     private final JLabel textureValue = valueLabel();
     private final JLabel failureValue = valueLabel();
 
-    private final JSpinner worldScale = spinner(5.0D, 0.10D, 20.0D, 0.05D);
-    private final JSpinner widthScale = spinner(0.92D, 0.25D, 2.0D, 0.01D);
-    private final JSpinner heightScale = spinner(1.0D, 0.25D, 2.0D, 0.01D);
-    private final JSpinner depthScale = spinner(0.95D, 0.25D, 2.0D, 0.01D);
-    private final JSpinner offsetX = spinner(0.0D, -1000.0D, 1000.0D, 1.0D);
-    private final JSpinner offsetY = spinner(0.0D, -1000.0D, 1000.0D, 1.0D);
-    private final JSpinner offsetZ = spinner(0.0D, -1000.0D, 1000.0D, 1.0D);
-    private final JSpinner yaw = spinner(0.0D, -360.0D, 360.0D, 1.0D);
+    private final JCheckBox runeScapeClipping = new JCheckBox("RuneScape clipping (tile authority)");
+    private final JCheckBox textureSampling = new JCheckBox("Use DMK UV/palette colour sampling", true);
 
-    private final JSpinner animationSpeed = spinner(1.0D, 0.05D, 4.0D, 0.05D);
-    private final JSpinner movementThreshold = spinner(0.25D, 0.001D, 5.0D, 0.01D);
-    private final JSpinner movementHold = spinner(180.0D, 0.0D, 2000.0D, 10.0D);
-    private final JComboBox<TpLinkWorkbench.PreviewAnimation> preview =
-            new JComboBox<TpLinkWorkbench.PreviewAnimation>(TpLinkWorkbench.PreviewAnimation.values());
-    private final JCheckBox textureSampling = new JCheckBox(
-            "Use DMK UV/palette color sampling", true);
+    private NumericControl worldScale;
+    private NumericControl widthScale;
+    private NumericControl heightScale;
+    private NumericControl depthScale;
+    private NumericControl yaw;
+    private NumericControl offsetX;
+    private NumericControl offsetY;
+    private NumericControl offsetZ;
+    private NumericControl moveSpeed;
+    private NumericControl turnSpeed;
+    private NumericControl contactFrame;
+    private NumericControl animationSpeed;
+    private NumericControl movementHold;
 
     private final Timer refreshTimer;
-    private boolean syncing;
 
     TpLinkPanel() {
         super(new BorderLayout());
         setBackground(ConsoleTheme.PANEL);
         setOpaque(true);
 
-        JTabbedPane tabs = new JTabbedPane();
-        tabs.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
-        tabs.setFont(ConsoleTheme.SMALL_FONT);
-        tabs.setForeground(ConsoleTheme.TEXT);
-        tabs.setBackground(ConsoleTheme.PANEL);
-        tabs.addTab("Presentation", createPresentationTab());
-        tabs.addTab("Animation", createAnimationTab());
-        tabs.addTab("Movement", createMovementTab());
-        tabs.addTab("Combat", createCombatTab());
-        tabs.addTab("Materials", createMaterialsTab());
-        tabs.addTab("Diagnostics", createDiagnosticsTab());
-        add(tabs, BorderLayout.CENTER);
+        VerticalScrollPanel content = new VerticalScrollPanel();
+        content.setBackground(ConsoleTheme.PANEL);
+        content.setBorder(ConsoleTheme.panelPadding(10, 8, 14, 8));
 
-        bindControls();
-        syncControlsFromState();
+        content.add(createStatusCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createFitCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createMovementCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createCombatCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createAnimationRenderCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createPlacementCard());
+        content.add(Box.createVerticalStrut(10));
+        content.add(createDiagnosticsCard());
+        content.add(Box.createVerticalGlue());
+
+        JScrollPane scroll = new JScrollPane(content);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        ConsoleTheme.styleScrollPane(scroll);
+        add(scroll, BorderLayout.CENTER);
+
+        syncControls();
         refreshTimer = new Timer(REFRESH_MS, e -> refreshStatus());
         refreshTimer.setCoalesce(true);
         refreshStatus();
@@ -95,272 +114,265 @@ final class TpLinkPanel extends JPanel {
         super.removeNotify();
     }
 
-    private JComponent createPresentationTab() {
-        JPanel content = verticalContent();
-        JPanel card = ConsoleTheme.createCard("TP Link presentation calibration");
+    private JPanel createStatusCard() {
+        JPanel card = ConsoleTheme.createCard("TP Link runtime");
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "Height at world scale 5.0 is runtime accepted. Width/depth are applied in TP model space before player yaw, so Link stays the same proportions while turning.", 3));
+                "Ctrl+Shift+L toggles TP Link. WASD is camera-relative movement, F plays the authentic sword action, and Shift holds Matrix target lock.", 3));
         card.add(Box.createVerticalStrut(8));
-        card.add(spinnerRow("World scale", worldScale));
-        card.add(spinnerRow("Body width (local X)", widthScale));
-        card.add(spinnerRow("Body height (local Y)", heightScale));
-        card.add(spinnerRow("Body depth (local Z)", depthScale));
-        card.add(spinnerRow("Local offset X", offsetX));
-        card.add(spinnerRow("Local offset Y", offsetY));
-        card.add(spinnerRow("Local offset Z", offsetZ));
-        card.add(spinnerRow("Yaw correction degrees", yaw));
+        card.add(ConsoleTheme.createValueRow("Controller", controllerValue));
+        card.add(ConsoleTheme.createValueRow("Animation", animationValue));
+        card.add(ConsoleTheme.createValueRow("Movement", movementValue));
+        card.add(ConsoleTheme.createValueRow("Facing", facingValue));
+        card.add(ConsoleTheme.createValueRow("Target", targetValue));
+        card.add(ConsoleTheme.createValueRow("Attack", attackValue));
+        return card;
+    }
+
+    private JPanel createFitCard() {
+        JPanel card = ConsoleTheme.createCard("Player fit");
+        card.add(Box.createVerticalStrut(6));
+        card.add(ConsoleTheme.createWrappedText(
+                "World scale 5.0 is the accepted height baseline. Width/depth remain model-local so Link keeps the same proportions while turning.", 3));
         card.add(Box.createVerticalStrut(8));
 
-        JPanel buttons = actionRow();
+        worldScale = numeric("World scale", 0.10D, 20.0D, 0.05D, 2,
+                value -> TpLinkWorkbench.setWorldScale((float) value));
+        widthScale = numeric("Body width", 0.25D, 2.0D, 0.01D, 2,
+                value -> TpLinkWorkbench.setModelWidth((float) value));
+        heightScale = numeric("Body height", 0.25D, 2.0D, 0.01D, 2,
+                value -> TpLinkWorkbench.setModelHeight((float) value));
+        depthScale = numeric("Body depth", 0.25D, 2.0D, 0.01D, 2,
+                value -> TpLinkWorkbench.setModelDepth((float) value));
+        yaw = numeric("Yaw correction", -360.0D, 360.0D, 1.0D, 0,
+                value -> TpLinkWorkbench.setYawOffsetDegrees((float) value));
+        card.add(worldScale);
+        card.add(widthScale);
+        card.add(heightScale);
+        card.add(depthScale);
+        card.add(yaw);
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel actions = actionGrid(2);
         JButton rsFit = button("RS fit");
-        JButton nativeFit = button("Native TP proportions");
-        JButton reset = button("Reset presentation");
+        JButton nativeFit = button("TP proportions");
+        JButton reset = button("Reset fit");
         rsFit.addActionListener(e -> {
             TpLinkWorkbench.useRuneScapeFitProportions();
-            syncControlsFromState();
+            syncControls();
         });
         nativeFit.addActionListener(e -> {
             TpLinkWorkbench.useNativeProportions();
-            syncControlsFromState();
+            syncControls();
         });
         reset.addActionListener(e -> {
             TpLinkWorkbench.resetPresentation();
-            syncControlsFromState();
+            syncControls();
         });
-        buttons.add(rsFit);
-        buttons.add(nativeFit);
-        buttons.add(reset);
-        card.add(buttons);
-        content.add(card);
-        content.add(Box.createVerticalGlue());
-        return scroll(content);
+        actions.add(rsFit);
+        actions.add(nativeFit);
+        actions.add(reset);
+        card.add(actions);
+        return card;
     }
 
-    private JComponent createAnimationTab() {
-        JPanel content = verticalContent();
-        JPanel card = ConsoleTheme.createCard("Authentic BCK playback");
+    private JPanel createMovementCard() {
+        JPanel card = ConsoleTheme.createCard("Movement");
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "AUTO uses Matrix player motion to select authentic idle/walk. IDLE/WALK/SWORD force a local visual preview only; they do not change RuneScape gameplay authority.", 3));
+                "TP Link now uses the same shared Matrix camera-relative WASD and optional tile-authority movement owner as the other imported characters.", 3));
         card.add(Box.createVerticalStrut(8));
-        ConsoleTheme.styleComboBox(preview);
-        card.add(labeledComponent("Preview clip", preview));
-        card.add(spinnerRow("Playback speed", animationSpeed));
-        card.add(spinnerRow("Movement threshold", movementThreshold));
-        card.add(spinnerRow("Walk hold after movement (ms)", movementHold));
+
+        moveSpeed = numeric("Move speed (60 Hz units)", 1.0D, 128.0D, 1.0D, 0,
+                value -> TpLinkWorkbench.setControllerMoveSpeed((float) value));
+        turnSpeed = numeric("Turn speed (deg/sec)", 30.0D, 2160.0D, 30.0D, 0,
+                value -> TpLinkWorkbench.setControllerTurnSpeed((float) value));
+        card.add(moveSpeed);
+        card.add(turnSpeed);
+        card.add(Box.createVerticalStrut(6));
+
+        styleCheckBox(runeScapeClipping);
+        runeScapeClipping.addActionListener(e -> AlternateCharacterController.setRuneScapeClippingEnabled(
+                runeScapeClipping.isSelected()));
+        card.add(runeScapeClipping);
         card.add(Box.createVerticalStrut(8));
-        JPanel buttons = actionRow();
-        JButton reset = button("Reset animation tuning");
+
+        JPanel actions = actionGrid(2);
+        JButton reset = button("Reset movement");
         reset.addActionListener(e -> {
-            TpLinkWorkbench.resetAnimation();
-            syncControlsFromState();
+            TpLinkWorkbench.resetControllerTuning();
+            syncControls();
         });
-        buttons.add(reset);
-        card.add(buttons);
-        content.add(card);
-        content.add(Box.createVerticalGlue());
-        return scroll(content);
+        actions.add(reset);
+        card.add(actions);
+        return card;
     }
 
-    private JComponent createMovementTab() {
-        JPanel content = verticalContent();
-        JPanel card = ConsoleTheme.createCard("Movement integration checkpoint");
+    private JPanel createCombatCard() {
+        JPanel card = ConsoleTheme.createCard("Sword combat");
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "Bundle 2.1 remains presentation-only: RuneScape currently owns movement, collision and input. Phase 3 will add TP_LINK to the already-fixed shared camera-relative alternate-character controller instead of creating another WASD owner.", 5));
+                "F plays the authentic TP sword clip once. At the contact frame Matrix resolves the locked/forward NPC and sends the existing server-authoritative manual melee intent. RuneScape damage, accuracy, cooldown and XP remain authoritative.", 5));
         card.add(Box.createVerticalStrut(8));
-        card.add(ConsoleTheme.createValueRow("Motion detected", movementValue));
-        card.add(ConsoleTheme.createWrappedText(
-                "The Animation tab's threshold and hold controls tune when presentation switches between idle and locomotion during this phase.", 3));
-        content.add(card);
-        content.add(Box.createVerticalGlue());
-        return scroll(content);
+        card.add(ConsoleTheme.createValueRow("Verified sword socket", fixedValue("0x9 handL / 0xA weaponL")));
+
+        contactFrame = numeric("Contact frame", 0.0D, 120.0D, 1.0D, 0,
+                value -> TpLinkWorkbench.setCombatContactFrame((float) value));
+        card.add(contactFrame);
+        card.add(Box.createVerticalStrut(8));
+
+        JPanel actions = actionGrid(2);
+        JButton preview = button("Preview sword");
+        JButton stop = button("Stop / AUTO");
+        preview.addActionListener(e -> TpLinkController.playSwordPreview());
+        stop.addActionListener(e -> TpLinkController.cancelSwordAction());
+        actions.add(preview);
+        actions.add(stop);
+        card.add(actions);
+        return card;
     }
 
-    private JComponent createCombatTab() {
-        JPanel content = verticalContent();
-        JPanel card = ConsoleTheme.createCard("Sword / future RuneScape combat seam");
+    private JPanel createAnimationRenderCard() {
+        JPanel card = ConsoleTheme.createCard("Animation / render");
         card.add(Box.createVerticalStrut(6));
-        card.add(ConsoleTheme.createWrappedText(
-                "Verified GameCube sword side: 0x9 handL / 0xA weaponL. The DMK sword clip can be previewed here now. Damage, hit windows, attack speed, NPC authority and RuneScape weapon replacement remain later combat work.", 5));
-        card.add(Box.createVerticalStrut(8));
-        JButton sword = button("Preview authentic sword BCK");
-        JButton auto = button("Return to AUTO");
-        sword.addActionListener(e -> {
-            TpLinkWorkbench.setPreviewAnimation(TpLinkWorkbench.PreviewAnimation.SWORD);
-            syncControlsFromState();
-        });
-        auto.addActionListener(e -> {
-            TpLinkWorkbench.setPreviewAnimation(TpLinkWorkbench.PreviewAnimation.AUTO);
-            syncControlsFromState();
-        });
-        JPanel buttons = actionRow();
-        buttons.add(sword);
-        buttons.add(auto);
-        card.add(buttons);
-        content.add(card);
-        content.add(Box.createVerticalGlue());
-        return scroll(content);
-    }
+        animationSpeed = numeric("Animation speed", 0.05D, 4.0D, 0.05D, 2,
+                value -> TpLinkWorkbench.setAnimationSpeed((float) value));
+        movementHold = numeric("Walk -> idle hold (ms)", 0.0D, 2000.0D, 10.0D, 0,
+                value -> TpLinkWorkbench.setMovementHoldMillis((int) Math.round(value)));
+        card.add(animationSpeed);
+        card.add(movementHold);
+        card.add(Box.createVerticalStrut(6));
 
-    private JComponent createMaterialsTab() {
-        JPanel content = verticalContent();
-        JPanel textureCard = ConsoleTheme.createCard("Current texture path");
-        textureCard.add(Box.createVerticalStrut(6));
         styleCheckBox(textureSampling);
-        textureCard.add(textureSampling);
-        textureCard.add(Box.createVerticalStrut(6));
-        textureCard.add(ConsoleTheme.createWrappedText(
-                "This is the current DMK fallback: UV/palette texture color is sampled and baked into Matrix face colors. Turning it off shows vertex-color-only output. Full Matrix texture/material binding is still a separate implementation step.", 5));
-        textureCard.add(ConsoleTheme.createValueRow("DMK texture", textureValue));
-        content.add(textureCard);
-        content.add(Box.createVerticalStrut(10));
+        textureSampling.addActionListener(e -> TpLinkWorkbench.setTextureColorSamplingEnabled(
+                textureSampling.isSelected()));
+        card.add(textureSampling);
+        card.add(Box.createVerticalStrut(8));
+        card.add(ConsoleTheme.createValueRow("Texture path", textureValue));
+        card.add(ConsoleTheme.createValueRow("Smoothing", fixedValue("NORMAL/WELD PASS STILL REQUIRED")));
+        card.add(Box.createVerticalStrut(8));
 
-        JPanel smoothCard = ConsoleTheme.createCard("Smoothing / normals");
-        smoothCard.add(Box.createVerticalStrut(6));
-        smoothCard.add(ConsoleTheme.createWrappedText(
-                "Current DMK geometry is triangle-expanded (three vertices per triangle), so a cosmetic Smooth checkbox would be fake. Proper smoothing needs imported normals or a UV/material-aware vertex weld with an angle rule. This tab records that boundary instead of silently damaging seams.", 6));
-        content.add(smoothCard);
-        content.add(Box.createVerticalGlue());
-        return scroll(content);
+        JPanel actions = actionGrid(2);
+        JButton reload = button("Reload DMK");
+        JButton resetAnim = button("Reset animation");
+        reload.addActionListener(e -> TpLinkWorkbench.requestAssetReload());
+        resetAnim.addActionListener(e -> {
+            TpLinkWorkbench.resetAnimation();
+            syncControls();
+        });
+        actions.add(reload);
+        actions.add(resetAnim);
+        card.add(actions);
+        return card;
     }
 
-    private JComponent createDiagnosticsTab() {
-        JPanel content = verticalContent();
-        JPanel card = ConsoleTheme.createCard("Live TP renderer state");
+    private JPanel createPlacementCard() {
+        JPanel card = ConsoleTheme.createCard("Fine placement");
+        card.add(Box.createVerticalStrut(6));
+        offsetX = numeric("Local X", -1000.0D, 1000.0D, 1.0D, 0,
+                value -> TpLinkWorkbench.setOffsetX((float) value));
+        offsetY = numeric("Local Y", -1000.0D, 1000.0D, 1.0D, 0,
+                value -> TpLinkWorkbench.setOffsetY((float) value));
+        offsetZ = numeric("Local Z", -1000.0D, 1000.0D, 1.0D, 0,
+                value -> TpLinkWorkbench.setOffsetZ((float) value));
+        card.add(offsetX);
+        card.add(offsetY);
+        card.add(offsetZ);
+        return card;
+    }
+
+    private JPanel createDiagnosticsCard() {
+        JPanel card = ConsoleTheme.createCard("Diagnostics");
         card.add(Box.createVerticalStrut(8));
-        card.add(ConsoleTheme.createValueRow("Renderer replacement", rendererValue));
         card.add(ConsoleTheme.createValueRow("DMK", assetValue));
         card.add(ConsoleTheme.createValueRow("Geometry", geometryValue));
-        card.add(ConsoleTheme.createValueRow("Animation", animationValue));
-        card.add(ConsoleTheme.createValueRow("Movement", movementValue));
-        card.add(ConsoleTheme.createValueRow("Texture", textureValue));
         card.add(ConsoleTheme.createValueRow("Last failure", failureValue));
-        card.add(Box.createVerticalStrut(8));
-        JButton reload = button("Reload local DMK");
-        reload.addActionListener(e -> TpLinkWorkbench.requestAssetReload());
-        JPanel actions = actionRow();
-        actions.add(reload);
-        card.add(actions);
-        content.add(card);
-        content.add(Box.createVerticalGlue());
-        return scroll(content);
+        return card;
     }
 
-    private void bindControls() {
-        worldScale.addChangeListener(e -> apply(() -> TpLinkWorkbench.setWorldScale(value(worldScale))));
-        widthScale.addChangeListener(e -> apply(() -> TpLinkWorkbench.setModelWidth(value(widthScale))));
-        heightScale.addChangeListener(e -> apply(() -> TpLinkWorkbench.setModelHeight(value(heightScale))));
-        depthScale.addChangeListener(e -> apply(() -> TpLinkWorkbench.setModelDepth(value(depthScale))));
-        offsetX.addChangeListener(e -> apply(() -> TpLinkWorkbench.setOffsetX(value(offsetX))));
-        offsetY.addChangeListener(e -> apply(() -> TpLinkWorkbench.setOffsetY(value(offsetY))));
-        offsetZ.addChangeListener(e -> apply(() -> TpLinkWorkbench.setOffsetZ(value(offsetZ))));
-        yaw.addChangeListener(e -> apply(() -> TpLinkWorkbench.setYawOffsetDegrees(value(yaw))));
-        animationSpeed.addChangeListener(e -> apply(() -> TpLinkWorkbench.setAnimationSpeed(value(animationSpeed))));
-        movementThreshold.addChangeListener(e -> apply(() -> TpLinkWorkbench.setMovementThreshold(value(movementThreshold))));
-        movementHold.addChangeListener(e -> apply(() -> TpLinkWorkbench.setMovementHoldMillis(
-                ((Number) movementHold.getValue()).intValue())));
-        preview.addActionListener(e -> apply(() -> TpLinkWorkbench.setPreviewAnimation(
-                (TpLinkWorkbench.PreviewAnimation) preview.getSelectedItem())));
-        textureSampling.addActionListener(e -> apply(() -> TpLinkWorkbench.setTextureColorSamplingEnabled(
-                textureSampling.isSelected())));
-    }
-
-    private void apply(Runnable action) {
-        if (!syncing) {
-            action.run();
-        }
-    }
-
-    private void syncControlsFromState() {
-        syncing = true;
-        try {
-            worldScale.setValue((double) TpLinkWorkbench.getWorldScale());
-            widthScale.setValue((double) TpLinkWorkbench.getModelWidth());
-            heightScale.setValue((double) TpLinkWorkbench.getModelHeight());
-            depthScale.setValue((double) TpLinkWorkbench.getModelDepth());
-            offsetX.setValue((double) TpLinkWorkbench.getOffsetX());
-            offsetY.setValue((double) TpLinkWorkbench.getOffsetY());
-            offsetZ.setValue((double) TpLinkWorkbench.getOffsetZ());
-            yaw.setValue((double) TpLinkWorkbench.getYawOffsetDegrees());
-            animationSpeed.setValue((double) TpLinkWorkbench.getAnimationSpeed());
-            movementThreshold.setValue((double) TpLinkWorkbench.getMovementThreshold());
-            movementHold.setValue((double) TpLinkWorkbench.getMovementHoldMillis());
-            preview.setSelectedItem(TpLinkWorkbench.getPreviewAnimation());
-            textureSampling.setSelected(TpLinkWorkbench.isTextureColorSamplingEnabled());
-        } finally {
-            syncing = false;
-        }
+    private void syncControls() {
+        set(worldScale, TpLinkWorkbench.getWorldScale());
+        set(widthScale, TpLinkWorkbench.getModelWidth());
+        set(heightScale, TpLinkWorkbench.getModelHeight());
+        set(depthScale, TpLinkWorkbench.getModelDepth());
+        set(yaw, TpLinkWorkbench.getYawOffsetDegrees());
+        set(offsetX, TpLinkWorkbench.getOffsetX());
+        set(offsetY, TpLinkWorkbench.getOffsetY());
+        set(offsetZ, TpLinkWorkbench.getOffsetZ());
+        set(moveSpeed, TpLinkWorkbench.getControllerMoveSpeed());
+        set(turnSpeed, TpLinkWorkbench.getControllerTurnSpeed());
+        set(contactFrame, TpLinkWorkbench.getCombatContactFrame());
+        set(animationSpeed, TpLinkWorkbench.getAnimationSpeed());
+        set(movementHold, TpLinkWorkbench.getMovementHoldMillis());
+        textureSampling.setSelected(TpLinkWorkbench.isTextureColorSamplingEnabled());
+        runeScapeClipping.setSelected(AlternateCharacterController.isRuneScapeClippingEnabled());
     }
 
     private void refreshStatus() {
-        rendererValue.setText(TpLinkWorkbench.isReplacementReady() ? "ACTIVE" : "Not replacing");
-        assetValue.setText(TpLinkWorkbench.isAssetLoaded() ? "Loaded" : "Not loaded");
-        geometryValue.setText(TpLinkWorkbench.getVertexCount() + " v / "
-                + TpLinkWorkbench.getTriangleCount() + " tri / "
-                + TpLinkWorkbench.getJointCount() + " joints");
+        controllerValue.setText(TpLinkController.isActive() ? "TP_LINK ACTIVE" : "OFF");
         animationValue.setText(TpLinkWorkbench.getActiveClip() + " frame "
                 + TpLinkWorkbench.getActiveFrame() + " | idle "
                 + TpLinkWorkbench.getIdleFrames() + " walk "
                 + TpLinkWorkbench.getWalkFrames() + " sword "
                 + TpLinkWorkbench.getSwordFrames());
-        movementValue.setText(TpLinkWorkbench.isMovementDetected() ? "moving" : "idle");
+        movementValue.setText(TpLinkController.isMoving() ? "MOVING" : "IDLE");
+        facingValue.setText(String.format(Locale.ROOT, "%.1f deg",
+                Float.valueOf(TpLinkController.getFacingYawDegrees())));
+        int target = TpLinkController.getLockedTargetIndex();
+        targetValue.setText(target < 0 ? "NONE" : "NPC " + target);
+        attackValue.setText(TpLinkController.getAttackStatus());
+        assetValue.setText(TpLinkWorkbench.isAssetLoaded() ? "Loaded" : "Not loaded");
+        geometryValue.setText(TpLinkWorkbench.getVertexCount() + " v / "
+                + TpLinkWorkbench.getTriangleCount() + " tri / "
+                + TpLinkWorkbench.getJointCount() + " joints");
         textureValue.setText(TpLinkWorkbench.isTexturePresent()
                 ? (TpLinkWorkbench.isTextureColorSamplingEnabled()
-                        ? "DMK sample -> face colour" : "vertex colour only")
+                        ? "DMK UV sample -> face colour" : "vertex colour only")
                 : "No TEXT chunk");
         failureValue.setText(TpLinkWorkbench.getLastFailure());
         failureValue.setToolTipText(TpLinkWorkbench.getAssetPath());
+        runeScapeClipping.setSelected(AlternateCharacterController.isRuneScapeClippingEnabled());
+        textureSampling.setSelected(TpLinkWorkbench.isTextureColorSamplingEnabled());
+
+        set(worldScale, TpLinkWorkbench.getWorldScale());
+        set(widthScale, TpLinkWorkbench.getModelWidth());
+        set(heightScale, TpLinkWorkbench.getModelHeight());
+        set(depthScale, TpLinkWorkbench.getModelDepth());
+        set(yaw, TpLinkWorkbench.getYawOffsetDegrees());
+        set(offsetX, TpLinkWorkbench.getOffsetX());
+        set(offsetY, TpLinkWorkbench.getOffsetY());
+        set(offsetZ, TpLinkWorkbench.getOffsetZ());
+        set(moveSpeed, TpLinkWorkbench.getControllerMoveSpeed());
+        set(turnSpeed, TpLinkWorkbench.getControllerTurnSpeed());
+        set(contactFrame, TpLinkWorkbench.getCombatContactFrame());
+        set(animationSpeed, TpLinkWorkbench.getAnimationSpeed());
+        set(movementHold, TpLinkWorkbench.getMovementHoldMillis());
     }
 
-    private static JPanel verticalContent() {
-        JPanel content = new JPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBackground(ConsoleTheme.PANEL);
-        content.setBorder(ConsoleTheme.panelPadding(10, 8, 14, 8));
-        return content;
+    private static NumericControl numeric(String label, double min, double max,
+            double step, int decimals, DoubleConsumer consumer) {
+        return new NumericControl(label, min, max, step, decimals, consumer);
     }
 
-    private static JScrollPane scroll(JPanel content) {
-        JScrollPane scroll = new JScrollPane(content);
-        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        ConsoleTheme.styleScrollPane(scroll);
-        return scroll;
+    private static void set(NumericControl control, double value) {
+        if (control != null) {
+            control.setValue(value);
+        }
     }
 
-    private static JPanel spinnerRow(String label, JSpinner spinner) {
-        return labeledComponent(label, spinner);
-    }
+    private static JPanel actionGrid(int columns) {
+        JPanel panel = new JPanel(new GridLayout(0, columns, 6, 4)) {
+            private static final long serialVersionUID = 1L;
 
-    private static JPanel labeledComponent(String labelText, JComponent component) {
-        JPanel row = new JPanel(new BorderLayout(8, 0));
-        row.setBackground(ConsoleTheme.CARD);
-        row.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        JLabel label = new JLabel(labelText);
-        label.setFont(ConsoleTheme.SMALL_FONT);
-        label.setForeground(ConsoleTheme.MUTED_TEXT);
-        row.add(label, BorderLayout.WEST);
-        row.add(component, BorderLayout.EAST);
-        return row;
-    }
-
-    private static JSpinner spinner(double value, double min, double max, double step) {
-        JSpinner spinner = new JSpinner(new SpinnerNumberModel(value, min, max, step));
-        spinner.setFont(ConsoleTheme.BODY_FONT);
-        spinner.setBackground(ConsoleTheme.INPUT);
-        spinner.setForeground(ConsoleTheme.TEXT);
-        spinner.setPreferredSize(new Dimension(105, 28));
-        return spinner;
-    }
-
-    private static JPanel actionRow() {
-        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        row.setOpaque(false);
-        row.setAlignmentX(JComponent.LEFT_ALIGNMENT);
-        return row;
+            @Override
+            public Dimension getMaximumSize() {
+                Dimension preferred = getPreferredSize();
+                return new Dimension(Integer.MAX_VALUE, preferred.height);
+            }
+        };
+        panel.setOpaque(false);
+        panel.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        return panel;
     }
 
     private static JButton button(String text) {
@@ -370,7 +382,15 @@ final class TpLinkPanel extends JPanel {
     }
 
     private static JLabel valueLabel() {
-        return ConsoleTheme.createValueLabel();
+        JLabel label = ConsoleTheme.createValueLabel();
+        label.setText("-");
+        return label;
+    }
+
+    private static JLabel fixedValue(String text) {
+        JLabel label = valueLabel();
+        label.setText(text);
+        return label;
     }
 
     private static void styleCheckBox(JCheckBox checkBox) {
@@ -382,7 +402,129 @@ final class TpLinkPanel extends JPanel {
         checkBox.setAlignmentX(JComponent.LEFT_ALIGNMENT);
     }
 
-    private static float value(JSpinner spinner) {
-        return ((Number) spinner.getValue()).floatValue();
+    /** Width-tracking vertical content: no horizontal Client Console scrolling. */
+    private static final class VerticalScrollPanel extends JPanel implements Scrollable {
+        private static final long serialVersionUID = 1L;
+
+        VerticalScrollPanel() {
+            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        }
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 18;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return Math.max(18, visibleRect.height - 18);
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
+    }
+
+    /** Compact Client Console numeric editor: direct entry plus +/- buttons. */
+    private static final class NumericControl extends JPanel {
+        private static final long serialVersionUID = 1L;
+
+        private final double min;
+        private final double max;
+        private final double step;
+        private final int decimals;
+        private final DoubleConsumer consumer;
+        private final JTextField field = new JTextField();
+
+        NumericControl(String labelText, double min, double max, double step,
+                int decimals, DoubleConsumer consumer) {
+            super(new BorderLayout(8, 0));
+            this.min = min;
+            this.max = max;
+            this.step = step;
+            this.decimals = decimals;
+            this.consumer = consumer;
+
+            setBackground(ConsoleTheme.CARD);
+            setOpaque(true);
+            setAlignmentX(JComponent.LEFT_ALIGNMENT);
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+
+            JLabel label = new JLabel(labelText);
+            label.setFont(ConsoleTheme.SMALL_FONT);
+            label.setForeground(ConsoleTheme.MUTED_TEXT);
+            add(label, BorderLayout.CENTER);
+
+            JPanel editor = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+            editor.setOpaque(false);
+            JButton minus = new JButton("-");
+            JButton plus = new JButton("+");
+            ConsoleTheme.styleButton(minus);
+            ConsoleTheme.styleButton(plus);
+            minus.setPreferredSize(new Dimension(34, 28));
+            plus.setPreferredSize(new Dimension(34, 28));
+
+            field.setPreferredSize(new Dimension(76, 29));
+            field.setHorizontalAlignment(JTextField.RIGHT);
+            ConsoleTheme.styleTextField(field);
+            field.addActionListener(e -> commitField());
+            field.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusLost(FocusEvent e) {
+                    commitField();
+                }
+            });
+            minus.addActionListener(e -> adjust(-step));
+            plus.addActionListener(e -> adjust(step));
+
+            editor.add(minus);
+            editor.add(field);
+            editor.add(plus);
+            add(editor, BorderLayout.EAST);
+        }
+
+        void setValue(double value) {
+            if (!field.hasFocus()) {
+                field.setText(format(value));
+            }
+        }
+
+        private void adjust(double delta) {
+            apply(parse() + delta);
+        }
+
+        private void commitField() {
+            apply(parse());
+        }
+
+        private double parse() {
+            try {
+                return Double.parseDouble(field.getText().trim());
+            } catch (RuntimeException ignored) {
+                return min;
+            }
+        }
+
+        private void apply(double value) {
+            double clamped = value < min ? min : value > max ? max : value;
+            field.setText(format(clamped));
+            consumer.accept(clamped);
+        }
+
+        private String format(double value) {
+            return String.format(Locale.ROOT, "% ." + decimals + "f",
+                    Double.valueOf(value)).trim();
+        }
     }
 }
