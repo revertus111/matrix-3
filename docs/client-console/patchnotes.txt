@@ -164,3 +164,10 @@
 - Added Visual Explorer as a lazy Test Console sub-tab with failure isolation preserved.
 - Specialist ownership lives in docs/visual-explorer/PROJECT.md; Client Console remains only the host/navigation shell.
 - Existing Interface Browser/Editor authority is reused through Visual Explorer rather than duplicated.
+
+2026-10-06 - N64 responsive layout repair
+- Fixed N64 workspace scroll views so Runtime, Custom combat, and Equipment Workbench track the Client Console viewport width instead of retaining an oversized preferred width.
+- Replaced dense one-row action strips with fixed-height two-column action grids where controls could wrap into clipped rows.
+- Event recorder text now wraps inside the console and no longer requires horizontal scrolling.
+- N64 header subtitle now wraps at narrow console widths.
+- Layout-only developer UI change; Mario/Link gameplay, combat, native bridge, and Matrix ownership are unchanged. Runtime resize acceptance pending.
