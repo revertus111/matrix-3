@@ -47,9 +47,9 @@ Use the shortest path only. Do not manually extract the whole disc.
 
 ## Bundle 1.2 - Link asset + animation proof
 
-Status: `NEEDS VISUAL ACCEPTANCE`
+Status: `VERIFIED`
 
-This remains the local donor-model/socket acceptance gate. The user explicitly advanced to the Phase 2 in-client presentation implementation before formally accepting the corrected left-side proof, so this stays as carryover rather than being marked VERIFIED.
+The corrected GZ2E01 left-side proof was explicitly accepted by the user. Do not rerun it unless later runtime evidence indicates a regression in the donor/visual-proof path.
 
 ### One-click test
 
@@ -97,15 +97,16 @@ This remains the local donor-model/socket acceptance gate. The user explicitly a
 ### Bundle 1.2 runtime evidence
 
 - The MSYS2/UCRT64 dependency bootstrap is runtime VERIFIED: pacman installed prebuilt NumPy/Pillow and the renderer ran to completion.
-- Authentic donor extraction remains runtime VERIFIED: `al.bmd` has 35 joints and real `waitb.bck`, `dasha.bck`, `cutl.bck` clips were selected.
+- Authentic donor extraction is runtime VERIFIED: `al.bmd` has 35 joints and real `waitb.bck`, `dasha.bck`, `cutl.bck` clips were selected.
 - The first successfully generated GIF was **not accepted visually**. It rendered animated Link but did not render a sword model, the only socket indicator was the red `0xF` debug cross, and the launcher incorrectly labeled successful artifact generation as `PASS`.
 - The second generated proof did include the authentic `al_swb.bmd` model and both `0xE handR` / `0xF weaponR` markers. User-provided GIFs showed the dark wooden sword rigidly following that right-side test socket while the opposite arm performed the prominent sword-cut motion. This proved the diagnostic had selected the wrong item side, not that the donor/toolchain failed.
-- Pinned TP source confirms human Link assigns left hand/item joints `9/10` and right hand/item joints `14/15`. Because this donor target is GZ2E01 GameCube Link, the corrected active sword proof now uses left `0x9 handL` / `0xA weaponL`; right `0xE/0xF` remains the alternate right-hand/item socket.
-- The corrected proof generated the local f32 `tp-link-proof.dmk`, but corrected left-side visual acceptance is still pending.
+- Pinned TP source confirms human Link assigns left hand/item joints `9/10` and right hand/item joints `14/15`. Because this donor target is GZ2E01 GameCube Link, the corrected active sword proof uses left `0x9 handL` / `0xA weaponL`; right `0xE/0xF` remains the alternate right-hand/item socket.
+- The corrected proof generated the local f32 `tp-link-proof.dmk`.
+- User explicitly accepted the corrected proof as PASS: authentic TP Link rendered with authentic idle/walk/sword BCK animation, the 35-joint skeleton was preserved, cyan `0x9 handL` and red `0xA weaponL` followed the intended GameCube left sword side, and `al_swb.bmd` remained attached to `0xA weaponL` through the sword animation.
 
 ### Acceptance boundary
 
-PASS means Bundle 1.2 can be promoted to `VERIFIED`. FAIL should be classified before patching:
+Bundle 1.2 is `VERIFIED`. The failure classifications below remain useful only for future regression diagnosis:
 
 - **asset/extraction failure:** missing BMD/BCK or wrong archive path;
 - **decoder failure:** BMD/BCK parser/converter rejects authentic TP data;
@@ -173,4 +174,4 @@ The first Matrix3 run is a real partial PASS:
 
 ## Current acceptance boundary
 
-Bundle 1.1 is runtime VERIFIED. Bundle 1.2 has runtime-verified extraction and visual-tool execution but still needs corrected left-side visual acceptance. Bundle 2.1 has a runtime-verified in-client render path; the current gate is the `5.0` scale calibration plus idle/walk/facing/hotkey/restoration acceptance.
+Bundle 1.1 is runtime VERIFIED. Bundle 1.2 is VERIFIED from the explicitly accepted corrected GZ2E01 left-side model/animation/socket proof. Bundle 2.1 has a runtime-verified in-client render path; the current gate is the `5.0` scale calibration plus idle/walk/facing/hotkey/restoration acceptance.
