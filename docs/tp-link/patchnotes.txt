@@ -138,3 +138,12 @@
 - Accepted evidence: authentic TP Link, authentic idle/walk/sword BCK animation, 35-joint skeleton, cyan `0x9 handL`, red `0xA weaponL`, and `al_swb.bmd` attached to `0xA weaponL` and following the sword animation.
 - Bundle 1.2 is now `VERIFIED`; the stale visual-acceptance carryover gate was removed from PROJECT/TESTLIST.
 - Bundle 2.1 remains active and unchanged: next runtime gate is `scale=5.0` plus idle/walk, facing, Shift-release latch, and normal-player restoration.
+
+2026-10-06 - TP Link N64 tuning workbench + model-space proportions
+- User runtime screenshots accepted world scale `5.0` for overall Link height and identified the remaining fit issue as excess width/depth for future RuneScape equipment.
+- Added `TpLinkWorkbench` session tuning plus a dedicated `N64 -> TP Link` workspace with Presentation, Animation, Movement, Combat, Materials and Diagnostics tabs.
+- World scale remains uniformly `5.0`; body width/height/depth are applied to skinned TP vertices before player yaw so proportions do not become world-axis dependent. Initial RuneScape-fit values are `0.92 / 1.00 / 0.95`.
+- Added live scale/offset/yaw tuning, idle/walk/sword visual preview, animation speed and movement-switch tuning, DMK reload, live diagnostics, and a real toggle for the existing DMK UV/palette-to-face-colour sampling path.
+- Movement/combat tabs preserve Matrix3 ownership: TP movement remains Phase 3 and authoritative RuneScape combat/equipment remain later phases. Sword preview is visual only.
+- Proper Matrix texture/material binding and geometric smoothing are not faked: current DMK geometry is triangle-expanded, so smoothing still needs imported normals or a UV/material-aware weld.
+- Status: new workbench/proportion controls are verified-static and require one consolidated Java 8 runtime acceptance pass.
