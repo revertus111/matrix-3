@@ -9,6 +9,8 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.FocusAdapter;
@@ -30,6 +32,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
+import javax.swing.Scrollable;
 import javax.swing.Timer;
 
 /**
@@ -150,8 +153,10 @@ public final class N64Panel extends JPanel {
         header.setBorder(ConsoleTheme.panelPadding(16, 18, 8, 18));
         header.add(ConsoleTheme.titleLabel("N64"));
         header.add(Box.createVerticalStrut(3));
-        header.add(ConsoleTheme.subtitleLabel(
-                "Imported-game diagnostics and development workspaces"));
+        JTextArea subtitle = ConsoleTheme.createWrappedText(
+                "Imported-game diagnostics and development workspaces", 2);
+        subtitle.setForeground(ConsoleTheme.ACCENT);
+        header.add(subtitle);
         header.add(Box.createVerticalStrut(8));
         styleCheckBox(runeScapeClipping);
         runeScapeClipping.setSelected(AlternateCharacterController.isRuneScapeClippingEnabled());
@@ -208,7 +213,15 @@ public final class N64Panel extends JPanel {
         }
         card.add(ConsoleTheme.createWrappedText(
                 "Calibration is session-only. Freeze pose in Equipment Workbench for grip inspection; unfreeze to play attacks. Unsupported weapons retain normal Mario attacks unless the explicit preview override is enabled.", 3));
-        JScrollPane scroll=new JScrollPane(card);
+
+        VerticalScrollPanel content = new VerticalScrollPanel();
+        content.setBackground(ConsoleTheme.PANEL);
+        content.add(card);
+        content.add(Box.createVerticalGlue());
+
+        JScrollPane scroll=new JScrollPane(content);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         ConsoleTheme.styleScrollPane(scroll);
         return scroll;
     }
@@ -231,8 +244,7 @@ public final class N64Panel extends JPanel {
     }
 
     private JScrollPane createDetailsScroll() {
-        JPanel content = new JPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        VerticalScrollPanel content = new VerticalScrollPanel();
         content.setBackground(ConsoleTheme.PANEL);
         content.setBorder(ConsoleTheme.panelPadding(10, 8, 10, 8));
 
@@ -293,8 +305,7 @@ public final class N64Panel extends JPanel {
         host.setBorder(ConsoleTheme.panelPadding(6, 8, 8, 8));
         host.setMinimumSize(new Dimension(0, 140));
 
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        toolbar.setOpaque(false);
+        JPanel toolbar = createActionGrid(2);
 
         JButton clear = new JButton("Clear events");
         JButton copySnapshot = new JButton("Copy snapshot");
@@ -337,11 +348,12 @@ public final class N64Panel extends JPanel {
         eventLog.setForeground(ConsoleTheme.TEXT);
         eventLog.setBackground(ConsoleTheme.INPUT);
         eventLog.setCaretColor(ConsoleTheme.TEXT);
-        eventLog.setLineWrap(false);
+        eventLog.setLineWrap(true);
+        eventLog.setWrapStyleWord(false);
         eventLog.setBorder(ConsoleTheme.panelPadding(6, 6, 6, 6));
 
         JScrollPane scroll = new JScrollPane(eventLog);
-        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         ConsoleTheme.styleScrollPane(scroll);
         scroll.getViewport().setBackground(ConsoleTheme.INPUT);
@@ -353,8 +365,7 @@ public final class N64Panel extends JPanel {
         JPanel host = new JPanel(new BorderLayout());
         host.setBackground(ConsoleTheme.PANEL);
 
-        JPanel content = new JPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        VerticalScrollPanel content = new VerticalScrollPanel();
         content.setBackground(ConsoleTheme.PANEL);
         content.setBorder(ConsoleTheme.panelPadding(10, 8, 14, 8));
 
@@ -436,8 +447,7 @@ public final class N64Panel extends JPanel {
         card.add(yawControl);
         card.add(Box.createVerticalStrut(8));
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        actions.setOpaque(false);
+        JPanel actions = createActionGrid(2);
         JButton reset = new JButton("Reset / recalc fit");
         JButton flip = new JButton("Flip helmet 180°");
         JButton copy = new JButton("Copy profile");
@@ -479,8 +489,7 @@ public final class N64Panel extends JPanel {
         card.add(coverageOnlyWithHelmet);
         card.add(Box.createVerticalStrut(8));
 
-        JPanel coverageActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        coverageActions.setOpaque(false);
+        JPanel coverageActions = createActionGrid(2);
         JButton keepAll = new JButton("Keep all");
         JButton fullHelm = new JButton("Cap/hair only");
         JButton closedShell = new JButton("Head shell closed");
@@ -580,8 +589,7 @@ public final class N64Panel extends JPanel {
                 "Save writes the current helmet transform, replacement/coverage profile, face-slice setting, semantic part counts and fallback settings to docs/n64/MARIO_EQUIPMENT_RUNTIME.md.", 3));
         card.add(Box.createVerticalStrut(8));
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        actions.setOpaque(false);
+        JPanel actions = createActionGrid(2);
         JButton save = new JButton("Save profile .md");
         JButton copy = new JButton("Copy markdown");
         ConsoleTheme.styleButton(save);
@@ -602,6 +610,21 @@ public final class N64Panel extends JPanel {
         workbenchStatus.setAlignmentX(JComponent.LEFT_ALIGNMENT);
         card.add(workbenchStatus);
         return card;
+    }
+
+    private static JPanel createActionGrid(int columns) {
+        JPanel panel = new JPanel(new GridLayout(0, columns, 6, 4)) {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Dimension getMaximumSize() {
+                Dimension preferred = getPreferredSize();
+                return new Dimension(Integer.MAX_VALUE, preferred.height);
+            }
+        };
+        panel.setOpaque(false);
+        panel.setAlignmentX(JComponent.LEFT_ALIGNMENT);
+        return panel;
     }
 
     private void refresh() {
@@ -766,6 +789,40 @@ public final class N64Panel extends JPanel {
         return !Float.isNaN(value) && !Float.isInfinite(value);
     }
 
+    /** Width-tracking vertical content for Client Console scroll panes. */
+    private static final class VerticalScrollPanel extends JPanel implements Scrollable {
+        private static final long serialVersionUID = 1L;
+
+        VerticalScrollPanel() {
+            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        }
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 18;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return Math.max(18, visibleRect.height - 18);
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
+    }
+
     /** Compact RuneScape-console styled numeric editor with direct-entry support. */
     private final class NumericControl extends JPanel {
         private static final long serialVersionUID = 1L;
@@ -863,4 +920,3 @@ public final class N64Panel extends JPanel {
         }
     }
 }
-
