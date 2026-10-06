@@ -132,3 +132,9 @@
 - The screenshot showed a clear calibration failure rather than an architecture failure: TP Link was dramatically undersized/action-figure sized at scale `1.0`.
 - Narrow corrective patch changes the default `matrix3.tp.modelScale` fallback from `1.0` to `5.0`; the system-property override remains available for follow-up tuning.
 - Updated PROJECT/TESTLIST to classify Bundle 2.1 as `PARTIAL VERIFIED / SCALE CALIBRATION NEEDS TEST`. Idle/walk visual switching, yaw/facing, hotkey release-order, and normal-player restoration still require runtime acceptance.
+
+2026-10-06 - Bundle 1.2 corrected left-side proof accepted
+- User explicitly accepted the corrected GZ2E01 visual proof as PASS.
+- Accepted evidence: authentic TP Link, authentic idle/walk/sword BCK animation, 35-joint skeleton, cyan `0x9 handL`, red `0xA weaponL`, and `al_swb.bmd` attached to `0xA weaponL` and following the sword animation.
+- Bundle 1.2 is now `VERIFIED`; the stale visual-acceptance carryover gate was removed from PROJECT/TESTLIST.
+- Bundle 2.1 remains active and unchanged: next runtime gate is `scale=5.0` plus idle/walk, facing, Shift-release latch, and normal-player restoration.
