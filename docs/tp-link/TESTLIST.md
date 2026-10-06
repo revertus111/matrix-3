@@ -27,7 +27,7 @@ Use the shortest path only. Do not manually extract the whole disc.
    - source is detached at `c8fa8c9e2aab72cf4e5db0e5d1c84a9ea6ee6eb0`;
    - `orig\GZ2E01` is a directory, matching decomp-toolkit's `object_base` contract;
    - the selected image keeps its filename/extension inside `orig\GZ2E01` and is hard-linked when possible, otherwise copied once;
-   - if a previous builder version left `orig\GZ2E01` as a file, the builder removes only that local workspace link/copy and repairs the layout automatically;
+   - if a previous builder version left `orig\GZ2E01` as a file, the builder removes only the builder-created `orig\GZ2E01` link/copy and repairs the layout automatically;
    - `configure.py` completes;
    - `ninja` completes;
    - window ends with `TP LINK DONOR BUILD SUCCESS`.
@@ -47,9 +47,9 @@ Use the shortest path only. Do not manually extract the whole disc.
 
 ## Bundle 1.2 - Link asset + animation proof
 
-Status: `NEEDS TEST`
+Status: `NEEDS VISUAL ACCEPTANCE`
 
-This is the first actually-visible TP Link acceptance gate. Do not manually extract archives and do not start Matrix3 client integration until this passes.
+This remains the local donor-model/socket acceptance gate. The user explicitly advanced to the Phase 2 in-client presentation implementation before formally accepting the corrected left-side proof, so this stays as carryover rather than being marked VERIFIED.
 
 ### One-click test
 
@@ -69,7 +69,7 @@ This is the first actually-visible TP Link acceptance gate. Do not manually extr
    - validates human Link's left hand/item pair `0x9 handL` / `0xA weaponL` and right hand/item pair `0xE handR` / `0xF weaponR`;
    - identifies `0x9/0xA` as the active sword-side pair for the GZ2E01 GameCube Link proof;
    - rejects selected BCKs that do not contain the complete human item-joint range through `0xF`.
-7. Expected first-run visual-tool behavior:
+7. Expected visual-tool behavior:
    - reuses the already-verified Matrix3 MSYS2/UCRT64 interpreter at `C:\msys64\ucrt64\bin\python.exe`;
    - if NumPy/Pillow imports are missing, `C:\msys64\usr\bin\pacman.exe` installs only the prebuilt UCRT64 packages `mingw-w64-ucrt-x86_64-python-numpy` and `mingw-w64-ucrt-x86_64-python-pillow`;
    - no `pip` source build, `winget`, private CPython installer, Windows Python registry discovery, or visual-proof venv is required on this path;
@@ -81,6 +81,7 @@ This is the first actually-visible TP Link acceptance gate. Do not manually extr
    - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\walk.gif`
    - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\sword.gif`
    - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.gif`
+   - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.dmk`
    - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\visual-proof.json`
    - `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\visual-summary.txt`
 9. The combined `tp-link-proof.gif` should open automatically. A successful script exit ends with `TP LINK VISUAL PROOF GENERATED`, not `PASS`; generation alone is not visual acceptance.
@@ -100,12 +101,11 @@ This is the first actually-visible TP Link acceptance gate. Do not manually extr
 - The first successfully generated GIF was **not accepted visually**. It rendered animated Link but did not render a sword model, the only socket indicator was the red `0xF` debug cross, and the launcher incorrectly labeled successful artifact generation as `PASS`.
 - The second generated proof did include the authentic `al_swb.bmd` model and both `0xE handR` / `0xF weaponR` markers. User-provided GIFs showed the dark wooden sword rigidly following that right-side test socket while the opposite arm performed the prominent sword-cut motion. This proved the diagnostic had selected the wrong item side, not that the donor/toolchain failed.
 - Pinned TP source confirms human Link assigns left hand/item joints `9/10` and right hand/item joints `14/15`. Because this donor target is GZ2E01 GameCube Link, the corrected active sword proof now uses left `0x9 handL` / `0xA weaponL`; right `0xE/0xF` remains the alternate right-hand/item socket.
+- The corrected proof generated the local f32 `tp-link-proof.dmk`, but corrected left-side visual acceptance is still pending.
 
 ### Acceptance boundary
 
-PASS means Bundle 1.2 can be promoted to `VERIFIED` and Phase 2 may use this exact proven character/animation representation for the first revision-830 render.
-
-FAIL should be classified before patching:
+PASS means Bundle 1.2 can be promoted to `VERIFIED`. FAIL should be classified before patching:
 
 - **asset/extraction failure:** missing BMD/BCK or wrong archive path;
 - **decoder failure:** BMD/BCK parser/converter rejects authentic TP data;
@@ -113,7 +113,40 @@ FAIL should be classified before patching:
 - **animation failure:** mesh renders but BCK pose/playback is wrong;
 - **socket failure:** `0x9` tracks the left hand but red `0xA` / attached `al_swb.bmd` does not remain on the intended active sword socket.
 
-Do not call Matrix3 in-client rendering verified from this test. Bundle 1.2 is a local donor-model/animation/socket proof only.
+## Bundle 2.1 - Matrix3 TP Link presentation
+
+Status: `IMPLEMENTED / NEEDS TEST`
+
+This is presentation only. It does **not** add TP movement, TP combat, RuneScape weapon replacement, or a native TP sidecar.
+
+### Consolidated runtime test
+
+1. Pull current `main` once.
+2. Confirm `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.dmk` exists from the generated Bundle 1.2 proof. Do not copy it into the repository.
+3. Eclipse: clean/build the **Client** with Java 8, then launch normally and log in.
+4. Stand somewhere safe with the normal RuneScape local player visible.
+5. Press `Ctrl+Shift+L` once, then release the keys in any order.
+6. Expected console sequence includes:
+   - `[Alternate Character] Controller mode: TP_LINK`
+   - `[TP Visual] Loaded local TP Link DMK: ...`
+   - `[TP Visual] GZ2E01 Link -> Matrix Model ACTIVE ... idle=idle walk=walk ...`
+7. Expected presentation:
+   - authentic TP Link appears at the local player's Matrix world transform;
+   - the normal RuneScape local-player model disappears only after TP Link successfully renders;
+   - remote players remain normal;
+   - while standing still, the real TP idle clip loops;
+   - move with normal RuneScape movement and verify the real TP locomotion clip takes over while the player position changes, then returns to idle after stopping;
+   - normal RuneScape camera/input/world behavior remains intact because TP mode is presentation-only.
+8. Hotkey regression: after TP mode activates, release **Shift first** while still briefly holding `Ctrl+L`. Expected: mode stays `TP_LINK`; it must not jump to OoT `LINK`.
+9. Press `Ctrl+Shift+L` again after fully releasing the first chord. Expected: controller mode returns to `RUNESCAPE` and the normal local-player model returns immediately.
+10. If Link is the wrong size or facing direction but otherwise renders/animates correctly, report that separately as calibration evidence; do not classify the DMK/skinning path as failed.
+
+### Fail-open/static boundary
+
+- `verified-static`: local-player suppression is shared through the existing `Player.method10696(...)` gate and only returns true after `TpLinkVisualRenderer` records a successful fresh Matrix render.
+- `verified-static`: missing/invalid DMK, failed skin/model conversion, missing player transform, or render exceptions leave the RuneScape local player visible.
+- `verified-static`: the renderer consumes only the local generated DMK and does not commit or ship Nintendo assets.
+- `VERIFIED` requires the runtime test above.
 
 ## Regression sanity
 
@@ -121,8 +154,10 @@ Do not call Matrix3 in-client rendering verified from this test. Bundle 1.2 is a
 - OoT button still launches the OoT builder.
 - `PREP + BUILD TP LINK` still launches donor prep/build.
 - `PROBE TP LINK` launches only the local visual proof.
+- `Ctrl+L` remains the OoT Link controller toggle after the chord is fully released.
+- `Ctrl+Shift+L` is TP Link presentation only.
 - Closing Native Builder still works normally.
 
 ## Current acceptance boundary
 
-Bundle 1.1 is runtime VERIFIED. Bundle 1.2 has runtime-verified extraction and visual-tool execution, but the corrected left-side sword/socket proof still requires user acceptance. Movement, combat, equipment and Matrix3 in-client TP Link rendering remain later gates.
+Bundle 1.1 is runtime VERIFIED. Bundle 1.2 has runtime-verified extraction and visual-tool execution but still needs corrected left-side visual acceptance. Bundle 2.1 is implemented at verified-static level and now needs the single in-client runtime test above.
