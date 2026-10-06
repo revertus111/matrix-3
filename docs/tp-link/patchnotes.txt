@@ -147,3 +147,13 @@
 - Movement/combat tabs preserve Matrix3 ownership: TP movement remains Phase 3 and authoritative RuneScape combat/equipment remain later phases. Sword preview is visual only.
 - Proper Matrix texture/material binding and geometric smoothing are not faked: current DMK geometry is triangle-expanded, so smoothing still needs imported normals or a UV/material-aware weld.
 - Status: new workbench/proportion controls are verified-static and require one consolidated Java 8 runtime acceptance pass.
+
+2026-10-06 - TP Link playable controller + responsive workspace correction
+- Replaced the cramped nested TP Presentation/Animation/Movement/Combat/Materials/Diagnostics tab wall with one width-tracking vertically scrolling `N64 -> TP Link` workspace using the established Client Console card and `- / value / +` numeric-control pattern.
+- Added distinct `TP_LINK` ownership to `AlternateCharacterController` and a new `TpLinkController`; camera-relative WASD now reuses the existing shared movement/free-vs-clipped owner instead of a duplicate movement stack.
+- Added time-normalized TP movement speed, movement-facing yaw with turn-speed smoothing, and Shift target lock through the existing shared `AlternateCharacterCombatBridge` target owner.
+- F now starts the authentic DMK sword clip once. At the configurable contact frame the TP adapter requests exactly one shared server-authoritative manual melee cycle; holding F does not continuously re-arm the same swing.
+- Added no TP damage formula or click-to-attack loop. Matrix/server remains authoritative for legality, range, cooldown, accuracy, damage, XP and NPC state.
+- Added movement speed, turn speed, contact frame, shared clipping, authentic sword preview, fit/placement, DMK reload and current material diagnostics to the flattened TP workspace.
+- Space/jump remains intentionally unbound in this slice; authentic TP jump/roll/guard clips/state choices must be added before those actions are implemented.
+- Status: verified-static implementation only. Java 8 compile/runtime acceptance is still required.
