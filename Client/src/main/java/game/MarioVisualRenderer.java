@@ -146,11 +146,14 @@ public final class MarioVisualRenderer {
 
     /**
      * Shared local-player presentation suppression seam. Player.method10696(...)
-     * already calls this gate for Mario; Link delegates through the same proven
-     * seam so the decompiled Player renderer does not need a second invasive hook.
-     * Both character renderers remain independently fail-open.
+     * already calls this gate for Mario; imported-character renderers delegate
+     * through the same proven seam so Player does not need another invasive hook.
+     * Every replacement remains independently fail-open.
      */
     static boolean shouldSuppressLocalPlayer(Player player) {
+        if (TpLinkVisualRenderer.shouldSuppressLocalPlayer(player)) {
+            return true;
+        }
         if (LinkVisualRenderer.shouldSuppressLocalPlayer(player)) {
             return true;
         }
@@ -827,4 +830,3 @@ public final class MarioVisualRenderer {
                 && Math.abs(z) <= 0.000001F;
     }
 }
-
