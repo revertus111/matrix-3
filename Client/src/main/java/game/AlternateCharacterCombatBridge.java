@@ -11,6 +11,8 @@ package game;
 public final class AlternateCharacterCombatBridge {
 
     private static final int MANUAL_MELEE_EXAMINE_FLAG = 2;
+    private static final int DEV_SPAWN_DUMMY_INDEX = 65534;
+    private static final int DEV_CLEAR_DUMMIES_INDEX = 65535;
     private static final float Z_TARGET_MAX_DISTANCE = 12.0F * 512.0F;
     private static final float Z_TARGET_DROP_DISTANCE = 14.0F * 512.0F;
     private static final float MELEE_FALLBACK_DISTANCE = 3.0F * 512.0F;
@@ -39,14 +41,19 @@ public final class AlternateCharacterCombatBridge {
     }
 
     /**
-     * Shared Matrix-owned target lock. Character adapters consume the returned
-     * direction as their native lock/camera basis; they never implement their own
-     * NPC search or lock retention policy.
+     * Shared Matrix-owned target lock implementation. Lock-on is a character
+     * capability, not a universal alternate-character behavior: current Link
+     * enables it; Mario must keep Shift for native crouch/ground-pound only.
      */
     static AlternateCharacterController.PlanarDirection updateTargeting(
             Player player,
             boolean targetDown,
             AlternateCharacterController.PlanarDirection cameraForward) {
+        if (AlternateCharacterController.getActiveCharacter()
+                != AlternateCharacterController.CharacterId.LINK) {
+            clearTarget();
+            return cameraForward;
+        }
         if (player == null || cameraForward == null) {
             clearTarget();
             return cameraForward;
@@ -181,6 +188,16 @@ public final class AlternateCharacterCombatBridge {
         return sent;
     }
 
+    /** Developer-only deterministic server target used by the N64 combat workspace. */
+    public static boolean requestCombatDummySpawn() {
+        return sendManualMeleeIntent(DEV_SPAWN_DUMMY_INDEX);
+    }
+
+    /** Removes combat dummies created by the deterministic N64 combat workspace. */
+    public static boolean requestCombatDummyClear() {
+        return sendManualMeleeIntent(DEV_CLEAR_DUMMIES_INDEX);
+    }
+
     static int getLockedTargetIndex() {
         return lockedTargetIndex;
     }
@@ -202,9 +219,9 @@ public final class AlternateCharacterCombatBridge {
     }
 
     /**
-     * Shared imported-character manual-melee envelope. Packet 0 normally carries
-     * NPC examine with transformed flag 0/1; reserved flag 2 is routed by the
-     * server to one direct PlayerCombatNew cycle rather than repeating auto-combat.
+     * Shared imported-character request envelope. Packet 0 normally carries NPC
+     * examine with transformed flag 0/1; reserved flag 2 carries either a real
+     * NPC manual-melee target or the two developer-only combat-dummy sentinels.
      */
     private static boolean sendManualMeleeIntent(int targetIndex) {
         if (targetIndex < 0 || client.aClass195_8589 == null) {
