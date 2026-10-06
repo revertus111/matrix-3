@@ -327,7 +327,7 @@ public final class ClientConsoleShell extends JPanel {
         if (PANEL_N64.equals(panelId)) {
             if (n64Panel == null) {
                 try {
-                    n64Panel = new N64Panel();
+                    n64Panel = TpLinkN64Extension.create();
                 } catch (RuntimeException ex) {
                     ex.printStackTrace();
                     n64Panel = createPanelError("N64 panel failed to initialize.");
