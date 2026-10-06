@@ -64,22 +64,33 @@ public final class AlternateCharacterCombatPacketBridge {
         }
 
         /*
-         * Action combat must never turn a contact request into click-to-follow.
-         * Reject out-of-range contacts before PlayerCombatNew can route toward the
-         * target.
+         * Imported-character combat is manual action combat. If stock RuneScape
+         * combat was already running before the native swing/contact arrived,
+         * stop only that repeating combat action so it cannot continue attacking
+         * after this one keypress. Do not cancel unrelated skilling/actions.
+         */
+        if (player.getActionManager().getAction() instanceof PlayerCombatNew) {
+            player.getActionManager().forceStop();
+        }
+
+        /*
+         * Never call PlayerCombatNew.start() here. start() immediately invokes
+         * process(), whose stock click-to-attack path may calcFollow/add walk
+         * steps/diagonal corrections. Native action combat must not move the
+         * player toward a target. If contact occurs out of legal melee range,
+         * the swing simply produces no combat cycle.
          */
         if (!PlayerCombatNew.isWithinDistance(player, npc)) {
             return;
         }
 
         PlayerCombatNew oneShot = new PlayerCombatNew(npc);
-        if (!oneShot.start(player)) {
-            return;
-        }
 
         /*
-         * One direct combat cycle only. Existing weapon delays reject early
-         * repeats; existing combat owns accuracy, damage, XP, NPC death and drops.
+         * Exactly one direct combat cycle for exactly one native contact event.
+         * processWithDelay() preserves the existing weapon delay, controller
+         * keepCombating check, accuracy, damage, XP, NPC death and drops, but the
+         * action is never installed in ActionManager and therefore cannot repeat.
          */
         oneShot.processWithDelay(player);
     }
