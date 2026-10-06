@@ -42,7 +42,13 @@ final class TpLinkVisualRenderer {
     private static final long LOAD_RETRY_NS = 2000000000L;
     private static final float MOVEMENT_EPSILON_SQ = 0.0625F;
 
-    private static final float MODEL_SCALE = resolvePositiveFloat("matrix3.tp.modelScale", 1.0F);
+    /*
+     * Runtime evidence from the first Matrix render showed the donor-space model
+     * at 1.0 was action-figure sized against normal revision-830 humanoids.
+     * 5.0 is the first evidence-based envelope calibration; the system property
+     * remains available for narrow follow-up tuning without changing ownership.
+     */
+    private static final float MODEL_SCALE = resolvePositiveFloat("matrix3.tp.modelScale", 5.0F);
     private static final float YAW_OFFSET_DEGREES = resolveFiniteFloat(
             "matrix3.tp.yawOffsetDegrees", 0.0F);
 
