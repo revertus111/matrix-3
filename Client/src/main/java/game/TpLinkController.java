@@ -1,17 +1,17 @@
 package game;
 
 /**
- * Matrix-owned controller for the current Java TP Link integration.
+ * Matrix-owned action/presentation adapter for the current Java TP Link integration.
  *
- * TP contributes authentic presentation clips. Matrix owns input, camera-relative
- * movement, optional RuneScape clipping, targeting and server-authoritative melee.
- * No TP native sidecar is required for this controller slice.
+ * AlternateCharacterController owns input, camera-relative movement, movement
+ * timing, horizontal state and optional RuneScape clipping. TP Link contributes
+ * authentic presentation clips, facing presentation and sword-contact timing.
  */
 public final class TpLinkController {
 
     private static final float MOVE_EPSILON_SQ = 0.0001F;
-    private static final float NORMALIZED_FRAME_SECONDS = 1.0F / 60.0F;
-    private static final float MAX_FRAME_SECONDS = 0.050F;
+    private static final float FACING_FRAME_SECONDS = 1.0F / 60.0F;
+    private static final float MAX_FACING_FRAME_SECONDS = 0.050F;
     private static final Class230 FACING_ROTATION = new Class230(0.0F, 0.0F, 0.0F, 1.0F);
 
     private static boolean modeWasTpLink;
@@ -19,11 +19,7 @@ public final class TpLinkController {
     private static boolean targetReleaseRequired;
     private static boolean attackWasDown;
 
-    private static boolean movementInitialized;
-    private static float nativeX;
-    private static float nativeZ;
-    private static long lastTickNanos = Long.MIN_VALUE;
-
+    private static long lastFacingTickNanos = Long.MIN_VALUE;
     private static boolean haveFacing;
     private static float facingYawDegrees;
     private static float targetYawDegrees;
@@ -61,8 +57,7 @@ public final class TpLinkController {
             return;
         }
 
-        long now = System.nanoTime();
-        float frameSeconds = frameSeconds(now);
+        float facingFrameSeconds = facingFrameSeconds(System.nanoTime());
         AlternateCharacterController.ControlState controls =
                 AlternateCharacterController.sampleControls();
 
@@ -87,20 +82,22 @@ public final class TpLinkController {
         AlternateCharacterController.PlanarDirection movementBasis = targeting
                 ? facingBasis : controls.cameraForward;
         AlternateCharacterController.MovementInput input =
-                AlternateCharacterController.movementInput(
+                AlternateCharacterController.applyInputDrivenHorizontalMovement(
                         AlternateCharacterController.CharacterId.TP_LINK,
+                        player,
                         controls,
                         movementBasis);
 
-        applyMovement(player, input, frameSeconds);
+        moving = input.worldMoveX * input.worldMoveX
+                + input.worldMoveZ * input.worldMoveZ > MOVE_EPSILON_SQ;
 
         if (targeting) {
-            updateFacing(player, facingBasis, frameSeconds);
+            updateFacing(player, facingBasis, facingFrameSeconds);
         } else if (moving) {
             updateFacing(player,
                     new AlternateCharacterController.PlanarDirection(
                             input.worldMoveX, input.worldMoveZ),
-                    frameSeconds);
+                    facingFrameSeconds);
         }
 
         if (attackEdge && !attackActive) {
@@ -110,10 +107,7 @@ public final class TpLinkController {
     }
 
     private static void enterTpLinkMode(Player player) {
-        movementInitialized = false;
-        nativeX = 0.0F;
-        nativeZ = 0.0F;
-        lastTickNanos = Long.MIN_VALUE;
+        lastFacingTickNanos = Long.MIN_VALUE;
         moving = false;
         targeting = false;
         haveFacing = false;
@@ -133,9 +127,9 @@ public final class TpLinkController {
         attackWasDown = attackReleaseRequired;
 
         System.out.println(
-                "[TP] Controls: camera-relative WASD move, F authentic sword, Shift target lock");
+                "[TP] Controls: shared camera-relative WASD, F authentic sword, Shift target lock");
         System.out.println(
-                "[TP] Matrix owns movement/clipping/targeting and server-authoritative melee.");
+                "[TP] AlternateCharacterController owns movement/clipping; Matrix owns server-authoritative melee.");
     }
 
     private static void exitTpLinkMode(Player player) {
@@ -150,11 +144,10 @@ public final class TpLinkController {
         } else {
             TpLinkWorkbench.setPreviewAnimation(TpLinkWorkbench.PreviewAnimation.AUTO);
         }
-        movementInitialized = false;
         moving = false;
         targeting = false;
         haveFacing = false;
-        lastTickNanos = Long.MIN_VALUE;
+        lastFacingTickNanos = Long.MIN_VALUE;
         attackReleaseRequired = false;
         targetReleaseRequired = false;
         attackWasDown = false;
@@ -172,38 +165,6 @@ public final class TpLinkController {
         modeWasTpLink = false;
         System.out.println("[TP] Falling back to RuneScape control: " + reason);
         PlayerControllerMode.setMode(PlayerControllerMode.Mode.RUNESCAPE);
-    }
-
-    private static void applyMovement(Player player,
-            AlternateCharacterController.MovementInput input,
-            float frameSeconds) {
-        if (!movementInitialized) {
-            AlternateCharacterController.applyHorizontalMovement(
-                    AlternateCharacterController.CharacterId.TP_LINK,
-                    player,
-                    nativeX,
-                    nativeZ,
-                    1.0F,
-                    input);
-            movementInitialized = true;
-        }
-
-        moving = input.worldMoveX * input.worldMoveX
-                + input.worldMoveZ * input.worldMoveZ > MOVE_EPSILON_SQ;
-        if (moving) {
-            float normalizedFrames = frameSeconds / NORMALIZED_FRAME_SECONDS;
-            float step = TpLinkWorkbench.getControllerMoveSpeed() * normalizedFrames;
-            nativeX += input.worldMoveX * step;
-            nativeZ += input.worldMoveZ * step;
-        }
-
-        AlternateCharacterController.applyHorizontalMovement(
-                AlternateCharacterController.CharacterId.TP_LINK,
-                player,
-                nativeX,
-                nativeZ,
-                1.0F,
-                input);
     }
 
     private static void updateFacing(Player player,
@@ -346,18 +307,18 @@ public final class TpLinkController {
         return facingYawDegrees;
     }
 
-    private static float frameSeconds(long now) {
-        float seconds = NORMALIZED_FRAME_SECONDS;
-        if (lastTickNanos != Long.MIN_VALUE) {
-            long delta = now - lastTickNanos;
+    private static float facingFrameSeconds(long now) {
+        float seconds = FACING_FRAME_SECONDS;
+        if (lastFacingTickNanos != Long.MIN_VALUE) {
+            long delta = now - lastFacingTickNanos;
             if (delta > 0L) {
                 seconds = delta / 1000000000.0F;
-                if (seconds > MAX_FRAME_SECONDS) {
-                    seconds = MAX_FRAME_SECONDS;
+                if (seconds > MAX_FACING_FRAME_SECONDS) {
+                    seconds = MAX_FACING_FRAME_SECONDS;
                 }
             }
         }
-        lastTickNanos = now;
+        lastFacingTickNanos = now;
         return seconds;
     }
 
