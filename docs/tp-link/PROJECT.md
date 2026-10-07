@@ -24,13 +24,13 @@ Make authentic Twilight Princess Link a fully playable Matrix3 revision-830 char
 - **TP donor authority:** authentic Link skeleton/resource IDs, BCK animation data, weapon/item sockets and presentation timing.
 - **Asset boundary:** user-owned `GZ2E01` image and extracted/converted Nintendo assets stay outside Git under `%LOCALAPPDATA%`.
 - **Runtime asset boundary:** Matrix3 loads `%LOCALAPPDATA%\Matrix3\TPLinkProof\visual\tp-link-proof.dmk`; no TP native sidecar is required for the current Java controller.
-- **Movement owner:** `AlternateCharacterController` remains the only imported-character WASD/camera-relative owner. TP must not create a competing movement stack.
+- **Movement owner:** `AlternateCharacterController` is the only imported-character WASD/camera-relative owner. It now also owns TP's Matrix-driven X/Z integration, timing, horizontal state, clipping and restore behavior. `TpLinkController` does not own a second movement integrator or movement-speed profile.
 - **Combat owner:** `AlternateCharacterCombatBridge` remains the shared imported-character target/manual-melee owner. TP supplies authentic sword presentation/contact timing only.
-- **Workbench owner:** `TpLinkWorkbench` stores developer-session tuning values; it does not own server/world state.
+- **Workbench owner:** `TpLinkWorkbench` stores developer-session presentation/facing/combat tuning values; it does not own server/world state or TP locomotion speed.
 
 ## Donor source pin
 
-- Source: `zeldaret/tp@c8fa8c9e2aab72cf4e5db0e5d1c84a9ea6ee6eb0`
+- Source: `zeldaret/tp@c8fa8c9e2aab72cf4e5d1c84a9ea6ee6eb0`
 - Target: `GZ2E01` - GameCube North America
 - Donor workspace: `%LOCALAPPDATA%\Matrix3\TPDecomp`
 - Local converter: `%LOCALAPPDATA%\Matrix3\TPLinkTools\demake-engine`
@@ -112,12 +112,12 @@ Make authentic Twilight Princess Link a fully playable Matrix3 revision-830 char
 - [x] Add `TpLinkController` to the established shared driver tick.
 - [x] Reuse the shared camera-relative WASD sample.
 - [x] Reuse `AlternateCharacterFreeMovement` for continuous movement and optional RuneScape tile-authority clipping.
-- [x] Normalize TP movement speed against a 60 Hz baseline so client frame rate does not directly double/halve movement speed.
-- [x] Add live move-speed tuning.
-- [x] Turn the local Matrix player toward movement direction with live turn-speed smoothing.
+- [x] Move TP's Matrix-driven X/Z integration and frame-normalized movement timing into `AlternateCharacterController`; `TpLinkController` no longer owns `nativeX/nativeZ` or a movement clock.
+- [x] Remove TP-only move-speed tuning so locomotion policy stays with the shared controller.
+- [x] Turn the local Matrix player toward movement direction with live facing-only turn smoothing.
 - [x] Reuse shared Shift target acquisition; when locked, Link faces the target and movement uses the shared target-relative basis.
 - [ ] Runtime accept WASD direction at north/east/west/south camera headings.
-- [ ] Runtime accept movement speed and turn speed.
+- [ ] Runtime accept shared movement behavior and facing turn speed.
 - [ ] Runtime accept target-lock facing/strafe behavior.
 
 ### Phase 4 - Action combat + RuneScape progression
@@ -162,16 +162,18 @@ Current cards:
 - Fine placement
 - Diagnostics
 
+Movement UI exposes shared clipping plus TP presentation-facing smoothing only. There is no TP-local move-speed control because locomotion ownership belongs to `AlternateCharacterController`.
+
 Controls use the same compact direct-entry `- / value / +` style as the existing N64 console. The workspace tracks viewport width and has no horizontal scrolling.
 
 ## Current execution state
 
 - Active phase: **Phase 3 / Bundle 3.1 plus Phase 4 / Bundle 4.1 runtime acceptance**
 - Presentation state: world-scale height VERIFIED; proportions/idle-walk/facing still need acceptance
-- Controller state: implemented verified-static; runtime test pending
+- Controller state: shared movement ownership corrected verified-static; runtime test pending
 - Sword/manual-melee state: implemented verified-static; contact/runtime test pending
 - UI state: flattened responsive workspace implemented verified-static; runtime visual acceptance pending
-- Approval: user gave `AAA` on 2026-10-06 for the corrective playable-controller + Client Console slice
+- Approval: user gave `AAA` on 2026-10-06 for the shared-controller movement ownership correction
 
 ## Testing
 
@@ -188,7 +190,7 @@ Authoritative steps: `docs/tp-link/TESTLIST.md`.
 7. Hold Shift near an NPC; verify target lock and target-facing movement.
 8. Tap F in melee range; authentic sword should play once and one manual melee request should occur at the contact frame.
 9. Tap F with no valid target; animation should still play but no auto-combat starts.
-10. Tune only move speed, turn speed, yaw correction, contact frame, width/depth if runtime evidence requires it.
+10. Tune only facing turn speed, yaw correction, contact frame, width/depth if runtime evidence requires it; TP movement speed is no longer a per-character tuning value.
 11. Toggle TP off and verify normal RuneScape body/control returns.
 
 ## Carryover / blockers
@@ -220,8 +222,8 @@ Authoritative steps: `docs/tp-link/TESTLIST.md`.
 - flattened TP Client Console workspace;
 - RS-fit model proportions `0.92 / 1.00 / 0.95`;
 - distinct TP shared-controller driver;
-- camera-relative WASD + shared clipping;
-- smoothed movement/target facing;
+- camera-relative WASD + shared controller-owned X/Z integration/clipping;
+- smoothed movement/target facing presentation;
 - Shift target lock;
 - F authentic sword one-shot + contact-frame manual melee.
 
@@ -235,6 +237,6 @@ Pull/build once and run the consolidated controller/UI/combat test in `TESTLIST.
 - Bundle 1.2 GZ2E01 left sword-side identity `0x9 handL / 0xA weaponL`.
 - DMK idle/walk/sword naming/format.
 - Existing Matrix direct render seam and fail-open suppression seam.
-- Shared camera-relative WASD owner.
+- Shared camera-relative WASD/horizontal movement owner.
 - Shared imported-character target/manual-melee owner.
 - Accepted world scale `5.0` height.
