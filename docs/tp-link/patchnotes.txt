@@ -157,3 +157,9 @@
 - Added movement speed, turn speed, contact frame, shared clipping, authentic sword preview, fit/placement, DMK reload and current material diagnostics to the flattened TP workspace.
 - Space/jump remains intentionally unbound in this slice; authentic TP jump/roll/guard clips/state choices must be added before those actions are implemented.
 - Status: verified-static implementation only. Java 8 compile/runtime acceptance is still required.
+
+2026-10-06 - Correct TP movement ownership to the shared controller
+- Removed TP-local `nativeX/nativeZ`, movement timing and movement-speed policy from `TpLinkController`.
+- `AlternateCharacterController` now owns TP's frame-normalized Matrix-driven X/Z integration before feeding the existing shared `AlternateCharacterFreeMovement` path, so camera-relative intent, horizontal state, optional clipping and restore behavior stay under one controller owner.
+- Removed the TP-only move-speed setting from `TpLinkWorkbench` and the N64 TP Link workspace. The Movement card now exposes the shared owner explicitly; only facing-turn smoothing remains TP presentation tuning.
+- Updated PROJECT/TESTLIST to require one runtime pass proving the shared WASD path and clean restoration. Status: verified-static; Eclipse Java 8 runtime acceptance still required.
