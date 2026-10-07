@@ -18,6 +18,18 @@ public final class AlternateCharacterController {
     private static boolean sampledCalibration;
     private static ControlState sampledControls;
 
+    /* Shared Matrix-driven locomotion profile for imported characters that do not
+     * provide a native X/Z simulation. This state belongs here, never in a
+     * character adapter. */
+    private static final float INPUT_MOVE_UNITS_PER_60HZ_FRAME = 18.0F;
+    private static final float INPUT_FRAME_SECONDS = 1.0F / 60.0F;
+    private static final float INPUT_MAX_FRAME_SECONDS = 0.050F;
+    private static CharacterId inputDrivenOwner;
+    private static boolean inputDrivenInitialized;
+    private static float inputDrivenX;
+    private static float inputDrivenZ;
+    private static long inputDrivenLastNanos = Long.MIN_VALUE;
+
     // UI requests only; the shared movement state applies transitions on the client thread.
     private static volatile boolean runeScapeClippingEnabled;
 
@@ -110,8 +122,9 @@ public final class AlternateCharacterController {
             PlanarDirection movementForward) {
         ControlState resolved = controls.withMovementForward(movementForward);
         /* verified-static at libsm64 fd118132, liboot 25208734 / OoT 269d0301.
-         * Matrix world intent is resolved once here. TP Link uses the same world
-         * intent but has no native transport in the current Java controller. */
+         * Matrix world intent is resolved once here. TP Link has no native
+         * transport, but consumes this same world intent through the shared
+         * input-driven horizontal movement owner below. */
         if (character == CharacterId.MARIO) {
             return new MovementInput(resolved.worldMoveX, resolved.worldMoveZ,
                     0.0F, 1.0F, -resolved.worldMoveX, -resolved.worldMoveZ);
@@ -124,11 +137,63 @@ public final class AlternateCharacterController {
         throw new IllegalArgumentException("Missing movement profile: " + character);
     }
 
+    /**
+     * Shared Matrix-driven movement path for an imported character without a
+     * native position stream. Camera mapping, timing, horizontal state, clipping
+     * and restore behavior are all owned here so the character adapter does not
+     * integrate X/Z itself.
+     */
+    static MovementInput applyInputDrivenHorizontalMovement(
+            CharacterId character,
+            Player player,
+            ControlState controls,
+            PlanarDirection movementForward) {
+        MovementInput input = movementInput(character, controls, movementForward);
+        if (player == null) {
+            return input;
+        }
+
+        if (inputDrivenOwner != character) {
+            resetInputDrivenMovement();
+            inputDrivenOwner = character;
+        }
+
+        long now = System.nanoTime();
+        float frameSeconds = INPUT_FRAME_SECONDS;
+        if (inputDrivenLastNanos != Long.MIN_VALUE) {
+            long delta = now - inputDrivenLastNanos;
+            if (delta > 0L) {
+                frameSeconds = delta / 1000000000.0F;
+                if (frameSeconds > INPUT_MAX_FRAME_SECONDS) {
+                    frameSeconds = INPUT_MAX_FRAME_SECONDS;
+                }
+            }
+        }
+        inputDrivenLastNanos = now;
+        inputDrivenInitialized = true;
+
+        float normalizedFrames = frameSeconds / INPUT_FRAME_SECONDS;
+        inputDrivenX += input.worldMoveX * INPUT_MOVE_UNITS_PER_60HZ_FRAME * normalizedFrames;
+        inputDrivenZ += input.worldMoveZ * INPUT_MOVE_UNITS_PER_60HZ_FRAME * normalizedFrames;
+
+        applyHorizontalMovement(
+                character,
+                player,
+                inputDrivenX,
+                inputDrivenZ,
+                1.0F,
+                input);
+        return input;
+    }
+
     static void beginHorizontalMovement(CharacterId character, Player player) {
         if (horizontalOwner != character) {
             HORIZONTAL_MOVEMENT.restore(player);
             HORIZONTAL_MOVEMENT.reset();
             horizontalOwner = character;
+            if (inputDrivenOwner != null && inputDrivenOwner != character) {
+                resetInputDrivenMovement();
+            }
         }
     }
 
@@ -144,6 +209,9 @@ public final class AlternateCharacterController {
             HORIZONTAL_MOVEMENT.restore(player);
             horizontalOwner = null;
         }
+        if (inputDrivenOwner == character) {
+            resetInputDrivenMovement();
+        }
     }
 
     static void resetHorizontalMovement(CharacterId character) {
@@ -151,6 +219,17 @@ public final class AlternateCharacterController {
             HORIZONTAL_MOVEMENT.reset();
             horizontalOwner = null;
         }
+        if (inputDrivenOwner == character) {
+            resetInputDrivenMovement();
+        }
+    }
+
+    private static void resetInputDrivenMovement() {
+        inputDrivenOwner = null;
+        inputDrivenInitialized = false;
+        inputDrivenX = 0.0F;
+        inputDrivenZ = 0.0F;
+        inputDrivenLastNanos = Long.MIN_VALUE;
     }
 
     // Class549_Sub1 normalized-key mappings, verified from anIntArray8901.
