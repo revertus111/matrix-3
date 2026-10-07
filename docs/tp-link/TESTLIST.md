@@ -120,11 +120,11 @@ Status: `PARTIAL VERIFIED / CONTROLLER ACCEPTANCE PENDING`
 - The accepted-height screenshots showed Link remains slightly too thick for the intended RuneScape equipment envelope.
 - World scale `5.0` remains fixed for this pass; RuneScape-fit proportions start at `0.92 / 1.00 / 0.95`.
 
-## Phase 3 / first playable-controller slice
+## Phase 3 / shared playable-controller slice
 
 Status: `IMPLEMENTED / NEEDS RUNTIME TEST`
 
-This pass intentionally reuses Matrix3's established shared owners instead of adding a second movement/combat stack.
+This pass reuses Matrix3's established shared movement/combat owners. TP Link no longer integrates X/Z inside `TpLinkController` and no longer exposes a TP-only locomotion-speed control.
 
 ### Consolidated pull/build/test
 
@@ -135,30 +135,32 @@ This pass intentionally reuses Matrix3's established shared owners instead of ad
    - there must be **one vertically scrolling TP Link workspace**, not Presentation/Animation/Movement/Combat nested tabs;
    - no horizontal scrollbar;
    - numeric controls use compact `- / direct value / +` editors;
-   - cards remain usable when the console is narrowed or widened.
+   - Movement must show `SHARED AlternateCharacterController` as its owner;
+   - there must be **no TP-only Move speed control**.
 5. Press `Ctrl+Shift+L` once.
 6. Expected console includes:
    - `[Alternate Character] Controller mode: TP_LINK`
-   - `[TP] Controls: camera-relative WASD move, F authentic sword, Shift target lock`
+   - `[TP] Controls: shared camera-relative WASD, F authentic sword, Shift target lock`
+   - `[TP] AlternateCharacterController owns movement/clipping; Matrix owns server-authoritative melee.`
    - the existing TP DMK load/ACTIVE lines.
 7. Release **Shift first** while still briefly holding `Ctrl+L` from activation. Expected: mode stays `TP_LINK`, not OoT `LINK`.
-8. WASD movement:
+8. WASD shared-controller movement:
    - with camera north, W moves Link forward relative to the camera;
    - rotate the camera east/west/south and W follows the new camera direction;
    - A/S/D work consistently;
-   - existing N64 camera WASD must not also move while TP owns controls.
+   - existing N64 camera WASD must not also move while TP owns controls;
+   - movement should behave as one shared controller path, not a TP-specific acceleration/speed profile.
 9. Locomotion presentation:
    - authentic walk takes over while moving;
    - authentic idle returns after movement stops;
    - Player Fit world scale remains `5.0`.
 10. Facing:
    - Link turns toward movement direction rather than sliding sideways;
-   - turn smoothing is controlled by `Turn speed (deg/sec)`;
+   - facing smoothing is controlled by `Facing turn speed (deg/sec)` and is presentation-only;
    - if he is consistently backward/offset, tune only `Yaw correction` and report the required value.
-11. Movement tuning:
-   - default `Move speed (60 Hz units)` is `18`;
-   - if movement is clearly too fast/slow, change only this control first;
-   - toggle `RuneScape clipping (tile authority)` once and confirm the existing shared clipping mode still works.
+11. Shared clipping sanity:
+   - toggle `RuneScape clipping (tile authority)` once and confirm the established shared clipping mode still works;
+   - turning TP mode off must restore the shared horizontal state cleanly.
 12. Shift target lock:
    - release the activation chord fully, then hold Shift near an NPC;
    - TP Link should report `Target = NPC <index>` when a valid target is acquired;
@@ -188,12 +190,13 @@ This pass intentionally reuses Matrix3's established shared owners instead of ad
 ### verified-static boundary
 
 - `TP_LINK` is a distinct `AlternateCharacterController.CharacterId` and driver.
-- TP movement uses the existing shared camera-relative control sample and `AlternateCharacterFreeMovement`; it does not duplicate WASD/clipping ownership.
+- `AlternateCharacterController` owns TP's camera-relative input mapping, frame-normalized Matrix-driven X/Z integration, `AlternateCharacterFreeMovement`, optional clipping and restore behavior.
+- `TpLinkController` no longer stores `nativeX/nativeZ`, no longer owns a movement clock, and has no TP-specific movement-speed setting.
 - TP targeting uses `AlternateCharacterCombatBridge.updateTargeting(...)`.
 - F starts the existing authentic DMK `sword` clip once and uses `AlternateCharacterCombatBridge.requestPrimaryMeleeAttack()` only at the configured contact frame.
 - RuneScape server combat remains authoritative; no TP damage formula was added.
-- TP facing writes only the local Matrix player transform rotation from the controller's movement/target direction; yaw correction remains presentation tuning.
-- The TP console was flattened into one width-tracking vertical workspace with compact direct-entry numeric controls.
+- TP facing writes only the local Matrix player transform rotation from the shared controller's movement/target direction; yaw correction remains presentation tuning.
+- The TP console is one width-tracking vertical workspace with compact direct-entry numeric controls.
 - Full runtime acceptance is still required before marking the playable-controller slice VERIFIED.
 
 ## Regression sanity
@@ -204,8 +207,8 @@ This pass intentionally reuses Matrix3's established shared owners instead of ad
 - N64 -> Mario 64 existing Runtime / Custom combat / Equipment Workbench behavior is unchanged.
 - N64 -> TP Link remains a sibling top-level game workspace.
 - `Ctrl+L` remains the OoT Link controller toggle after the chord is fully released.
-- `Ctrl+Shift+L` now owns TP Link presentation + Matrix-owned action controls.
+- `Ctrl+Shift+L` owns TP Link presentation + Matrix-owned action controls.
 
 ## Current acceptance boundary
 
-Bundle 1.1 and 1.2 remain VERIFIED. Bundle 2.1 has runtime-verified TP rendering and accepted world-height scale. The current gate is one consolidated runtime pass for the flattened TP workspace, model proportions, camera-relative WASD/facing, Shift targeting, authentic one-shot F sword/contact, and clean mode restoration.
+Bundle 1.1 and 1.2 remain VERIFIED. Bundle 2.1 has runtime-verified TP rendering and accepted world-height scale. The current gate is one consolidated runtime pass for the flattened TP workspace, model proportions, shared-controller camera-relative WASD/facing, Shift targeting, authentic one-shot F sword/contact, and clean mode restoration.
