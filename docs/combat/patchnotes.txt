@@ -1,3 +1,13 @@
+2026-10-06 - Native-contact cadence for imported melee
+- Runtime showed Link's native sword swings were visually faster than valid hits because the shared server bridge still honored RuneScape main-hand weapon delay.
+- Imported-character manual melee now treats the native contact event as the cadence authority: the bridge neutralizes only the legacy main-hand delay for that one contact, then executes the existing PlayerCombatNew calculation.
+- Stock RuneScape click-to-attack remains unchanged and still uses normal weapon delays.
+- Existing controller checks, melee weapon validation, legal range, accuracy, damage, XP, NPC HP/death and drops remain owned by PlayerCombatNew; no duplicate damage formula was added.
+- If another combat rule rejects the manual contact, the pre-existing main-hand delay is restored so a failed imported contact cannot accidentally clear stock combat cooldown.
+- Successful manual contacts leave PlayerCombatNew's newly-written delay intact for a clean transition back to stock combat, but later imported contacts bypass that timer again because native animation/contact owns their cadence.
+- Future RuneScape weapon-speed support for imported characters should change native attack animation/contact spacing rather than silently discarding valid native contacts behind a second server timer.
+- Status: verified-static; Eclipse Java 8 build and runtime cadence acceptance pending.
+
 2026-10-06 - Imported-character combat dummy + lock capability guard
 - Z-target lock remains implemented once in AlternateCharacterCombatBridge but is now explicitly enabled only while LINK is the active imported character; Mario Shift remains native crouch/ground-pound and Mario melee uses forward fallback only.
 - Added an admin-only, server-side Combat Dummy using attackable NPC id 1 with 10,000,000 HP, zero random movement, no retaliation processing, no kill XP and no drops.
