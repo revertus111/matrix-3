@@ -103,19 +103,33 @@ public final class AlternateCharacterCombatPacketBridge {
         }
 
         PlayerCombatNew oneShot = new PlayerCombatNew(npc);
-        int mainDelayBefore = (int) (player.getCombatDefinitions().getMainHandDelay()
-                - Utils.currentWorldCycle());
+        long worldCycle = Utils.currentWorldCycle();
+        long previousMainHandDelay = player.getCombatDefinitions().getMainHandDelay();
+        int mainDelayBefore = (int) (previousMainHandDelay - worldCycle);
 
         /*
-         * Exactly one direct combat cycle for exactly one native contact event.
-         * processWithDelay() preserves the existing weapon delay, controller
-         * keepCombating check, accuracy, damage, XP, NPC death and drops, but the
-         * action is never installed in ActionManager and therefore cannot repeat.
+         * Native contact owns imported-character hit cadence. Neutralize only the
+         * legacy RuneScape main-hand timer for this one contact, then run the
+         * existing PlayerCombatNew calculation unchanged. This preserves the
+         * normal legality/controller/accuracy/damage/XP/death/drop path without
+         * making a second damage formula or changing stock click-to-attack.
+         *
+         * A successful attack is allowed to leave PlayerCombatNew's newly-written
+         * delay in place so switching back to stock combat still observes the most
+         * recent real attack. If another rule rejects the contact, restore the
+         * pre-existing delay rather than accidentally clearing stock cooldown.
          */
+        if (previousMainHandDelay > worldCycle) {
+            player.getCombatDefinitions().setMainHandDelay(worldCycle);
+        }
         int result = oneShot.processWithDelay(player);
+        if (result <= 0 && previousMainHandDelay > worldCycle) {
+            player.getCombatDefinitions().setMainHandDelay(previousMainHandDelay);
+        }
+
         int mainDelayAfter = (int) (player.getCombatDefinitions().getMainHandDelay()
                 - Utils.currentWorldCycle());
-        String outcome = result > 0 ? "EXECUTED" : result == 0 ? "BLOCKED_OR_COOLDOWN" : "REJECTED";
+        String outcome = result > 0 ? "EXECUTED_NATIVE_CONTACT" : result == 0 ? "BLOCKED" : "REJECTED";
         System.out.println("[Alt Character Combat] " + outcome
                 + " npc=" + npcIndex
                 + " result=" + result
