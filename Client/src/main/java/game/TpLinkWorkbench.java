@@ -17,7 +17,6 @@ public final class TpLinkWorkbench {
     private static final float DEFAULT_RS_WIDTH = 0.92F;
     private static final float DEFAULT_RS_HEIGHT = 1.0F;
     private static final float DEFAULT_RS_DEPTH = 0.95F;
-    private static final float DEFAULT_MOVE_SPEED = 18.0F;
     private static final float DEFAULT_TURN_SPEED = 720.0F;
     private static final float DEFAULT_CONTACT_FRAME = 5.0F;
 
@@ -38,8 +37,6 @@ public final class TpLinkWorkbench {
     private static volatile float animationSpeed = 1.0F;
     private static volatile float movementThreshold = 0.25F;
     private static volatile int movementHoldMillis = 180;
-    private static volatile float controllerMoveSpeed = positiveProperty(
-            "matrix3.tp.moveSpeed", DEFAULT_MOVE_SPEED);
     private static volatile float controllerTurnSpeed = positiveProperty(
             "matrix3.tp.turnSpeed", DEFAULT_TURN_SPEED);
     private static volatile float combatContactFrame = positiveProperty(
@@ -167,14 +164,6 @@ public final class TpLinkWorkbench {
         bumpConfig();
     }
 
-    public static float getControllerMoveSpeed() {
-        return controllerMoveSpeed;
-    }
-
-    public static void setControllerMoveSpeed(float value) {
-        controllerMoveSpeed = clampFinite(value, 1.0F, 128.0F, DEFAULT_MOVE_SPEED);
-    }
-
     public static float getControllerTurnSpeed() {
         return controllerTurnSpeed;
     }
@@ -259,10 +248,8 @@ public final class TpLinkWorkbench {
         bumpConfig();
     }
 
-    public static void resetControllerTuning() {
-        controllerMoveSpeed = DEFAULT_MOVE_SPEED;
+    public static void resetFacingTuning() {
         controllerTurnSpeed = DEFAULT_TURN_SPEED;
-        combatContactFrame = DEFAULT_CONTACT_FRAME;
     }
 
     static void reportAsset(String path, int vertices, int triangles, int joints,
