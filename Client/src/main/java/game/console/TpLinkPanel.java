@@ -54,7 +54,6 @@ final class TpLinkPanel extends JPanel {
     private NumericControl offsetX;
     private NumericControl offsetY;
     private NumericControl offsetZ;
-    private NumericControl moveSpeed;
     private NumericControl turnSpeed;
     private NumericControl contactFrame;
     private NumericControl animationSpeed;
@@ -118,7 +117,7 @@ final class TpLinkPanel extends JPanel {
         JPanel card = ConsoleTheme.createCard("TP Link runtime");
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "Ctrl+Shift+L toggles TP Link. WASD is camera-relative movement, F plays the authentic sword action, and Shift holds Matrix target lock.", 3));
+                "Ctrl+Shift+L toggles TP Link. WASD uses the shared alternate-character controller, F plays the authentic sword action, and Shift holds Matrix target lock.", 3));
         card.add(Box.createVerticalStrut(8));
         card.add(ConsoleTheme.createValueRow("Controller", controllerValue));
         card.add(ConsoleTheme.createValueRow("Animation", animationValue));
@@ -180,14 +179,13 @@ final class TpLinkPanel extends JPanel {
         JPanel card = ConsoleTheme.createCard("Movement");
         card.add(Box.createVerticalStrut(6));
         card.add(ConsoleTheme.createWrappedText(
-                "TP Link now uses the same shared Matrix camera-relative WASD and optional tile-authority movement owner as the other imported characters.", 3));
+                "TP Link does not own X/Z integration or a private movement-speed profile. The shared AlternateCharacterController owns camera-relative WASD, timing, horizontal state, clipping and restore behavior.", 4));
         card.add(Box.createVerticalStrut(8));
+        card.add(ConsoleTheme.createValueRow(
+                "Movement owner", fixedValue("SHARED AlternateCharacterController")));
 
-        moveSpeed = numeric("Move speed (60 Hz units)", 1.0D, 128.0D, 1.0D, 0,
-                value -> TpLinkWorkbench.setControllerMoveSpeed((float) value));
-        turnSpeed = numeric("Turn speed (deg/sec)", 30.0D, 2160.0D, 30.0D, 0,
+        turnSpeed = numeric("Facing turn speed (deg/sec)", 30.0D, 2160.0D, 30.0D, 0,
                 value -> TpLinkWorkbench.setControllerTurnSpeed((float) value));
-        card.add(moveSpeed);
         card.add(turnSpeed);
         card.add(Box.createVerticalStrut(6));
 
@@ -198,9 +196,9 @@ final class TpLinkPanel extends JPanel {
         card.add(Box.createVerticalStrut(8));
 
         JPanel actions = actionGrid(2);
-        JButton reset = button("Reset movement");
+        JButton reset = button("Reset facing");
         reset.addActionListener(e -> {
-            TpLinkWorkbench.resetControllerTuning();
+            TpLinkWorkbench.resetFacingTuning();
             syncControls();
         });
         actions.add(reset);
@@ -299,7 +297,6 @@ final class TpLinkPanel extends JPanel {
         set(offsetX, TpLinkWorkbench.getOffsetX());
         set(offsetY, TpLinkWorkbench.getOffsetY());
         set(offsetZ, TpLinkWorkbench.getOffsetZ());
-        set(moveSpeed, TpLinkWorkbench.getControllerMoveSpeed());
         set(turnSpeed, TpLinkWorkbench.getControllerTurnSpeed());
         set(contactFrame, TpLinkWorkbench.getCombatContactFrame());
         set(animationSpeed, TpLinkWorkbench.getAnimationSpeed());
@@ -315,7 +312,7 @@ final class TpLinkPanel extends JPanel {
                 + TpLinkWorkbench.getIdleFrames() + " walk "
                 + TpLinkWorkbench.getWalkFrames() + " sword "
                 + TpLinkWorkbench.getSwordFrames());
-        movementValue.setText(TpLinkController.isMoving() ? "MOVING" : "IDLE");
+        movementValue.setText(TpLinkController.isMoving() ? "MOVING / SHARED" : "IDLE / SHARED");
         facingValue.setText(String.format(Locale.ROOT, "%.1f deg",
                 Float.valueOf(TpLinkController.getFacingYawDegrees())));
         int target = TpLinkController.getLockedTargetIndex();
@@ -342,7 +339,6 @@ final class TpLinkPanel extends JPanel {
         set(offsetX, TpLinkWorkbench.getOffsetX());
         set(offsetY, TpLinkWorkbench.getOffsetY());
         set(offsetZ, TpLinkWorkbench.getOffsetZ());
-        set(moveSpeed, TpLinkWorkbench.getControllerMoveSpeed());
         set(turnSpeed, TpLinkWorkbench.getControllerTurnSpeed());
         set(contactFrame, TpLinkWorkbench.getCombatContactFrame());
         set(animationSpeed, TpLinkWorkbench.getAnimationSpeed());
